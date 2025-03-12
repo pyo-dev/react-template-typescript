@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+		}
+
+		.list-wrap {
+			display: flex;
+			flex-wrap: wrap;
+			width: 1000px;
+			margin: 0 auto;
+		}
+
+		.list-wrap>div {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border: 3px solid #000;
+			width: 33.3333%;
+			height: 50px;
+			font-size: 22px;
+			font-weight: bold;
+		}
+		.bt-wrap{
+			text-align: center;
+		}
+		.bt-wrap button{
+			padding: 20px 100px;
+		}
+	</style>
+</head>
+
+<body>
+
+
+	<div class="list-wrap"></div>
+	<div class="bt-wrap"><button class="more-bt" onclick="moreAc()">더보기</button></div>
+
+	<script>
+		let more = true;
+		function moreAc() {
+			let pageNo = (document.querySelectorAll('.list-wrap > div').length/3) + 1;
+			getData({ reqPageNo: pageNo, reqPageRow: 3 })
+		}
+		function goDetail(pageNo, contentIndex, id){
+			let goHref = `/client/nongshim/tv/detail.html?pageNo=${pageNo}&contentIndex=${contentIndex}`;
+			// location.href = goHref;
+			window.open(goHref);
+		}
+		function getData({ reqPageNo = 1, reqPageRow = 15 } = {}) {
+			if(more){
+				fetch(`https://crashoxsusu.cafe24.com/api/data/board_list2.php?pageNo=${reqPageNo}&pageRow=${reqPageRow}`, {
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				})
+				.then((cnbRes) => cnbRes.json())
+				.then((res) => {
+					let resData = res.data;
+					let fragment = document.createDocumentFragment();
+					resData.forEach((el, index) => {
+						let tagDiv = document.createElement('div');
+						let pageNo = Math.ceil(el.id/3);
+						let contentIndex = Math.ceil((el.id-1)%3);
+						tagDiv.innerHTML = el.subject;
+						tagDiv.setAttribute('onclick', `goDetail(${pageNo},${contentIndex}, ${el.id})`);
+						fragment.appendChild(tagDiv); // Fragment에 추가
+					});
+
+					document.querySelector('.list-wrap').appendChild(fragment);
+					more = res.more;
+				})
+				.catch((error) => {
+					console.error('실패:', error);
+				});
+			}
+		}
+		getData();
+
+
+
+	</script>
+</body>
+
+</html>

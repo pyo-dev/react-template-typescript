@@ -1,0 +1,25 @@
+.sort-table-wrap{
+	display: flex;
+	gap: 30px;
+	min-width: 500px;
+}
+
+.sort-table{
+	flex: 1;
+	> div{
+		margin: 5px 0;
+		padding: 5px;
+		border: 2px solid #000;
+	}
+	> div.sortable-chosen{
+		background-color: red;
+	}
+	> div.sortable-ghost{
+		background-color: blue;
+	}
+	.my-handle{
+		height: 20px;
+		border: 2px solid red;
+		cursor: move;
+	}
+}

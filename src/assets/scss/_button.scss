@@ -1,0 +1,95 @@
+@use "_function" as *;
+@use "sass:list";
+
+.lm-button{
+	// set
+	$timer: 0.2s;
+	@mixin line( $padTb: 16, $padLr: 16) {
+		padding: #{$padTb}px #{$padLr}px;
+		&.line{
+			$rePadTb: $padTb - 1;
+			$rePadLr: $padLr - 1;
+			padding: #{$rePadTb}px #{$rePadLr}px; 
+		}
+	}
+	@mixin color($val){
+		background-color: $val;
+		color: #fff;
+		&:not([disabled]):hover,
+		&:not([disabled]):focus{
+			color: #fff;
+			background-color: $val;
+		}
+		&.line{
+			border: 1px solid $val;
+			background-color: #fff;
+			color: $val;
+			&:not([disabled]):hover,
+			&:not([disabled]):focus{
+				color: $val;
+				background-color: #fff;
+			}
+			&:not([disabled]):active{
+				box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.0), inset 100rem 100rem rgba($val, 0.1);
+			}
+		}
+	}
+	//// set
+
+	@include line();
+	display: inline-block;
+	overflow: hidden;
+	position: relative;
+	line-height: 1;
+	border: none;
+	border-radius: 3px;
+	background-color: #fff;
+	font-size: 16px;
+	font-weight: 500;
+	color: #000;
+	text-align: center;
+	transition: box-shadow $timer;
+	&:not([disabled]):hover,
+	&:not([disabled]):focus{
+		background-color: #fff;
+		box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.1), inset 100rem 100rem rgba(255, 255, 255, 0.1);
+		color: #000;
+	}
+	&:not([disabled]):active{
+		box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.0), inset 100rem 100rem rgba(0, 0, 0, 0.1);
+	}
+	&.line{
+		border: 1px solid #e5e5e5;
+	}
+	&.s-s{
+		@include line(9, 10);
+		border-radius: 2px;
+		font-size: 14px;
+	}
+	&.s-l{
+		@include line(23, 24);
+		border-radius: 4px;
+		font-size: 18px;
+	}
+	&.w-full{
+		width: 100%;
+	}
+	&.color-black{
+		@include color(#000);
+	}
+	@each $val in $LM-point-color {
+		$i: list.index($LM-point-color, $val);
+		&.color-#{$i}{
+			@include color($val);
+		}
+	}
+	&:disabled{
+		background-color: #e5e5e5;
+		color: #9a9a9a;
+		&.line{
+			border: 1px solid #cecece;
+			background-color: #e5e5e5;
+			color: #9a9a9a;
+		}
+	}
+}

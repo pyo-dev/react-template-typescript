@@ -1,0 +1,16 @@
+.react-datepicker__tab-loop{
+	display: inline-block;
+}
+.react-datepicker__day--weekend,
+.react-datepicker__day--outside-month{
+	color: #bbb;
+}
+.react-datepicker__day--disabled{
+	color: #eee;
+}
+.react-datepicker__day--in-range,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--keyboard-selected{
+	color: #fff;
+	background-color: #216ba5;
+}

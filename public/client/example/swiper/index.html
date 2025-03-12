@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<link rel="stylesheet" href="/client/_js/swiper/v11/swiper-bundle.min.css">
+	<style>
+		html,
+		body {
+			position: relative;
+			height: 100%;
+		}
+	
+		body {
+			background: #eee;
+			font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+			font-size: 14px;
+			color: #000;
+			margin: 0;
+			padding: 0;
+		}
+	
+		body {
+			font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+			font-size: 14px;
+			color: #000;
+			margin: 0;
+			padding: 0;
+		}
+		
+		.lm-wrap {
+			width: 1200px;
+			margin: 0 auto;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 20px;
+		}
+	
+		.swiper {
+			width: 320px;
+			height: 240px;
+		}
+		.swiper-slide {
+			color: #fff;
+		}
+
+		.full {
+			width: 100%;
+		}
+		.swiper.full .swiper-slide{
+			width: 320px;
+			height: 240px;
+		}
+
+		.parallax-bg {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 130%;
+			height: 100%;
+			-webkit-background-size: cover;
+			background-size: cover;
+			background-position: center;
+		}
+
+		.swiper-slide .title {
+			padding: 5px 20px;
+			font-size: 41px;
+			font-weight: 300;
+		}
+
+		.swiper-slide .subtitle {
+			padding: 5px 20px;
+			font-size: 21px;
+		}
+
+		.swiper-slide .text {
+			padding: 5px 20px;
+			font-size: 14px;
+			max-width: 400px;
+		}
+	
+		.swiper-slide:nth-child(1n) {
+			background-color: rgb(206, 17, 17);
+		}
+	
+		.swiper-slide:nth-child(2n) {
+			background-color: rgb(0, 140, 255);
+		}
+	
+		.swiper-slide:nth-child(3n) {
+			background-color: rgb(10, 184, 111);
+		}
+	
+		.swiper-slide:nth-child(4n) {
+			background-color: rgb(211, 122, 7);
+		}
+	
+		.swiper-slide:nth-child(5n) {
+			background-color: rgb(118, 163, 12);
+		}
+	
+		.swiper-slide:nth-child(6n) {
+			background-color: rgb(180, 10, 47);
+		}
+	
+		.swiper-slide:nth-child(7n) {
+			background-color: rgb(35, 99, 19);
+		}
+	
+		.swiper-slide:nth-child(8n) {
+			background-color: rgb(0, 68, 255);
+		}
+	
+		.swiper-slide:nth-child(9n) {
+			background-color: rgb(218, 12, 218);
+		}
+	
+		.swiper-slide:nth-child(10n) {
+			background-color: rgb(54, 94, 77);
+		}
+
+		.swiper.no-color .swiper-slide {
+			background-color: transparent;
+		}
+	
+	</style>
+</head>
+<body>
+	<div class="lm-wrap">
+		<div class="swiper mySwiper">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper2">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper3">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper4">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper5">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper6">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+		</div>
+		<div class="swiper mySwiper7">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+			<div class="swiper-pagination"></div>
+		</div>
+		<div class="swiper mySwiper8">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+			<div class="swiper-pagination"></div>
+		</div>
+		<div class="swiper mySwiper9 full ">
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">Slide 1</div>
+				<div class="swiper-slide">Slide 2</div>
+				<div class="swiper-slide">Slide 3</div>
+				<div class="swiper-slide">Slide 4</div>
+				<div class="swiper-slide">Slide 5</div>
+				<div class="swiper-slide">Slide 6</div>
+				<div class="swiper-slide">Slide 7</div>
+				<div class="swiper-slide">Slide 8</div>
+				<div class="swiper-slide">Slide 9</div>
+			</div>
+			<div class="swiper-pagination"></div>
+		</div>
+
+		<div style="--swiper-navigation-color: #fff; --swiper-pagination-color: #fff;" class="swiper mySwiper10 full no-color">
+			<div class="parallax-bg" style=" background-image: url(/client/_img/bg1.jpg);" data-swiper-parallax="-23%"></div>
+			<div class="swiper-wrapper">
+				<div class="swiper-slide">
+					<div class="title" data-swiper-parallax="-800">Slide 1</div>
+					<div class="subtitle" data-swiper-parallax="-300">Subtitle</div>
+					<div class="text" data-swiper-parallax="-100">
+						<p>
+							Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam
+							dictum mattis velit, sit amet faucibus felis iaculis nec. Nulla
+							laoreet justo vitae porttitor porttitor. Suspendisse in sem justo.
+							Integer laoreet magna nec elit suscipit, ac laoreet nibh euismod.
+							Aliquam hendrerit lorem at elit facilisis rutrum. Ut at
+							ullamcorper velit. Nulla ligula nisi, imperdiet ut lacinia nec,
+							tincidunt ut libero. Aenean feugiat non eros quis feugiat.
+						</p>
+					</div>
+				</div>
+				<div class="swiper-slide">
+					<div class="title" data-swiper-parallax="-800">Slide 2</div>
+					<div class="subtitle" data-swiper-parallax="-300">Subtitle</div>
+					<div class="text" data-swiper-parallax="-100">
+						<p>
+							Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam
+							dictum mattis velit, sit amet faucibus felis iaculis nec. Nulla
+							laoreet justo vitae porttitor porttitor. Suspendisse in sem justo.
+							Integer laoreet magna nec elit suscipit, ac laoreet nibh euismod.
+							Aliquam hendrerit lorem at elit facilisis rutrum. Ut at
+							ullamcorper velit. Nulla ligula nisi, imperdiet ut lacinia nec,
+							tincidunt ut libero. Aenean feugiat non eros quis feugiat.
+						</p>
+					</div>
+				</div>
+				<div class="swiper-slide">
+					<div class="title" data-swiper-parallax="-800">Slide 3</div>
+					<div class="subtitle" data-swiper-parallax="-300">Subtitle</div>
+					<div class="text" data-swiper-parallax="-100">
+						<p>
+							Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam
+							dictum mattis velit, sit amet faucibus felis iaculis nec. Nulla
+							laoreet justo vitae porttitor porttitor. Suspendisse in sem justo.
+							Integer laoreet magna nec elit suscipit, ac laoreet nibh euismod.
+							Aliquam hendrerit lorem at elit facilisis rutrum. Ut at
+							ullamcorper velit. Nulla ligula nisi, imperdiet ut lacinia nec,
+							tincidunt ut libero. Aenean feugiat non eros quis feugiat.
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="swiper-button-next"></div>
+			<div class="swiper-button-prev"></div>
+			<div class="swiper-pagination"></div>
+		</div>
+
+		<div class="thumbs-wrap full">
+			<div class="swiper mySwiper11 full">
+				<div class="swiper-wrapper">
+					<div class="swiper-slide">Slide 1</div>
+					<div class="swiper-slide">Slide 2</div>
+					<div class="swiper-slide">Slide 3</div>
+					<div class="swiper-slide">Slide 4</div>
+					<div class="swiper-slide">Slide 5</div>
+					<div class="swiper-slide">Slide 6</div>
+					<div class="swiper-slide">Slide 7</div>
+					<div class="swiper-slide">Slide 8</div>
+					<div class="swiper-slide">Slide 9</div>
+				</div>
+				<div class="swiper-button-next"></div>
+				<div class="swiper-button-prev"></div>
+			</div>
+			<div class="swiper mySwiper12 no-color full">
+				<div class="swiper-wrapper">
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 1</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 2</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 3</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 4</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 5</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 6</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 7</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 8</div>
+					<div class="swiper-slide" style="height: 100px; background-color: blue;">Slide 9</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+	<script src="/client/_js/swiper/v11/swiper-bundle.min.js"></script>
+	<script>
+		let swiper = new Swiper(".mySwiper", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					translate: [0, 0, 0],
+				},
+				next: {
+					translate: ["100%", 0, 0],
+				},
+			},
+		});
+
+		let swiper2 = new Swiper(".mySwiper2", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					translate: ["-120%", 0, -500],
+				},
+				next: {
+					shadow: true,
+					translate: ["120%", 0, -500],
+				},
+			},
+		});
+
+		let swiper3 = new Swiper(".mySwiper3", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					translate: ["-20%", 0, -1],
+				},
+				next: {
+					translate: ["100%", 0, 0],
+				},
+			},
+		});
+
+		let swiper4 = new Swiper(".mySwiper4", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					translate: [0, 0, -800],
+					rotate: [180, 0, 0],
+				},
+				next: {
+					shadow: true,
+					translate: [0, 0, -800],
+					rotate: [-180, 0, 0],
+				},
+			},
+		});
+
+		let swiper5 = new Swiper(".mySwiper5", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					translate: ["-125%", 0, -800],
+					rotate: [0, 0, -90],
+				},
+				next: {
+					shadow: true,
+					translate: ["125%", 0, -800],
+					rotate: [0, 0, 90],
+				},
+			},
+		});
+
+		let swiper6 = new Swiper(".mySwiper6", {
+			grabCursor: true,
+			effect: "creative",
+			creativeEffect: {
+				prev: {
+					shadow: true,
+					origin: "left center",
+					translate: ["-5%", 0, -200],
+					rotate: [0, 100, 0],
+				},
+				next: {
+					origin: "right center",
+					translate: ["5%", 0, -200],
+					rotate: [0, -100, 0],
+				},
+			},
+		});
+
+		let swiper7 = new Swiper(".mySwiper7", {
+			effect: "cube",
+			grabCursor: true,
+			cubeEffect: {
+				shadow: true,
+				slideShadows: true,
+				shadowOffset: 20,
+				shadowScale: 0.94,
+			},
+			pagination: {
+				el: ".swiper-pagination",
+			},
+		});
+
+		let swiper8 = new Swiper(".mySwiper8", {
+			effect: "cards",
+			grabCursor: true,
+		});
+
+		let swiper9 = new Swiper(".mySwiper9", {
+			effect: "coverflow",
+			grabCursor: true,
+			centeredSlides: true,
+			slidesPerView: "auto",
+			coverflowEffect: {
+				rotate: 50,
+				stretch: 0,
+				depth: 100,
+				modifier: 1,
+				slideShadows: true,
+			},
+			pagination: {
+				el: ".swiper-pagination",
+			},
+		});
+
+		let swiper10 = new Swiper(".mySwiper10", {
+			speed: 600,
+			parallax: true,
+			pagination: {
+				el: ".swiper-pagination",
+				clickable: true,
+			},
+			navigation: {
+				nextEl: ".swiper-button-next",
+				prevEl: ".swiper-button-prev",
+			},
+		});
+
+		let swiper12 = new Swiper(".mySwiper12", {
+			loop: true,
+			spaceBetween: 10,
+			slidesPerView: 4,
+			freeMode: true,
+			watchSlidesProgress: true,
+		});
+		let swiper11 = new Swiper(".mySwiper11", {
+			loop: true,
+			spaceBetween: 10,
+			navigation: {
+				nextEl: ".swiper-button-next",
+				prevEl: ".swiper-button-prev",
+			},
+			thumbs: {
+				swiper: swiper12,
+			},
+		});
+	</script>
+</body>
+</html>
+
+
+
+

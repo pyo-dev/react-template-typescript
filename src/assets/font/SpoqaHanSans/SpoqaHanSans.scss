@@ -1,0 +1,37 @@
+@charset "utf-8";
+
+@font-face {
+     font-family: 'Spoqa Han Sans';
+     font-weight: 700;
+     src: local('Spoqa Han Sans Bold'),
+     url('SpoqaHanSansBold.woff2') format('woff2'),
+     url('SpoqaHanSansBold.woff') format('woff'),
+     url('SpoqaHanSansBold.ttf') format('truetype');
+ }
+
+ @font-face {
+     font-family: 'Spoqa Han Sans';
+     font-weight: 400;
+     src: local('Spoqa Han Sans Regular'),
+     url('SpoqaHanSansRegular.woff2') format('woff2'),
+     url('SpoqaHanSansRegular.woff') format('woff'),
+     url('SpoqaHanSansRegular.ttf') format('truetype');
+ }
+
+ @font-face {
+     font-family: 'Spoqa Han Sans';
+     font-weight: 300;
+     src: local('Spoqa Han Sans Light'),
+     url('SpoqaHanSansLight.woff2') format('woff2'),
+     url('SpoqaHanSansLight.woff') format('woff'),
+     url('SpoqaHanSansLight.ttf') format('truetype');
+ }
+
+ @font-face {
+     font-family: 'Spoqa Han Sans';
+     font-weight: 100;
+     src: local('Spoqa Han Sans Thin'),
+     url('SpoqaHanSansThin.woff2') format('woff2'),
+     url('SpoqaHanSansThin.woff') format('woff'),
+     url('SpoqaHanSansThin.ttf') format('truetype');
+ }

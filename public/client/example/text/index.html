@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Infinite Flowing Text on Path</title>
+	<style>
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+
+		svg.type1 {
+			width: 100%;
+			height: 200px;
+		}
+
+		path {
+			stroke: lightgray;
+			stroke-width: 1;
+			fill: none;
+		}
+
+		text {
+			font-size: 24px;
+			font-weight: bold;
+			fill: black;
+		}
+
+		.move-wrap{
+			overflow: hidden;
+		}
+		.move-wrap svg{
+			position: relative;
+			left: 50%;
+			transform: translateX(-50%);
+		}
+		.move-wrap svg text{
+			font-size: 20px;
+		}
+	</style>
+</head>
+
+<body>
+	<svg viewBox="0 0 1000 200" class="type1">
+		<!-- 경로 정의 -->
+		<path id="curve1" d="M10,100 Q150,20 300,100 T590,100" />
+
+		<text>
+			<textPath href="#curve1">
+				<animate attributeName="startOffset" from="-100%" to="0%" dur="10s" repeatCount="indefinite" />
+				<!-- animate 주석후 path길이에 맞게 텍스트 조절 필요 안그러면 끊김현상 발생 -->
+				Text that flows from right to left. Text that flows from ri
+				Text that flows from right to left. Text that flows from ri
+			</textPath>
+		</text>
+	</svg>
+
+
+	<svg viewBox="0 0 1000 200" class="type1">
+		<!-- 경로 정의 -->
+		<path id="curve2" d="M10,100 Q150,20 300,100 T590,100" />
+
+		<text>
+			<textPath href="#curve2">
+				<animate attributeName="startOffset" from="0%" to="-100%" dur="10s" repeatCount="indefinite" />
+				<!-- animate 주석후 path길이에 맞게 텍스트 조절 필요 안그러면 끊김현상 발생 -->
+				Text that flows from right to left. Text that flows from ri
+				Text that flows from right to left. Text that flows from ri
+			</textPath>
+		</text>
+	</svg>
+
+
+	<div class="move-wrap">
+		<svg xmlns="http://www.w3.org/2000/svg" width="1570" height="470" viewBox="0 0 1570 470" fill="none">
+			<path id="curve3" d="M0.964844 49.2736C70.1485 35.7744 216.615 47.2487 249.014 201.14C289.511 393.504 473.017 312.509 545.154 211.265C617.29 110.02 669.178 -1.34855 813.451 23.9626C957.725 49.2737 1036.03 191.693 1080.48 282.135C1117.18 356.803 1157.26 444.549 1209.57 459.314C1379.15 541.574 1377.64 26.4927 1568.99 1.18164" stroke="black" stroke-width="2"/>
+			<text>
+				<textPath href="#curve3">
+					<animate attributeName="startOffset" from="0%" to="-100%" dur="30s" repeatCount="indefinite" />
+					<!-- animate 주석후 path길이에 맞게 텍스트 조절 필요 안그러면 끊김현상 발생 -->
+					Text that flows from right to left. Text thaa
+					Text <tspan style="fill: red">that flows</tspan> from right to left. Text thaa
+					Text that flows from right to left. Text thaa
+					<tspan style="fill: blue">Text that</tspan> flows <tspan style="fill: red">from right to</tspan> left. Text thaa
+					Text that flows from right to left. Text t
+					Text that flows from right to left. Text thaa
+					Text <tspan style="fill: red">that flows</tspan> from right to left. Text thaa
+					Text that flows from right to left. Text thaa
+					<tspan style="fill: blue">Text that</tspan> flows <tspan style="fill: red">from right to</tspan> left. Text thaa
+					Text that flows from right to left. Text t
+					Text that flows from right to left. Text thaa
+					Text <tspan style="fill: red">that flows</tspan> from right to left. Text thaa
+					Text that flows from right to left. Text thaa
+					<tspan style="fill: blue">Text that</tspan> flows <tspan style="fill: red">from right to</tspan> left. Text thaa
+					Text that flows from right to left. Text t
+				</textPath>
+			</text>
+		</svg>
+	</div>
+</body>
+
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>nongshim example</title>
+	<link rel="stylesheet" href="/client/_js/swiper/v11/swiper-bundle.min.css">
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			height: 100%;
+			background-color: #eee;
+		}
+
+		.swiper {
+			width: 100%;
+			height: 100%;
+		}
+
+		.swiper-slide {
+			background: #fff;
+		}
+
+		.swiper-item {
+			position: relative;
+			width: 100%;
+			height: 100%;
+		}
+
+		/* 비디오 오버레이를 위한 어두운 레이어 스타일 */
+		.dim {
+			display: none;
+			z-index: 1;
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.5);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			color: white;
+			font-size: 18px;
+			cursor: pointer;
+		}
+
+		.dim.play {
+			z-index: 2;
+		}
+
+		.dim.hidden {
+			display: none;
+		}
+
+		video,
+		iframe {
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+		}
+	</style>
+</head>
+
+<body>
+	<!-- Swiper -->
+	<div class="swiper mySwiper">
+		<div class="swiper-wrapper">
+		</div>
+		<div class="swiper-pagination"></div>
+	</div>
+
+	<!-- Swiper JS -->
+	<script src="/client/_js/swiper/v11/swiper-bundle.min.js"></script>
+
+	<!-- Initialize Swiper -->
+	<script>
+		// 유튜브 iframe API 스크립트를 동적으로 추가
+		const tag = document.createElement('script');
+		tag.src = "https://www.youtube.com/iframe_api";
+		const firstScriptTag = document.getElementsByTagName('script')[0];
+		firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+		// 플레이어 배열 및 상태 관리 변수 초기화
+		let players = [];  // 각 유튜브 플레이어 객체를 담는 배열
+		let lastVideoTime = 0; // 마지막 비디오 시간 저장
+
+		// Swiper 및 페이지 관련 변수 초기화
+		let swiper;
+		let pageNo = 2; // 현재 페이지 번호
+		let pageRow = 3; // 한 페이지당 데이터 개수
+		let totalPagging = 4; // 전체 페이지 수
+		let totalCount = 12; // 전체 데이터 수
+		let sliderToNo = 2; // 시작 슬라이드 인덱스
+
+		// URL에서 페이지 번호와 콘텐츠 인덱스 파라미터를 가져오는 함수
+		function getParams() {
+			const params = new URL(location.href).searchParams;
+			const getPageNo = Number(params.get(`pageNo`)); // pageNo 값
+			const getContentIndex = Number(params.get(`contentIndex`)); // contentIndex 값
+			return {getPageNo, getContentIndex};
+		}
+
+		// 가져온 파라미터를 설정하는 함수
+		function setParams() {
+			pageNo = getParams().getPageNo; // 현재 페이지 번호 설정
+			sliderToNo = getParams().getContentIndex; // 슬라이드 이동 번호 설정
+		}
+
+		// YouTube Iframe API 로드 완료 후 호출되는 함수
+		function onYouTubeIframeAPIReady() {
+			setParams(); // URL 파라미터 설정
+			swiper = new Swiper(".mySwiper", { // Swiper 초기화
+				direction: "vertical", // 슬라이드 방향 설정 (세로)
+				on: {
+					slideChange: resetVideosAndDim, // 슬라이드 변경 시 동영상 초기화
+					slidePrevTransitionEnd: handleSlidePrev, // 이전 슬라이드로 이동 완료 시 처리
+					slideNextTransitionEnd: handleSlideNext, // 다음 슬라이드로 이동 완료 시 처리
+				},
+			});
+
+			// 초기 데이터 로드 및 슬라이드 이동
+			if (sliderToNo === 0) {
+				addSwiperItem({ nowPageNo: pageNo, changeType: 'prev' }).then(() => {
+					swiper.update(); // 추가 후 Swiper 업데이트
+					swiper.slideTo(sliderToNo, 0); // 슬라이드 이동
+				});
+			} else {
+				addSwiperItem({ nowPageNo: pageNo, changeType: 'next' }).then(() => {
+					swiper.update(); // 추가 후 Swiper 업데이트
+					swiper.slideTo(sliderToNo, 0); // 슬라이드 이동
+				});
+			}
+		}
+
+		// Swiper에 슬라이드 항목을 추가하는 함수
+		const addSwiperItem = async ({ nowPageNo, changeType }) => {
+			try {
+				// API 호출로 데이터 가져오기
+				const response = await fetch(`https://crashoxsusu.cafe24.com/api/data/board_list2.php?pageNo=${nowPageNo}&pageRow=${pageRow}`);
+				const res = await response.json();
+
+				// 총 페이지 수 업데이트
+				totalPagging = res.totalPagging;
+
+				// 가져온 데이터를 기반으로 슬라이드 생성
+				const slides = res.data.map((el) => createSwiperSlide(el, nowPageNo));
+
+				// 슬라이드 추가: 다음 또는 이전 위치에 추가
+				if (changeType === 'next') {
+					slides.forEach((slide) => swiper.appendSlide(slide));
+				} else if (changeType === 'prev') {
+					slides.reverse().forEach((slide) => swiper.prependSlide(slide));
+				}
+
+				return slides.length; // 추가된 슬라이드 개수 반환
+			} catch (error) {
+				console.error('슬라이드 추가 실패:', error);
+				return 0; // 실패 시 0 반환
+			}
+		};
+
+		// 슬라이드 HTML을 생성하는 함수
+		function createSwiperSlide(el, nowPageNo) {
+			const swiperItem = document.createElement('div');
+			swiperItem.className = 'swiper-slide';
+			if (el.youtube) {  // 유튜브 링크가 있을 경우 iframe 생성
+				const urlObj = new URL(el.youtube);
+				const youtubeId = urlObj.searchParams.get("v"); // 유튜브 ID 추출
+				swiperItem.innerHTML = `
+					<div class="swiper-item" data-page-no="${nowPageNo}">
+						<div class="dim play">Click to Play ${el.id}</div>
+						<div class="dim stop hidden">Click to Stop ${el.id}</div>
+						<iframe
+							src="https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&controls=0&modestbranding=1&rel=0&fs=0"
+							frameborder="0"
+							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+							allowfullscreen>
+						</iframe>
+					</div>
+				`;
+				const iframe = swiperItem.querySelector('iframe');
+				const index = players.length;
+
+				// YouTube Player 생성 및 이벤트 설정
+				players[index] = new YT.Player(iframe, {
+					events: {
+						'onStateChange': (event) => onPlayerStateChange(event, index),
+					},
+				});
+				// 재생 및 정지 버튼 클릭 이벤트 설정
+				const playDim = swiperItem.querySelector('.dim.play');
+				const stopDim = swiperItem.querySelector('.dim.stop');
+				playDim.addEventListener('click', () => {
+					playDim.classList.add('hidden'); // 재생 버튼 숨기기
+					stopDim.classList.remove('hidden'); // 정지 버튼 표시
+					players[index].playVideo(); // 비디오 재생
+				});
+				stopDim.addEventListener('click', () => {
+					stopDim.classList.add('hidden'); // 정지 버튼 숨기기
+					playDim.classList.remove('hidden'); // 재생 버튼 표시
+					players[index].stopVideo(); // 비디오 정지
+				});
+			}
+			return swiperItem;
+		}
+
+		// 현재 비디오를 초기 상태로 리셋하는 함수
+		function resetVideosAndDim() {
+			// 현재 활성화된 슬라이드의 데이터 속성에서 페이지 번호를 가져옴
+			let getPageNo = swiper.slides[swiper.activeIndex].querySelector('div').dataset.pageNo;
+			// 현재 페이지 번호를 업데이트
+			pageNo = getPageNo;
+
+			// 모든 플레이어 비디오 정지 및 초기화
+			players.forEach(player => {
+				if (player && typeof player.seekTo === 'function') {
+					player.seekTo(0); // 동영상 처음으로 이동
+					player.stopVideo(); // 동영상 정지
+				}
+			});
+
+			// 재생/정지 버튼 초기화
+			document.querySelectorAll('.swiper-item').forEach(el => {
+				el.querySelector('.dim.play').classList.remove('hidden'); // 재생 버튼 표시
+				el.querySelector('.dim.stop').classList.add('hidden'); // 정지 버튼 숨기기
+			});
+		}
+
+		// 이전 슬라이드 이동 시 처리
+		function handleSlidePrev() {
+			if (swiper.activeIndex === 0 && pageNo >= 1) {
+				pageNo--; // 밑에 로직과 합치면 오류남
+			}
+			if (swiper.activeIndex === 0 && pageNo >= 1) {
+				addSwiperItem({ nowPageNo: pageNo, changeType: 'prev' });  // 이전 슬라이드 추가
+			}
+		}
+
+		// 다음 슬라이드 이동 시 처리
+		function handleSlideNext() {
+			if (swiper.activeIndex === swiper.slides.length - 1 && pageNo <= totalPagging) {
+				pageNo++;
+				addSwiperItem({ nowPageNo: pageNo, changeType: 'next' });  // 다음 슬라이드 추가
+			}
+		}
+
+		// YouTube Player 상태 변경 이벤트 핸들러
+		function onPlayerStateChange(event, index) {
+			const targetDim = event.target.getIframe().closest('.swiper-item').querySelector('.dim');
+			if (event.data === YT.PlayerState.PLAYING) {
+				targetDim.classList.add('hidden'); // 재생 중일 때 버튼 숨김
+			} else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+				targetDim.classList.remove('hidden'); // 일시 정지 또는 종료 시 버튼 표시
+			}
+		}
+	</script>
+</body>
+
+</html>

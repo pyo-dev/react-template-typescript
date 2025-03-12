@@ -1,0 +1,11 @@
+.lm-dashboard-wrap{
+	flex: 1;
+	display: grid;
+	gap: 20px;
+	// grid-template-columns: minmax(auto, 200px) minmax(400px, 1fr) minmax(auto, 300px);
+	grid-template-columns: 1fr 1fr;
+	max-width: 1000px;
+	.lm-panel{
+		cursor: pointer;
+	}
+}

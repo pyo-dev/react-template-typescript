@@ -1,0 +1,261 @@
+.lm-loader-sample-box{
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 200px;
+	height: 200px;
+	border-radius: 10px;
+	background-color: #222;
+	cursor: pointer;
+}
+
+.lm-loader-1{
+	width: fit-content;
+	font-weight: bold;
+	font-family: monospace;
+	font-size: 20px;
+	background:linear-gradient(90deg,#fff 50%,#0000 0) right/200% 100%;
+	animation: l21 2s infinite linear;
+	&::before {
+		content :"Loading...";
+		color: #0000;
+		padding: 0 5px;
+		background: inherit;
+		background-image: linear-gradient(90deg,#000 50%,#fff 0);
+		background-clip:text;
+	}
+	@keyframes l21{
+		100%{background-position: left}
+	}
+}
+
+.lm-loader-2 {
+	width: fit-content;
+	font-weight: bold;
+	font-family: monospace;
+	font-size: 20px;
+	background: radial-gradient(circle closest-side,#fff 94%,#0000) right/calc(200% - 1em) 100%;
+	animation: l24 1s infinite alternate linear;
+	&::before {
+		content: "Loading...";
+		line-height: 1em;
+		color: #0000;
+		background: inherit;
+		background-image: radial-gradient(circle closest-side,#000 94%,#fff);
+		-webkit-background-clip:text;
+				background-clip:text;
+	}
+	@keyframes l24{
+		100%{background-position: left}
+	}
+}
+
+.lm-loader-3 {
+	width: 50px;
+	--b: 8px; 
+	aspect-ratio: 1;
+	border-radius: 50%;
+	padding: 1px;
+	background: conic-gradient(#0000 10%,#fff) content-box;
+	-webkit-mask:
+		repeating-conic-gradient(#0000 0deg,#000 1deg 20deg,#0000 21deg 36deg),
+		radial-gradient(farthest-side,#0000 calc(100% - var(--b) - 1px),#000 calc(100% - var(--b)));
+	-webkit-mask-composite: destination-in;
+			mask-composite: intersect;
+	animation:l4 1s infinite steps(10);
+	@keyframes l4 {to{transform: rotate(1turn)}}
+}
+
+.lm-loader-4 {
+	width: 50px;
+	aspect-ratio: 1;
+	display: grid;
+	&::before,
+	&::after {    
+		content:"";
+		grid-area: 1/1;
+		--c:no-repeat radial-gradient(farthest-side,#fff 92%,#0000);
+		background: 
+			var(--c) 50%  0, 
+			var(--c) 50%  100%, 
+			var(--c) 100% 50%, 
+			var(--c) 0    50%;
+		background-size: 12px 12px;
+		animation: l12 1s infinite;
+	}
+	&::before {
+		margin: 4px;
+		filter: hue-rotate(45deg);
+		background-size: 8px 8px;
+		animation-timing-function: linear
+	}
+	
+	@keyframes l12 { 
+		100%{transform: rotate(.5turn)}
+	}
+}
+
+.lm-loader-5 {
+	width: 60px;
+	aspect-ratio: 1;
+	border: 15px solid #ddd;
+	border-radius: 50%;
+	position: relative;
+	transform: rotate(45deg);
+	&::before {
+		content: "";
+		position: absolute;
+		inset: -15px;
+		border-radius: 50%;
+		border: 15px solid #0068FF;
+	animation: l18 2s infinite linear;
+	}
+	@keyframes l18 {
+		0%   {clip-path:polygon(50% 50%,0 0,0    0,0    0   ,0    0   ,0    0   )}
+		25%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0   ,100% 0   ,100% 0   )}
+		50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
+		75%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0    100%,0    100%)}
+		100% {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,0    100%,0    0   )}
+	}
+}
+
+.lm-loader-6 {
+	width: 80px;
+	height: 40px;
+	color: #fff;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	padding: 3px;
+	background: 
+	repeating-linear-gradient(90deg,
+		#0068FF 0 10px, 
+		#0000 0 15px, 
+		#0068FF 15px 25px, 
+		#0000 25px 30px, 
+		#0068FF 30px 40px, 
+		#0000 40px 45px
+	) 0/0% no-repeat content-box content-box;
+	position: relative;
+	box-sizing: border-box;
+	animation: l5 2s infinite steps(6);
+
+	&::before {
+	content: "";
+		position: absolute;
+		top: -2px;
+		bottom: -2px;
+		left: 100%;
+		width: 10px;
+		background:
+			linear-gradient(
+			#0000 calc(50% - 7px),currentColor 0 calc(50% - 5px),
+			#0000 0 calc(50% + 5px),currentColor 0 calc(50% + 7px),#0000 0) left /100% 100%,
+			linear-gradient(currentColor calc(50% - 5px),#0000 0 calc(50% + 5px),currentColor 0) left /2px 100%,
+			linear-gradient(#0000 calc(50% - 5px),currentColor 0 calc(50% + 5px),#0000 0) right/2px 100%;
+		background-repeat: no-repeat;
+	}
+
+	@keyframes l5 {
+		100% {background-size: 120%;}
+	}
+}
+
+.lm-loader-7 {    
+	--r1: 154%;
+	--r2: 68.5%;
+	width: 60px;
+	aspect-ratio: 1;
+	border-radius: 50%; 
+	background:
+		radial-gradient(var(--r1) var(--r2) at top   ,#0000 79.5%,#0068FF 80%),
+		radial-gradient(var(--r1) var(--r2) at bottom,#0068FF 79.5%,#0000 80%),
+		radial-gradient(var(--r1) var(--r2) at top   ,#0000 79.5%,#0068FF 80%),
+		#fff;
+	background-size: 50.5% 220%;
+	background-position: -100% 0%,0% 0%,100% 0%;
+	background-repeat:no-repeat;
+	animation: l9 2s infinite linear;
+
+	@keyframes l9 {
+		33%  {background-position:    0% 33% ,100% 33% ,200% 33% }
+		66%  {background-position: -100%  66%,0%   66% ,100% 66% }
+		100% {background-position:    0% 100%,100% 100%,200% 100%}
+	}
+}
+
+.lm-loader-8 {
+	width: 60px;
+	aspect-ratio: 1;
+	background: linear-gradient(#dc1818 0 0) bottom/100% 0% no-repeat #fff;
+	-webkit-mask: 
+		radial-gradient(circle at 60% 65%, #000 62%, #0000 65%) top left, 
+		radial-gradient(circle at 40% 65%, #000 62%, #0000 65%) top right, 
+		linear-gradient(to bottom left, #000 42%,#0000 43%) bottom left , 
+		linear-gradient(to bottom right,#000 42%,#0000 43%) bottom right;
+	-webkit-mask-size: 50% 50%;
+	-webkit-mask-repeat: no-repeat;
+	animation: l19 2s infinite linear;
+
+	@keyframes l19 {
+		90%,100% {background-size:100% 100%}
+	}
+}
+
+.lm-loader-9 {
+	width: calc(80px / cos(45deg));
+	height: 14px;
+	background: repeating-linear-gradient(-45deg,#fff 0 15px,#0000 0 20px) left/200% 100%;
+	animation: l3 2s infinite linear;
+
+	@keyframes l3 {
+		100% {background-position:right}
+	}
+}
+
+.lm-loader-10 {
+	width: 20px;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 0 0 0 #fff;
+	animation: l2 1.5s infinite linear;
+	position: relative;
+
+	&:before,
+	&:after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		box-shadow: 0 0 0 0 #fff;
+		animation: inherit;
+		animation-delay: -0.5s;
+	}
+	&:after {
+		animation-delay: -1s;
+	}
+	@keyframes l2 {
+		100% {box-shadow: 0 0 0 40px #0000}
+	}
+}
+
+.lm-loader-11 {
+	width: 85px;
+	height: 35px;
+	--g1:conic-gradient(from  90deg at 3px  3px ,#0000 90deg,#fff 0);
+	--g2:conic-gradient(from -90deg at 22px 22px,#0000 90deg,#fff 0);
+	background:var(--g1),var(--g1),var(--g1), var(--g2),var(--g2),var(--g2);
+	background-size: 25px 25px;
+	background-repeat: no-repeat;
+	animation: l6 1s infinite alternate;
+
+	@keyframes l6 {
+		0%   {background-position:0 50% ,50% 50% ,100% 50% }
+		20%  {background-position:0 0   ,50% 50% ,100% 50% }
+		40%  {background-position:0 100%,50%  0  ,100% 50% }
+		60%  {background-position:0 50% ,50% 100%,100% 0   }
+		80%  {background-position:0 50% ,50% 50% ,100% 100%}
+		100% {background-position:0 50% ,50% 50% ,100% 50% }
+	}
+}

@@ -1,0 +1,119 @@
+@use "sass:list";
+@use "_function" as *;
+
+$LM-icon-name: (
+	'all-menu-2',
+	'all-menu',
+	'arrow-down',
+	'arrow-first',
+	'arrow-last',
+	'arrow-next',
+	'arrow-prev',
+	'arrow-up',
+	'calendar',
+	'camera',
+	'card-hand',
+	'card',
+	'cart',
+	'check',
+	'check-2',
+	'clip',
+	'coupon',
+	'doc',
+	'el',
+	'feel',
+	'gear',
+	'hand-best-fill',
+	'hand-best',
+	'hart-fill',
+	'hart',
+	'i-2',
+	'i',
+	'link',
+	'lock-open',
+	'lock',
+	'minus',
+	'money-2',
+	'money-hand',
+	'money-paper',
+	'money',
+	'note',
+	'notebook',
+	'pay',
+	'people',
+	'percent',
+	'phone',
+	'pin-fill',
+	'pin',
+	'play',
+	'plus',
+	'power',
+	'print',
+	'qr',
+	'refresh',
+	'repeat',
+	'search',
+	'smile',
+	'speaker-2',
+	'speaker',
+	'speech',
+	'star',
+	'tag',
+	'upload-2',
+	'upload',
+	'x-cicle',
+	'x'
+);
+
+.lm-icon {
+	@each $item in $LM-icon-name {
+		&-#{$item} {
+			display: inline-block;
+			width: 24px;
+			height: 24px;
+			background-color: black;
+			vertical-align: middle;
+
+			$cicle-items: 'check', 'feel', 'i-2';
+			@if list.index($cicle-items, $item) {
+				border-radius: 100%;
+				background-image: url(@/assets/img/icon/icon-#{$item}.svg);
+				background-repeat: no-repeat;
+				background-position: center;
+			} @else {
+				mask: url(@/assets/img/icon/icon-#{$item}.svg) no-repeat center;
+				mask-size: cover;
+			}
+
+			@each $color in $LM-point-color {
+				$i: list.index($LM-point-color, $color);
+				&.color-#{$i} {
+					background-color: $color;
+				}
+			}
+			&.color-white {
+				background-color: white;
+			}
+		}
+	}
+}
+.lm-icon-box{
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 60px;
+	height: 60px;
+	border-radius: $LM-radius-1;
+	background-color: #444;
+	box-shadow: $LM-shodow-2;
+	@each $color in $LM-point-color {
+		$i: list.index($LM-point-color, $color);
+		&.color-#{$i} {
+			background-color: $color;
+		}
+	}
+	[class^="lm-icon"] {
+		width: 30px;
+		height: 30px;
+	}
+}

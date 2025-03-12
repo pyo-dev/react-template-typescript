@@ -1,0 +1,65 @@
+@charset "UTF-8";
+// write : gray
+// since : 2024-05-18/
+
+// @import url(../font/SpoqaHanSans/SpoqaHanSans.css);
+// @import url(../font/NotoSansKR/NotoSansKR.css);
+@use "@/assets/font/Pretendard/Pretendard.scss" as *;
+
+// default font family
+$LM-font-family : 'Pretendard', Malgun Gothic, '맑은 고딕', dotum, '돋움', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial,sans-serif;
+//// default font family
+
+// font size
+$LM-default-font-size : 16px;
+//// font size
+
+// default font color
+$LM-default-font-color : #000;
+$LM-default-font-color-link : #3399cc;
+//// default font color
+
+// point color
+$LM-point-color:(
+	#0068FF,
+	#6200EE,
+	#06C755,
+	#FFB624,
+	#E62A10,
+);
+//// point color
+
+// radius
+$LM-radius-1: 10px;
+//// radius
+
+// shadow
+$LM-shodow-1: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
+$LM-shodow-2: 0 4px 20px 0 rgba(0, 0, 0, .14), 0 7px 10px -5px rgba(64, 64, 64, .4);
+//// shadow
+
+// width
+$LM-w-max: 1224px;
+$LM-w-full: 100%;
+//// width
+
+// mixin style
+@mixin box-style( $padding: 20px, $radius: 10px, $backgroundColor: '#fff' ) {
+	padding: $padding;
+	border-radius: $LM-radius-1;
+	background-color: #fff;
+	box-shadow: $LM-shodow-1;
+}
+@mixin flex-box( $getSpace: 20, $getCount: 5 ) {
+	$spaceWidth1: calc(100 / $getCount);
+	$spaceWidth2: $spaceWidth1 * 1%;
+	$minusPx: calc(($getSpace * ($getCount - 1)) / $getCount);
+	
+	display: flex;
+	flex-wrap: wrap;
+	gap: #{$getSpace}px;
+	> div {
+		width: calc($spaceWidth2 - #{$minusPx}px);
+	}
+}
+//// mixin style

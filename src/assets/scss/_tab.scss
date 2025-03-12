@@ -1,0 +1,115 @@
+@use "sass:list";
+@use "_function" as *;
+
+.lm-tab{
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	padding: 10px;
+	margin-bottom: 20px;
+	border-radius: $LM-radius-1;
+	background-color: #fff;
+	box-shadow: $LM-shodow-1;
+	button{
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 10px 25px;
+		border-radius: 5px;
+		border: none;
+		background-color: transparent;
+		color: #666;
+		transition: all 0.2s;
+		[class^="lm-icon"] {
+			width: 16px;
+			height: 16px;
+			opacity: 0.5;
+			transition: all 0.2s;
+		}
+		&:focus,
+		&:hover{
+			background-color: #eee;
+		}
+		&.active{
+			background-color: list.nth($LM-point-color, 1);
+			color: #fff;
+			box-shadow: $LM-shodow-2;
+			[class^="lm-icon"] {
+				background-color: #fff;
+				opacity: 1;
+			}
+		}
+	}
+}
+
+.lm-tab-type2{
+	display: inline-flex;
+	margin-bottom: 20px;
+	button{
+		z-index: 1;
+		position: relative;
+		line-height: 1;
+		padding: 15px 30px;
+		border: 1px solid #b2b2b2;
+		background-color: #fff;
+		color: #333;
+		font-size: 16px;
+		&:not(&:first-child){
+			margin-left: -1px;
+		}
+		&:first-child{
+			border-top-left-radius: 4px;
+			border-bottom-left-radius: 4px;
+		}
+		&:last-child{
+			border-top-right-radius: 4px;
+			border-bottom-right-radius: 4px;
+		}
+		&.active{
+			z-index: 2;
+			border: 1px solid list.nth($LM-point-color, 1);
+			background-color: rgba($color: list.nth($LM-point-color, 1), $alpha: 0.05);
+			font-weight: 500;
+			color: list.nth($LM-point-color, 1);
+		}
+		&:not([disabled]):hover,
+		&:not([disabled]):focus{
+			box-shadow: inset 100rem 100rem rgba(0, 0, 0, 0.03);
+		}
+		&:not([disabled]):active{
+			box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.0), inset 100rem 100rem rgba(list.nth($LM-point-color, 1), 0.1);
+		}
+	}
+}
+
+.lm-tab-type3{
+	position: relative;
+	display: inline-flex;
+	margin-bottom: 20px;
+	&::after{
+		content: '';
+		z-index: 1;
+		position: absolute;
+		bottom: 0px;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		background-color: #E6E6E6;
+	}
+	button{
+		z-index: 2;
+		position: relative;
+		line-height: 1;
+		padding: 16px 30px;
+		border: none;
+		border-bottom: 2px solid transparent;
+		background-color: transparent;
+		color: #333;
+		font-size: 22px;
+		font-weight: 500;
+		&.active{
+			border-color: list.nth($LM-point-color, 1);
+			color: list.nth($LM-point-color, 1);
+		}
+	}
+}
