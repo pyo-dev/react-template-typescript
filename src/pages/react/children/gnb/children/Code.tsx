@@ -86,7 +86,7 @@ export const 컴포넌트이름 = () => {
 				{sitemap.map((item, index) => (
 					<div key={index} style={{ padding: "5px" }}>
 						<LmNavButton
-							to="/leadermine/design"
+							to="/pyo-dev/design"
 							lmClass={"lm-button color-1"}
 							lmEvent={
 								item.children && item.children.length > 0

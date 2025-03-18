@@ -18,7 +18,7 @@ const LmDesign = () => {
 				<div className="lm-icon-box color-1"><div className="lm-icon-smile color-white"></div></div>
 				<div>
 					<div className="title">DESIGN</div>
-					<div className="des">리더마인 내부 디자인 에셋</div>
+					<div className="des">pyo-dev 내부 디자인 에셋</div>
 				</div>
 			</div>
 

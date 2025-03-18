@@ -23,7 +23,7 @@ const LmLoader = () => {
 				<div className="lm-icon-box color-3"><div className="lm-icon-play color-white"></div></div>
 				<div>
 					<div className="title">LOADER</div>
-					<div className="des">리더마인 css loader 모음</div>
+					<div className="des">pyo-dev css loader 모음</div>
 				</div>
 			</div>
 			<div className='lm-panel-guide'>

@@ -3,7 +3,7 @@ import { LmNavButton } from "@/components/LmNavButton";
 export const LayoutHeader = () => {
 	return (
 		<div className="lmHeader">
-			<div className="logo">LEADERMINE</div>
+			<div className="logo">PYO-DEV</div>
 			<div className="profile">
 				<div
 					className="img"
@@ -21,7 +21,7 @@ export const LayoutHeader = () => {
 				</LmNavButton>
 			</div>
 			<div className="nav">
-				<div className="title">리더마인</div>
+				<div className="title">pyo-dev</div>
 				<LmNavButton to="/design" lmParents={true}>
 					<span className="lm-icon-smile color-white"></span>디자인
 					에셋
@@ -37,7 +37,7 @@ export const LayoutHeader = () => {
 				</LmNavButton>
 			</div>
 			<div className="nav last">
-				<div className="title">고객사 템플릿</div>
+				<div className="title">샘플 템플릿</div>
 				<LmNavButton to="/company" lmParents={true}>
 					<span className="lm-icon-hart color-white"></span>메인
 				</LmNavButton>

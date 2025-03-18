@@ -19,7 +19,7 @@ const Main = () => {
 					</div>
 					<div className="lm-panel-info">
 						<div className="title">DESIGN</div>
-						<div className="des">리더마인 내부 디자인 에셋</div>
+						<div className="des">pyo-dev 내부 디자인 에셋</div>
 						<div className="bottom-box">
 							<div className="like">
 								<div className="lm-icon-hand-best"></div> +200
@@ -39,7 +39,7 @@ const Main = () => {
 					</div>
 					<div className="lm-panel-info">
 						<div className="title">FILTER</div>
-						<div className="des">리더마인 javascript 필터 모음</div>
+						<div className="des">pyo-dev javascript 필터 모음</div>
 						<div className="bottom-box">
 							<div className="like">
 								<div className="lm-icon-hand-best"></div> +100
@@ -59,7 +59,7 @@ const Main = () => {
 					</div>
 					<div className="lm-panel-info">
 						<div className="title">LOADER</div>
-						<div className="des">리더마인 css loader 모음</div>
+						<div className="des">pyo-dev css loader 모음</div>
 						<div className="bottom-box">
 							<div className="like">
 								<div className="lm-icon-hand-best"></div> +10

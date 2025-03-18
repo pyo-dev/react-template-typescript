@@ -65,10 +65,10 @@ getFilter.checkPhoneNumber('013-12-4567');
 // output: false
 
 // 이메일 유효성 검사
-getFilter.checkEmail('leadermine@co.kr');
+getFilter.checkEmail('pyo-dev@co.kr');
 // output: true
 
-getFilter.checkEmail('leadermine@co');
+getFilter.checkEmail('pyo-dev@co');
 getFilter.checkEmail('leade@123@co.kr');
 // output: false
 

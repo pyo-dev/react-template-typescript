@@ -10,7 +10,7 @@ export const Layout = () => {
 	return (
 		<>
 			<Helmet>
-				<title>LEADERMINE TEMPLATE GUIDE</title>
+				<title>PYO-DEV TEMPLATE GUIDE</title>
 			</Helmet>
 			<Outlet />
 		</>

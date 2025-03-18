@@ -4,7 +4,7 @@ import { LmBoardList, BoardItem } from "@/components/board/faq/LmList";
 import { LmPaging, PagingData } from "@/components/board/LmPaging";
 
 export const LmReactBoardFaq = () => {
-	// const boardUrl = "/leadermine/react/board/faq";
+	// const boardUrl = "/pyo-dev/react/board/faq";
 	const boardUrl = "/react?depth1=board";
 	const searchParams = new URLSearchParams(location.search);
 	const currentPage = searchParams.get("pageNo") ? parseInt(searchParams.get("pageNo")!) : 1;

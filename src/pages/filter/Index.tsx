@@ -16,7 +16,7 @@ const LmFilter = () => {
 				<div className="lm-icon-box color-5"><div className="lm-icon-el color-white"></div></div>
 				<div>
 					<div className="title">FILTER</div>
-					<div className="des">리더마인 javascript 필터 모음</div>
+					<div className="des">pyo-dev javascript 필터 모음</div>
 				</div>
 			</div>
 
