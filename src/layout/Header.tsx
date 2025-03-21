@@ -12,7 +12,7 @@ export const LayoutHeader = () => {
 							"url(https://dimg.donga.com/wps/NEWS/IMAGE/2009/06/09/7132013.1.jpg)",
 					}}
 				></div>
-				<div className="info">Jumin Pyo</div>
+				<div className="info">Jungmin Pyo</div>
 			</div>
 			<div className="nav">
 				<div className="title">메인</div>
