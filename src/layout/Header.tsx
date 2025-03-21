@@ -17,7 +17,7 @@ export const LayoutHeader = () => {
 			<div className="nav">
 				<div className="title">메인</div>
 				<LmNavButton to="/">
-					<span className="lm-icon-doc color-white"></span>데시보드
+					<span className="lm-icon-doc color-white"></span>대시보드
 				</LmNavButton>
 			</div>
 			<div className="nav">
