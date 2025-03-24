@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmPluginSortableCode } from "./children/Code";
-import { LmPluginSortablePreview } from "./children/Preview";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoPluginSortableCode } from "./children/Code";
+import { PyoPluginSortablePreview } from "./children/Preview";
 
-export const LmPluginSortable = () => {
+export const PyoPluginSortable = () => {
 	// URL 쿼리 파라미터에서 'type' 값 추출
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -11,19 +11,19 @@ export const LmPluginSortable = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
+			<div className="pyo-tab">
 				{/* 소스 및 미리보기 버튼 */}
-				<LmNavButton to="/react?depth1=plugin&depth2=sortable">
-					<div className="lm-icon-pin"></div>소스
-				</LmNavButton>
-				<LmNavButton to="/react?depth1=plugin&depth2=sortable&depth3=preview">
-					<div className="lm-icon-pin"></div>미리보기
-				</LmNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=sortable">
+					<div className="pyo-icon-pin"></div>소스
+				</PyoNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=sortable&depth3=preview">
+					<div className="pyo-icon-pin"></div>미리보기
+				</PyoNavButton>
 			</div>
 			{getDepth3 === 'code' ? (
-				<LmPluginSortableCode />
+				<PyoPluginSortableCode />
 			) : (
-				<LmPluginSortablePreview />
+				<PyoPluginSortablePreview />
 			)}
 		</>
 	);

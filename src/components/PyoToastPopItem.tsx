@@ -10,7 +10,7 @@ interface ToastPopItemProps {
 	closeAc: () => void;
 }
 
-export const LmToastPopItem: React.FC<ToastPopItemProps> = ({ data, closeAc }) => {
+export const PyoToastPopItem: React.FC<ToastPopItemProps> = ({ data, closeAc }) => {
 	const [show, setShow] = useState<boolean>(false);
 	const [showClass, setShowClass] = useState<string>("");
 	const innerRef = useRef<HTMLDivElement | null>(null);
@@ -46,7 +46,7 @@ export const LmToastPopItem: React.FC<ToastPopItemProps> = ({ data, closeAc }) =
 	return (
 		show && (
 			<div
-				className={`lm-pop-toast ${showClass}`}
+				className={`pyo-pop-toast ${showClass}`}
 				style={{ height: innerHeight }}
 			>
 				<div className={`inner ${data.type}`} ref={innerRef}>

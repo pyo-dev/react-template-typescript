@@ -2,7 +2,7 @@ import { atom } from "recoil";
 import { recoilPersist } from "recoil-persist";
 
 const { persistAtom } = recoilPersist({
-	key: "LM_TOAST_POP",
+	key: "PYO_TOAST_POP",
 	// storage: sessionStorage,
 });
 
@@ -24,7 +24,7 @@ export interface ToastPopState {
 	reset?: Omit<ToastPopState, "reset">; // reset을 선택적으로 추가
 }
 
-const LM_TOAST_POP_RESET: Omit<ToastPopState, "reset"> = {
+const PYO_TOAST_POP_RESET: Omit<ToastPopState, "reset"> = {
 	position: {
 		bottom: "0",
 		right: "0",
@@ -34,11 +34,11 @@ const LM_TOAST_POP_RESET: Omit<ToastPopState, "reset"> = {
 	items: null,
 };
 
-export const LM_TOAST_POP = atom<ToastPopState>({
-	key: "LM_TOAST_POP_ATOM",
+export const PYO_TOAST_POP = atom<ToastPopState>({
+	key: "PYO_TOAST_POP_ATOM",
 	default: {
-		reset: LM_TOAST_POP_RESET, // reset 포함
-		...LM_TOAST_POP_RESET,
+		reset: PYO_TOAST_POP_RESET, // reset 포함
+		...PYO_TOAST_POP_RESET,
 	},
 	effects_UNSTABLE: [persistAtom],
 });

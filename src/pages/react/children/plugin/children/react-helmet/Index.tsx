@@ -31,22 +31,22 @@ export const Layout = () => {
 };
 `
 
-export const LmPluginReactHelmet = () => {
+export const PyoPluginReactHelmet = () => {
 
 	return (
 		<>
 			<Helmet>
 				<title>타이틀 변경 테스트</title>
 			</Helmet>
-			<div className="lm-panel-guide">
-				<div className="lm-icon-feel color-1"></div>
+			<div className="pyo-panel-guide">
+				<div className="pyo-icon-feel color-1"></div>
 				head 내용을 동적으로 변경하는데 사용한다
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{layoutCode}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{pageCode}
 				</Highlight>
 			</div>

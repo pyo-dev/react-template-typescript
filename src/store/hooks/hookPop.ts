@@ -1,18 +1,18 @@
 import { useRecoilState } from "recoil";
-import { LM_POP, LmPopState } from "@/store/storePop"; // LmPopState를 import 했습니다.
+import { PYO_POP, PyoPopState } from "@/store/storePop"; // PyoPopState를 import 했습니다.
 
-export const HOOK_LM_POP = () => {
-	const [getLmPop, updateLmPop] = useRecoilState<LmPopState>(LM_POP);
+export const HOOK_PYO_POP = () => {
+	const [getPyoPop, updatePyoPop] = useRecoilState<PyoPopState>(PYO_POP);
 
-	const setLmPop = (data: Partial<LmPopState>) => {
-		updateLmPop((prevLmPop: LmPopState) => ({
-			...prevLmPop,
+	const setPyoPop = (data: Partial<PyoPopState>) => {
+		updatePyoPop((prevPyoPop: PyoPopState) => ({
+			...prevPyoPop,
 			...data,
 		}));
 	};
 
 	return {
-		getLmPop,
-		setLmPop,
+		getPyoPop,
+		setPyoPop,
 	};
 };

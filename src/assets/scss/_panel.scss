@@ -1,6 +1,6 @@
 @use "_function" as *;
 
-.lm-panel{
+.pyo-panel{
 	position: relative;
 	@include box-style();
 	&.icon-pos{
@@ -12,7 +12,7 @@
 		left: 20px;
 	}
 }
-.lm-panel-info{
+.pyo-panel-info{
 	.title{
 		font-size: 24px;
 		font-weight: 500;
@@ -37,7 +37,7 @@
 			background-color: transparent;
 			font-size: 12px;
 			color: #666;
-			[class^="lm-icon"] {
+			[class^="pyo-icon"] {
 				width: 15px;
 				height: 15px;
 				opacity: 0.7;
@@ -45,7 +45,7 @@
 		}
 	}
 }
-.lm-panel-title{
+.pyo-panel-title{
 	@include box-style();
 	display: flex;
 	align-items: center;
@@ -61,7 +61,7 @@
 	}
 }
 
-.lm-panel-guide{
+.pyo-panel-guide{
 	@include box-style();
 	display: flex;
 	align-items: center;
@@ -72,7 +72,7 @@
 	font-size: 14px;
 }
 
-.lm-panel-vertical{
+.pyo-panel-vertical{
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -81,12 +81,12 @@
 		margin: auto;
 	}
 }
-.lm-panel-inner-title{
+.pyo-panel-inner-title{
 	width: 100%;
 	margin-bottom: 10px;
 	font-size: 22px;
 }
-.lm-panel-flex-wrap{
+.pyo-panel-flex-wrap{
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -96,21 +96,21 @@
 	pre{
 		width: 100%;
 	}
-	.lm-panel-flex-inner{
+	.pyo-panel-flex-inner{
 		display: inline-flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 10px;
 	}
 }
-.lm-panel-code{
+.pyo-panel-code{
 	&.hljs{
 		border-radius: 10px;
 		padding: 20px;
 		font-size: 12px;
 	}
 }
-.lm-sample-img-wrap{
+.pyo-sample-img-wrap{
 	img{
 		width: 100%;
 		max-width: 300px;

@@ -1,7 +1,7 @@
 import Highlight from "react-highlight";
 
 const filterJsIm = `// javascript
-<script src="/js/lmFilter.js"></script>
+<script src="/js/pyoFilter.js"></script>
 
 // react
 import { getFilter } from '@/utils/getFilter';`;
@@ -83,14 +83,14 @@ getFilter.spaceDelet('  입력 하시오 크크크  ');
 
 export const FilterText = () => {
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
-			<Highlight className="javascript lm-panel-code">
+		<div className="pyo-panel pyo-panel-flex-wrap">
+			<Highlight className="javascript pyo-panel-code">
 				{filterJsIm}
 			</Highlight>
-			<Highlight className="javascript lm-panel-code">
+			<Highlight className="javascript pyo-panel-code">
 				{filterJs}
 			</Highlight>
-			<Highlight className="javascript lm-panel-code">
+			<Highlight className="javascript pyo-panel-code">
 				{sampleJs}
 			</Highlight>
 		</div>

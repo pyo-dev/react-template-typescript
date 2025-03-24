@@ -3,10 +3,10 @@ import { useRoutes, RouteObject } from "react-router-dom";
 const Layout = lazy(() => import('@/layout/Layout'));
 const NotFound = lazy(() => import('@/pages/_notFound/Index'));
 const Main = lazy(() => import('@/pages/_main/Index'));
-const LmDesign = lazy(() => import('@/pages/design/Index'));
-const LmFilter = lazy(() => import('@/pages/filter/Index'));
-const LmLoader = lazy(() => import('@/pages/loader/Index'));
-const LmReact = lazy(() => import('@/pages/react/Index'));
+const PyoDesign = lazy(() => import('@/pages/design/Index'));
+const PyoFilter = lazy(() => import('@/pages/filter/Index'));
+const PyoLoader = lazy(() => import('@/pages/loader/Index'));
+const PyoReact = lazy(() => import('@/pages/react/Index'));
 const CompanyMain = lazy(() => import('@/pages/company/Index'));
 
 const MyRouter = () => {
@@ -21,19 +21,19 @@ const MyRouter = () => {
 				},
 				{
 					path: "design",
-					element: <LmDesign />,
+					element: <PyoDesign />,
 				},
 				{
 					path: "filter",
-					element: <LmFilter />,
+					element: <PyoFilter />,
 				},
 				{
 					path: "loader",
-					element: <LmLoader />,
+					element: <PyoLoader />,
 				},
 				{
 					path: "react",
-					element: <LmReact />,
+					element: <PyoReact />,
 				},
 				{
 					path: "company",

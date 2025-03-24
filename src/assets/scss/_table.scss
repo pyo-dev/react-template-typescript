@@ -1,7 +1,7 @@
 @use "sass:list";
 @use "_function" as *;
 
-.lm-paging{
+.pyo-paging{
 	display: flex;
 	justify-content: center;
 	gap: 6px;
@@ -44,14 +44,14 @@
 		button{
 			border-radius: 50%;
 			&.active{
-				background-color: list.nth($LM-point-color, 1);
+				background-color: list.nth($PYO-point-color, 1);
 				color: #fff;
 			}
 		}
 	}
 }
 
-.lm-board-basic{
+.pyo-board-basic{
 	thead{
 		th{
 			padding: 12px 16px;
@@ -129,8 +129,8 @@
 	}
 }
 
-.lm-board-faq{
-	.lm-board-item{
+.pyo-board-faq{
+	.pyo-board-item{
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: space-between;

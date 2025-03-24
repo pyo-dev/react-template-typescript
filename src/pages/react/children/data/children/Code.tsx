@@ -1,6 +1,6 @@
 import Highlight from "react-highlight";
 
-export const LmReactDataCode = () => {
+export const PyoReactDataCode = () => {
 	const typeHmtl = `// types code
 // 공통으로 사용할 PropData 인터페이스 정의
 export interface PropData {
@@ -11,14 +11,14 @@ export interface PropData {
 	const parentstHmtl = `// Parents Components
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmReactDataSub1 } from "./children/Sub1";
-import { LmReactDataSub2 } from "./children/Sub2";
-import { LmReactDataSub3 } from "./children/Sub3";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoReactDataSub1 } from "./children/Sub1";
+import { PyoReactDataSub2 } from "./children/Sub2";
+import { PyoReactDataSub3 } from "./children/Sub3";
 
 import { PropData } from './types'; // 공통 타입을 import
 
-export const LmReactData = () => {
+export const PyoReactData = () => {
 
 	// 부모 컴포넌트에서 관리하는 데이터 상태
 	const [prposData1, setPrposData1] = useState<PropData>({});
@@ -65,74 +65,74 @@ export const LmReactData = () => {
 	return (
 		<>
 			{/* 데이터1 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					부모 컴포넌트 데이터1
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
 						name="name"
-						className="lm-input"
+						className="pyo-input"
 						value={prposData1.name || ""}
 						onChange={handleChangeData1} // 데이터 변경 시 호출되는 함수
 						placeholder="데이터1 이름"
 					/>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
 						name="tell"
-						className="lm-input"
+						className="pyo-input"
 						value={prposData1.tell || ""}
 						onChange={handleChangeData1} // 데이터 변경 시 호출되는 함수
 						placeholder="데이터1 전화번호"
 					/>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					이름 : {prposData1.name} <br />
 					전화번호 : {prposData1.tell}
 				</div>
 			</div>
 
 			{/* 데이터2 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					부모 컴포넌트 데이터2
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
 						name="name"
-						className="lm-input"
+						className="pyo-input"
 						value={prposData2.name || ""}
 						onChange={handleChangeData2} // 데이터 변경 시 호출되는 함수
 						placeholder="데이터2 이름"
 					/>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
 						name="tell"
-						className="lm-input"
+						className="pyo-input"
 						value={prposData2.tell || ""}
 						onChange={handleChangeData2} // 데이터 변경 시 호출되는 함수
 						placeholder="데이터2 전화번호"
 					/>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					이름 : {prposData2.name} <br />
 					전화번호 : {prposData2.tell}
 				</div>
 			</div>
 
 			{/* 자식 컴포넌트들 */}
-			<LmReactDataSub1 data={prposData1} />
-			<LmReactDataSub2
+			<PyoReactDataSub1 data={prposData1} />
+			<PyoReactDataSub2
 				data={prposData2}
 				dataChange={setPrposData2}
 			/>
-			<LmReactDataSub3
+			<PyoReactDataSub3
 				dataChange1={handleChangeData1}
 				dataChange2={handleChangeData2}
 			/>
@@ -144,17 +144,17 @@ export const LmReactData = () => {
 import { PropData } from '../types'; // 공통 타입을 import
 
 // Props 인터페이스 정의: 자식 컴포넌트에 전달되는 데이터
-interface LmReactDataSub1Props {
+interface PyoReactDataSub1Props {
 	data: PropData; // 부모로부터 전달된 데이터
 }
 
-export const LmReactDataSub1 = ({
+export const PyoReactDataSub1 = ({
 	data,
-}: LmReactDataSub1Props) => {
+}: PyoReactDataSub1Props) => {
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
-			<div className="lm-panel-inner-title">자식 컴포넌트1 데이터1</div>
-			<div className="lm-panel-flex-inner">
+		<div className="pyo-panel pyo-panel-flex-wrap">
+			<div className="pyo-panel-inner-title">자식 컴포넌트1 데이터1</div>
+			<div className="pyo-panel-flex-inner">
 				{/* 부모로부터 전달받은 데이터를 출력 */}
 				이름 : {data.name} <br />
 				전화번호 : {data.tell}
@@ -168,24 +168,24 @@ export const LmReactDataSub1 = ({
 import { PropData } from '../types'; // 공통 타입을 import
 
 // Props 인터페이스 정의: 자식 컴포넌트에 전달되는 데이터 및 데이터 변경 함수
-interface LmReactDataSub2Props {
+interface PyoReactDataSub2Props {
 	data: PropData; // 부모로부터 전달된 데이터
 	dataChange: React.Dispatch<React.SetStateAction<PropData>>; // 부모 상태를 변경하는 함수
 }
 
-export const LmReactDataSub2 = ({
+export const PyoReactDataSub2 = ({
 	data,
 	dataChange,
-}: LmReactDataSub2Props) => {
+}: PyoReactDataSub2Props) => {
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
-			<div className="lm-panel-inner-title">자식 컴포넌트2 데이터2</div>
-			<div className="lm-panel-flex-inner">
+		<div className="pyo-panel pyo-panel-flex-wrap">
+			<div className="pyo-panel-inner-title">자식 컴포넌트2 데이터2</div>
+			<div className="pyo-panel-flex-inner">
 				{/* 입력 필드를 사용해 부모 데이터 변경 */}
 				<input
 					type="text"
 					name="name"
-					className="lm-input"
+					className="pyo-input"
 					value={data.name || ""}
 					onChange={(e) =>
 						dataChange((prevData) => ({
@@ -196,11 +196,11 @@ export const LmReactDataSub2 = ({
 					placeholder="데이터2 이름"
 				/>
 			</div>
-			<div className="lm-panel-flex-inner">
+			<div className="pyo-panel-flex-inner">
 				<input
 					type="text"
 					name="tell"
-					className="lm-input"
+					className="pyo-input"
 					value={data.tell || ""}
 					onChange={(e) =>
 						dataChange((prevData) => ({
@@ -211,7 +211,7 @@ export const LmReactDataSub2 = ({
 					placeholder="데이터2 전화번호"
 				/>
 			</div>
-			<div className="lm-panel-flex-inner">
+			<div className="pyo-panel-flex-inner">
 				{/* 부모 데이터 출력 */}
 				이름 : {data.name} <br />
 				전화번호 : {data.tell}
@@ -226,7 +226,7 @@ import { useState } from "react";
 import { PropData } from '../types'; // 공통 타입을 import
 
 // Props 인터페이스 정의: 데이터 변경 함수
-interface LmReactDataSub3Props {
+interface PyoReactDataSub3Props {
 	dataChange1: (
 		e: React.ChangeEvent<HTMLInputElement>,
 		childData?: PropData
@@ -237,10 +237,10 @@ interface LmReactDataSub3Props {
 	) => void;
 }
 
-export const LmReactDataSub3 = ({
+export const PyoReactDataSub3 = ({
 	dataChange1,
 	dataChange2,
-}: LmReactDataSub3Props) => {
+}: PyoReactDataSub3Props) => {
 	// 자식 컴포넌트에서 관리하는 데이터 상태
 	const [reqData, setReqData] = useState<PropData[]>([]);
 
@@ -281,33 +281,33 @@ export const LmReactDataSub3 = ({
 	return (
 		<>
 			{/* 첫 번째 데이터 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					자식 컴포넌트3 데이터1
 				</div>
-				<div className="lm-panel-flex-wrap">
-					<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-wrap">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="name"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[0]?.name || ""}
 							onChange={(e) => handleChangeData(e, 0)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터1 이름"
 						/>
 					</div>
-					<div className="lm-panel-flex-inner">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="tell"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[0]?.tell || ""}
 							onChange={(e) => handleChangeData(e, 0)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터1 전화번호"
 						/>
 					</div>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={(e) => parentDataChange(e, 0)}
 					>
 						부모 데이터1 변경
@@ -316,33 +316,33 @@ export const LmReactDataSub3 = ({
 			</div>
 
 			{/* 두 번째 데이터 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					자식 컴포넌트3 데이터2
 				</div>
-				<div className="lm-panel-flex-wrap">
-					<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-wrap">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="name"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[1]?.name || ""}
 							onChange={(e) => handleChangeData(e, 1)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터2 이름"
 						/>
 					</div>
-					<div className="lm-panel-flex-inner">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="tell"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[1]?.tell || ""}
 							onChange={(e) => handleChangeData(e, 1)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터2 전화번호"
 						/>
 					</div>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={(e) => parentDataChange(e, 1)}
 					>
 						부모 데이터2 변경
@@ -356,20 +356,20 @@ export const LmReactDataSub3 = ({
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{typeHmtl}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{parentstHmtl}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{sub1Html}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{sub2Html}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{sub3Html}
 				</Highlight>
 			</div>

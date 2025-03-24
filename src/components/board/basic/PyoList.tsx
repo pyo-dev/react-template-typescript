@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { LmAxios } from '@/axios/LmAxios';
-import {HOOK_LM_POP} from '@/store/hooks/hookPop'
+import { PyoAxios } from '@/axios/PyoAxios';
+import {HOOK_PYO_POP} from '@/store/hooks/hookPop'
 import { getFilter } from '@/utils/getFilter';
 
 // BoardItem 타입 정의
@@ -12,29 +12,29 @@ export interface BoardItem {
 }
 
 // data 객체의 타입 정의
-export interface LmBoardListData {
+export interface PyoBoardListData {
 	url: string;
 	listHeader: Array<{ text: string; class: string }>;
 	list: BoardItem[];
 	totalPages: number;
 }
 
-export const LmBoardList = ({ data }: { data: LmBoardListData }) => {
+export const PyoBoardList = ({ data }: { data: PyoBoardListData }) => {
 	const { url, listHeader, list } = data;
 	const navigate = useNavigate();
-	const { setLmPop } = HOOK_LM_POP();
+	const { setPyoPop } = HOOK_PYO_POP();
 
 	const handleViewClick = async (id: string) => {
 		// navigate(`${url}/view/${id}`);
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: 'GET',
 				url: `/board_detail.php?viewNo=${id}`,
     			headers: { disableLoading: true }, // 로딩 비활성화
 			});
 			const resData = res.data.data ? res.data.data : [];
 			resData.contents = getFilter.replaceNewlinesWithBr(resData.contents);
-			setLmPop({
+			setPyoPop({
 				show: true,
 				title: resData.subject,
 				contents: resData.contents,
@@ -46,7 +46,7 @@ export const LmBoardList = ({ data }: { data: LmBoardListData }) => {
 
 	return (
 		<>
-			<table className="lm-board-basic">
+			<table className="pyo-board-basic">
 				<thead>
 					<tr>
 						{listHeader.map((item, index) => (

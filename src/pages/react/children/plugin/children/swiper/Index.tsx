@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmPluginSwiperCode } from "./children/Code";
-import { LmPluginSwiperPreview } from "./children/Preview";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoPluginSwiperCode } from "./children/Code";
+import { PyoPluginSwiperPreview } from "./children/Preview";
 
-export const LmPluginSwiper = () => {
+export const PyoPluginSwiper = () => {
 	// URL 쿼리 파라미터에서 'type' 값 추출
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -11,19 +11,19 @@ export const LmPluginSwiper = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
+			<div className="pyo-tab">
 				{/* 소스 및 미리보기 버튼 */}
-				<LmNavButton to="/react?depth1=plugin&depth2=swiper">
-					<div className="lm-icon-pin"></div>소스
-				</LmNavButton>
-				<LmNavButton to="/react?depth1=plugin&depth2=swiper&depth3=preview">
-					<div className="lm-icon-pin"></div>미리보기
-				</LmNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=swiper">
+					<div className="pyo-icon-pin"></div>소스
+				</PyoNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=swiper&depth3=preview">
+					<div className="pyo-icon-pin"></div>미리보기
+				</PyoNavButton>
 			</div>
 			{getDepth3 === 'code' ? (
-				<LmPluginSwiperCode />
+				<PyoPluginSwiperCode />
 			) : (
-				<LmPluginSwiperPreview />
+				<PyoPluginSwiperPreview />
 			)}
 		</>
 	);

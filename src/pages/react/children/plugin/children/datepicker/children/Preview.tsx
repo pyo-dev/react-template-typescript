@@ -5,7 +5,7 @@ import { ko } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import "@/assets/scss/_datepicker.scss";
 
-export const LmPluginDatepickerPreview = () => {
+export const PyoPluginDatepickerPreview = () => {
 	// 기본
 	const [startDateA, setStartDateA] = useState<Date | undefined>(new Date());
 
@@ -35,10 +35,10 @@ export const LmPluginDatepickerPreview = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>기본</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					dateFormat="yyyy-MM-dd"
 					selected={startDateA || null} // undefined -> null
@@ -48,10 +48,10 @@ export const LmPluginDatepickerPreview = () => {
 				/>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>년,월 선택</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					dateFormat="yyyy-MM-dd"
 					selected={startDateB || null} // undefined -> null
@@ -64,10 +64,10 @@ export const LmPluginDatepickerPreview = () => {
 				/>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>ranges 선택</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					selectsRange
 					startDate={startDateC} // undefined -> null
@@ -83,10 +83,10 @@ export const LmPluginDatepickerPreview = () => {
 				/>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>이전일 이후일 선택 금지</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					selectsRange
 					startDate={startDateD} // undefined -> null
@@ -104,10 +104,10 @@ export const LmPluginDatepickerPreview = () => {
 				/>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>듀얼 달력</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					selected={startDateE || null} // undefined -> null
 					onChange={(date: Date | null) =>
@@ -117,10 +117,10 @@ export const LmPluginDatepickerPreview = () => {
 				/>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<div>듀얼 달력 + ranges 선택</div>
 				<DatePicker
-					className="lm-input"
+					className="pyo-input"
 					locale={ko}
 					selectsRange
 					startDate={startDateF} // undefined -> null

@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import {HOOK_LM_LODING} from "@/store/hooks/hookLoding";
+import {HOOK_PYO_LODING} from "@/store/hooks/hookLoding";
 
-export const LmLoding = () => {
-	const { getLmLoding } = HOOK_LM_LODING();
+export const PyoLoding = () => {
+	const { getPyoLoding } = HOOK_PYO_LODING();
 	const [show, setShow] = useState<boolean>(false);
 	const [showClass, setShowClass] = useState<string>("");
 
 	useEffect(() => {
 		let setTimeId: NodeJS.Timeout | undefined;
-		if (!getLmLoding.show) {
+		if (!getPyoLoding.show) {
 			setShowClass("");
 			setTimeId = setTimeout(() => {
 				setShow(false);
@@ -23,13 +23,13 @@ export const LmLoding = () => {
 				clearTimeout(setTimeId);
 			}
 		};
-	}, [getLmLoding]);
+	}, [getPyoLoding]);
 
 	return (
 		show && (
-			<div className="lm-loding">
-				<div className={`lm-loding-inner ${showClass}`}>
-					<div className="lm-loding-loader"></div>
+			<div className="pyo-loding">
+				<div className={`pyo-loding-inner ${showClass}`}>
+					<div className="pyo-loding-loader"></div>
 				</div>
 			</div>
 		)

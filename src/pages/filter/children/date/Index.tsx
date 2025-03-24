@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { LmNavButton } from "@/components/LmNavButton";
+import { PyoNavButton } from "@/components/PyoNavButton";
 import { FilterDateFormat } from './children/Format';
 import { FilterDateDday } from './children/Dday';
 import { FilterDateBetween } from './children/Between';
@@ -13,12 +13,12 @@ export const FilterDate = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
-				<LmNavButton to="/filter"><div className="lm-icon-pin"></div>포멧 타입</LmNavButton>
-				<LmNavButton to="/filter?depth1=date&depth2=dday"><div className="lm-icon-pin"></div>당일기준 남은 일정</LmNavButton>
-				<LmNavButton to="/filter?depth1=date&depth2=between"><div className="lm-icon-pin"></div>일정 사이 계산</LmNavButton>
-				<LmNavButton to="/filter?depth1=date&depth2=incheck"><div className="lm-icon-pin"></div>일정 사이 포함</LmNavButton>
-				<LmNavButton to="/filter?depth1=date&depth2=byoffset"><div className="lm-icon-pin"></div>일정 전,후 일</LmNavButton>
+			<div className="pyo-tab">
+				<PyoNavButton to="/filter"><div className="pyo-icon-pin"></div>포멧 타입</PyoNavButton>
+				<PyoNavButton to="/filter?depth1=date&depth2=dday"><div className="pyo-icon-pin"></div>당일기준 남은 일정</PyoNavButton>
+				<PyoNavButton to="/filter?depth1=date&depth2=between"><div className="pyo-icon-pin"></div>일정 사이 계산</PyoNavButton>
+				<PyoNavButton to="/filter?depth1=date&depth2=incheck"><div className="pyo-icon-pin"></div>일정 사이 포함</PyoNavButton>
+				<PyoNavButton to="/filter?depth1=date&depth2=byoffset"><div className="pyo-icon-pin"></div>일정 전,후 일</PyoNavButton>
 			</div>
 
 			{getDepth2 === 'format' && <FilterDateFormat/>}

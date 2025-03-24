@@ -20,7 +20,7 @@ interface ExcelData {
 	image: string;
 }
 
-export const LmPluginExcelPreview = () => {
+export const PyoPluginExcelPreview = () => {
 	const jsonData: JsonData[] = [
 		{
 			name: "John Doe",
@@ -151,7 +151,7 @@ export const LmPluginExcelPreview = () => {
 	};
 
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>
 				<button onClick={downloadExcel}>Download Excel</button>
 				<div>
@@ -172,11 +172,11 @@ export const LmPluginExcelPreview = () => {
 };
 `
 
-export const LmPluginExcelCode = () => {
+export const PyoPluginExcelCode = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{codeHtml}
 				</Highlight>
 			</div>

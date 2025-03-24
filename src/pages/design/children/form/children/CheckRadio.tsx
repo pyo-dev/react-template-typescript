@@ -1,31 +1,31 @@
 import { useState, ChangeEvent } from "react";
-import {HOOK_LM_TOAST_POP} from '@/store/hooks/hookToastPop';
+import {HOOK_PYO_TOAST_POP} from '@/store/hooks/hookToastPop';
 import { getEvent } from "@/utils/getEvent";
 
 export const FormCheckRadio = () => {
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 	const [isChecked, setIsChecked] = useState<boolean>(true);
 	const [selectedRadio, setSelectedRadio] = useState<string>("radio1");
 
 	const checkHtml = [
-`<label class="lm-check-box">
+`<label class="pyo-check-box">
 	<input type="checkbox" />
 	<span class="change-d"></span>
 	<span class="text">Checkbox</span>
 </label>`,
-`<label class="lm-check-box s-l">
+`<label class="pyo-check-box s-l">
 	<input type="checkbox" />
 	<span class="change-d"></span>
 	<span class="text">Checkbox</span>
 </label>`
 	]
 	const radioHtml = [
-`<label class="lm-radio-box">
+`<label class="pyo-radio-box">
 	<input type="radio" />
 	<span class="change-d"></span>
 	<span class="text">Radio</span>
 </label>`,
-`<label class="lm-radio-box s-l">
+`<label class="pyo-radio-box s-l">
 	<input type="radio" />
 	<span class="change-d"></span>
 	<span class="text">Radio</span>
@@ -33,35 +33,35 @@ export const FormCheckRadio = () => {
 	]
 	
 	const wrapHtml = [
-`<div class="lm-check-radio-box-wrap">
-	<label class="lm-check-box s-l">
+`<div class="pyo-check-radio-box-wrap">
+	<label class="pyo-check-box s-l">
 		<input type="checkbox" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
 	</label>
-	<label class="lm-check-box s-l">
+	<label class="pyo-check-box s-l">
 		<input type="checkbox" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
 	</label>
-	<label class="lm-check-box s-l">
+	<label class="pyo-check-box s-l">
 		<input type="checkbox" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
 	</label>
 </div>`,
-`<div class="lm-check-radio-box-wrap">
-	<label class="lm-radio-box s-l">
+`<div class="pyo-check-radio-box-wrap">
+	<label class="pyo-radio-box s-l">
 		<input type="radio" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
 	</label>
-	<label class="lm-radio-box s-l">
+	<label class="pyo-radio-box s-l">
 		<input type="radio" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
 	</label>
-	<label class="lm-radio-box s-l">
+	<label class="pyo-radio-box s-l">
 		<input type="radio" />
 		<span class="change-d"></span>
 		<span class="text">Checkbox</span>
@@ -79,11 +79,11 @@ export const FormCheckRadio = () => {
 
 	const copyCheck = (num: number) => {
 		getEvent.copyText(checkHtml[num]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-check-box 복사',
+				title: 'pyo-check-box 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -91,11 +91,11 @@ export const FormCheckRadio = () => {
 
 	const copyRadio = (num: number) => {
 		getEvent.copyText(radioHtml[num]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-radio-box 복사',
+				title: 'pyo-radio-box 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -103,11 +103,11 @@ export const FormCheckRadio = () => {
 
 	const copyWrap = (num: number) => {
 		getEvent.copyText(wrapHtml[num]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-check-radio-box-wrap 복사',
+				title: 'pyo-check-radio-box-wrap 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -115,14 +115,14 @@ export const FormCheckRadio = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-check-radio-box-wrap">
-					<label className="lm-check-box">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-check-radio-box-wrap">
+					<label className="pyo-check-box">
 						<input type="checkbox" />
 						<span className="change-d"></span>
 						<span className="text">Checkbox</span>
 					</label>
-					<label className="lm-check-box">
+					<label className="pyo-check-box">
 						<input
 							type="checkbox"
 							checked={isChecked}
@@ -131,18 +131,18 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Checkbox checked</span>
 					</label>
-					<label className="lm-check-box">
+					<label className="pyo-check-box">
 						<input type="checkbox" disabled />
 						<span className="change-d"></span>
 						<span className="text">Checkbox disabled</span>
 					</label>
 
-					<label className="lm-check-box s-l">
+					<label className="pyo-check-box s-l">
 						<input type="checkbox" />
 						<span className="change-d"></span>
 						<span className="text">Checkbox s-l</span>
 					</label>
-					<label className="lm-check-box s-l">
+					<label className="pyo-check-box s-l">
 						<input
 							type="checkbox"
 							checked={isChecked}
@@ -151,7 +151,7 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Checkbox checked s-l</span>
 					</label>
-					<label className="lm-check-box s-l">
+					<label className="pyo-check-box s-l">
 						<input type="checkbox" disabled />
 						<span className="change-d"></span>
 						<span className="text">Checkbox disabled s-l</span>
@@ -159,9 +159,9 @@ export const FormCheckRadio = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-check-radio-box-wrap">
-					<label className="lm-radio-box">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-check-radio-box-wrap">
+					<label className="pyo-radio-box">
 						<input
 							name="radio-test"
 							type="radio"
@@ -172,7 +172,7 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Radio 1</span>
 					</label>
-					<label className="lm-radio-box">
+					<label className="pyo-radio-box">
 						<input
 							name="radio-test"
 							type="radio"
@@ -183,7 +183,7 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Radio 2</span>
 					</label>
-					<label className="lm-radio-box">
+					<label className="pyo-radio-box">
 						<input
 							name="radio-test"
 							type="radio"
@@ -195,7 +195,7 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Radio disabled</span>
 					</label>
-					<label className="lm-radio-box s-l">
+					<label className="pyo-radio-box s-l">
 						<input
 							name="radio-test"
 							type="radio"
@@ -206,7 +206,7 @@ export const FormCheckRadio = () => {
 						<span className="change-d"></span>
 						<span className="text">Radio s-l</span>
 					</label>
-					<label className="lm-radio-box s-l">
+					<label className="pyo-radio-box s-l">
 						<input
 							name="radio-test"
 							type="radio"
@@ -219,13 +219,13 @@ export const FormCheckRadio = () => {
 					</label>
 				</div>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<button className="lm-button color-black" onClick={()=>copyCheck(0)} >Checkbox Copy</button>
-				<button className="lm-button color-black" onClick={()=>copyCheck(1)} >Checkbox s-l Copy</button>
-				<button className="lm-button color-black" onClick={()=>copyWrap(0)} >Checkbox Wrap Copy</button>
-				<button className="lm-button color-black" onClick={()=>copyRadio(0)} >Radio Copy</button>
-				<button className="lm-button color-black" onClick={()=>copyRadio(1)} >Radio s-l Copy</button>
-				<button className="lm-button color-black" onClick={()=>copyWrap(1)}>Radio Wrap Copy</button>
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<button className="pyo-button color-black" onClick={()=>copyCheck(0)} >Checkbox Copy</button>
+				<button className="pyo-button color-black" onClick={()=>copyCheck(1)} >Checkbox s-l Copy</button>
+				<button className="pyo-button color-black" onClick={()=>copyWrap(0)} >Checkbox Wrap Copy</button>
+				<button className="pyo-button color-black" onClick={()=>copyRadio(0)} >Radio Copy</button>
+				<button className="pyo-button color-black" onClick={()=>copyRadio(1)} >Radio s-l Copy</button>
+				<button className="pyo-button color-black" onClick={()=>copyWrap(1)}>Radio Wrap Copy</button>
 			</div>
 		</>
 	);

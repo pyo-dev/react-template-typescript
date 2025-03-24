@@ -405,14 +405,14 @@ export const 컴포넌트이름 = () => {
 	);
 };
 `
-export const LmPluginChartCode = () => {
+export const PyoPluginChartCode = () => {
 	const [viewType, setViewType] = useState<string>('pie')
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				<button
-					className={`lm-button color-1 s-s ${
+					className={`pyo-button color-1 s-s ${
 						viewType !== "pie" && "line"
 					}`}
 					onClick={() => setViewType("pie")}
@@ -420,7 +420,7 @@ export const LmPluginChartCode = () => {
 					Pie Chart
 				</button>
 				<button
-					className={`lm-button color-1 s-s ${
+					className={`pyo-button color-1 s-s ${
 						viewType !== "bar" && "line"
 					}`}
 					onClick={() => setViewType("bar")}
@@ -428,7 +428,7 @@ export const LmPluginChartCode = () => {
 					Bar Chart
 				</button>
 				<button
-					className={`lm-button color-1 s-s ${
+					className={`pyo-button color-1 s-s ${
 						viewType !== "line" && "line"
 					}`}
 					onClick={() => setViewType("line")}
@@ -436,17 +436,17 @@ export const LmPluginChartCode = () => {
 					Line Chart
 				</button>
 				{viewType === "pie" && (
-					<Highlight className="javascript lm-panel-code">
+					<Highlight className="javascript pyo-panel-code">
 						{pieHtml}
 					</Highlight>
 				)}
 				{viewType === "bar" && (
-					<Highlight className="javascript lm-panel-code">
+					<Highlight className="javascript pyo-panel-code">
 						{barHtml}
 					</Highlight>
 				)}
 				{viewType === "line" && (
-					<Highlight className="javascript lm-panel-code">
+					<Highlight className="javascript pyo-panel-code">
 						{lineHtml}
 					</Highlight>
 				)}

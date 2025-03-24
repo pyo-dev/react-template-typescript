@@ -1,29 +1,29 @@
 import { useState } from 'react';
-import {HOOK_LM_TOAST_POP} from '@/store/hooks/hookToastPop';
+import {HOOK_PYO_TOAST_POP} from '@/store/hooks/hookToastPop';
 import { getEvent } from "@/utils/getEvent";
 
-export const LmDesignPopup = () => {
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+export const PyoDesignPopup = () => {
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 	const [popShow, setPopShow] = useState<boolean>(true);
 
 	const popHtml = 
-`<div class="lm-pop">
-	<div class="lm-pop-inner show">
-		<div class="lm-pop-container">
-			<div class="lm-pop-title">Title</div>
-			<div class="lm-pop-contents">
+`<div class="pyo-pop">
+	<div class="pyo-pop-inner show">
+		<div class="pyo-pop-container">
+			<div class="pyo-pop-title">Title</div>
+			<div class="pyo-pop-contents">
 				<div style="text-align: center">주제나 내용의 일부를 요약해<br>간략하게 보여주는 영역</div>
 			</div>
-			<div class="lm-pop-bt-wrap ">
-				<button class="lm-pop-bt-cancle">취소</button>
-				<button class="lm-pop-bt-success">확인</button>
+			<div class="pyo-pop-bt-wrap ">
+				<button class="pyo-pop-bt-cancle">취소</button>
+				<button class="pyo-pop-bt-success">확인</button>
 			</div>
 		</div>
 	</div>
 </div>`;
 
 	const toastPopHtml = [
-`<div class="lm-pop-toast show">
+`<div class="pyo-pop-toast show">
 	<div class="inner">
 		<div class="info">
 			<div class="icon"></div>
@@ -35,7 +35,7 @@ export const LmDesignPopup = () => {
 		<button class="close"></button>
 	</div>
 </div>`,
-`<div class="lm-pop-toast show">
+`<div class="pyo-pop-toast show">
 	<div class="inner guide">
 		<div class="info">
 			<div class="icon check"></div>
@@ -47,7 +47,7 @@ export const LmDesignPopup = () => {
 		<button class="close"></button>
 	</div>
 </div>`,
-`<div class="lm-pop-toast show">
+`<div class="pyo-pop-toast show">
 	<div class="inner warning">
 		<div class="info">
 			<div class="icon feel"></div>
@@ -59,7 +59,7 @@ export const LmDesignPopup = () => {
 		<button class="close"></button>
 	</div>
 </div>`,
-`<div class="lm-pop-toast show">
+`<div class="pyo-pop-toast show">
 	<div class="inner error">
 		<div class="info">
 			<div class="icon feel"></div>
@@ -74,27 +74,27 @@ export const LmDesignPopup = () => {
 	];
 
 	const tooltipHtml = [
-`<div class="lm-pop-tooltip">
+`<div class="pyo-pop-tooltip">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
-`<div class="lm-pop-tooltip middle">
+`<div class="pyo-pop-tooltip middle">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
-`<div class="lm-pop-tooltip right">
+`<div class="pyo-pop-tooltip right">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
-`<div class="lm-pop-tooltip top">
+`<div class="pyo-pop-tooltip top">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
-`<div class="lm-pop-tooltip top middle">
+`<div class="pyo-pop-tooltip top middle">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
-`<div class="lm-pop-tooltip top right">
+`<div class="pyo-pop-tooltip top right">
 	<div class="title">Title</div>
 	<div class="con">주제나 내용의 일부를 요약해 간략하게 보여주는 영역</div>
 </div>`,
@@ -103,11 +103,11 @@ export const LmDesignPopup = () => {
 	const copyPop = () => {
 		setPopShow(false);
 		getEvent.copyText(popHtml);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-pop 복사',
+				title: 'pyo-pop 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -115,11 +115,11 @@ export const LmDesignPopup = () => {
 
 	const copyToast = (num: number) => {
 		getEvent.copyText(toastPopHtml[num]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-pop-toast 복사',
+				title: 'pyo-pop-toast 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -127,11 +127,11 @@ export const LmDesignPopup = () => {
 
 	const copyTooltip = (num: number) => {
 		getEvent.copyText(tooltipHtml[num]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-pop-tooltip 복사',
+				title: 'pyo-pop-tooltip 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -142,7 +142,7 @@ export const LmDesignPopup = () => {
 			{ popShow && <div dangerouslySetInnerHTML={{ __html: popHtml }} onClick={copyPop}></div>}
 
 			{/* Toast Popup 렌더링 */}
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				{toastPopHtml.map((html, index) => (
 					<div
 						key={index}
@@ -153,7 +153,7 @@ export const LmDesignPopup = () => {
 			</div>
 
 			{/* Tooltip 렌더링 */}
-			<div className="lm-panel lm-panel-flex-wrap">
+			<div className="pyo-panel pyo-panel-flex-wrap">
 				{tooltipHtml.slice(0, 3).map((html, index) => (
 					<div
 						className='tooltip-parent'
@@ -173,7 +173,7 @@ export const LmDesignPopup = () => {
 				))}
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap" style={{ marginTop: '400px' }}>
+			<div className="pyo-panel pyo-panel-flex-wrap" style={{ marginTop: '400px' }}>
 				{tooltipHtml.slice(3).map((html, index) => (
 					<div
 						className='tooltip-parent'

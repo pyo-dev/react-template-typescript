@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmPluginDatepickerCode } from "./children/Code";
-import { LmPluginDatepickerPreview } from "./children/Preview";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoPluginDatepickerCode } from "./children/Code";
+import { PyoPluginDatepickerPreview } from "./children/Preview";
 
-export const LmPluginDatepicker = () => {
+export const PyoPluginDatepicker = () => {
 	// URL 쿼리 파라미터에서 'type' 값 추출
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -11,19 +11,19 @@ export const LmPluginDatepicker = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
+			<div className="pyo-tab">
 				{/* 소스 및 미리보기 버튼 */}
-				<LmNavButton to="/react?depth1=plugin&depth2=datepicker">
-					<div className="lm-icon-pin"></div>소스
-				</LmNavButton>
-				<LmNavButton to="/react?depth1=plugin&depth2=datepicker&depth3=preview">
-					<div className="lm-icon-pin"></div>미리보기
-				</LmNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=datepicker">
+					<div className="pyo-icon-pin"></div>소스
+				</PyoNavButton>
+				<PyoNavButton to="/react?depth1=plugin&depth2=datepicker&depth3=preview">
+					<div className="pyo-icon-pin"></div>미리보기
+				</PyoNavButton>
 			</div>
 			{getDepth3 === 'code' ? (
-				<LmPluginDatepickerCode />
+				<PyoPluginDatepickerCode />
 			) : (
-				<LmPluginDatepickerPreview />
+				<PyoPluginDatepickerPreview />
 			)}
 		</>
 	);

@@ -1,18 +1,18 @@
-import {HOOK_LM_TOAST_POP} from "@/store/hooks/hookToastPop";
+import {HOOK_PYO_TOAST_POP} from "@/store/hooks/hookToastPop";
 import { getEvent } from "@/utils/getEvent";
 
 interface CopySelectProps {
-	lmClass: string;
+	pyoClass: string;
 	state?: string;
 };
 
 export const FormSelect = () => {
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 
 	// copySelect 함수 타입 적용
-	const copySelect = ({ lmClass, state }: CopySelectProps): void => {
+	const copySelect = ({ pyoClass, state }: CopySelectProps): void => {
 		let selectHtml = 
-`<select className="lm-input ${lmClass}" ${state ? state : ""}>
+`<select className="pyo-input ${pyoClass}" ${state ? state : ""}>
 	<option>Select option</option>
 	<option>select option1</option>
 	<option>select option2</option>
@@ -20,11 +20,11 @@ export const FormSelect = () => {
 	<option>select option4</option>
 </select>`;
 		getEvent.copyText(selectHtml);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: "guide",
 				iconType: "check",
-				title: "lm-input select 복사",
+				title: "pyo-input select 복사",
 				contents: "클립보드에 복사되었습니다.",
 			},
 		});
@@ -32,10 +32,10 @@ export const FormSelect = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Select s-s</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-s">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Select s-s</div>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-s">
 						<option>Select default</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -43,14 +43,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copySelect({ lmClass: "s-s" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copySelect({ pyoClass: "s-s" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-s success">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-s success">
 						<option>Select Success</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -58,14 +58,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copySelect({ lmClass: "s-s success" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copySelect({ pyoClass: "s-s success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-s error">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-s error">
 						<option>Select Error</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -73,14 +73,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copySelect({ lmClass: "s-s error" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copySelect({ pyoClass: "s-s error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-s" disabled>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-s" disabled>
 						<option>Select Disabled</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -88,9 +88,9 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black s-s"
+						className="pyo-button color-black s-s"
 						onClick={() =>
-							copySelect({ lmClass: "s-s", state: "disabled" })
+							copySelect({ pyoClass: "s-s", state: "disabled" })
 						}
 					>
 						Disabled Copy
@@ -98,10 +98,10 @@ export const FormSelect = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Select default</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Select default</div>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input">
 						<option>Select default</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -109,14 +109,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input success">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input success">
 						<option>Select Success</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -124,14 +124,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "success" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input error">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input error">
 						<option>Select Error</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -139,14 +139,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "error" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input" disabled>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input" disabled>
 						<option>Select Disabled</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -154,9 +154,9 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={() =>
-							copySelect({ lmClass: "", state: "disabled" })
+							copySelect({ pyoClass: "", state: "disabled" })
 						}
 					>
 						Disabled Copy
@@ -164,10 +164,10 @@ export const FormSelect = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Select s-l</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-l">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Select s-l</div>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-l">
 						<option>Select default</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -175,14 +175,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "s-l" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "s-l" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-l success">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-l success">
 						<option>Select Success</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -190,14 +190,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "s-l success" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "s-l success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-l error">
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-l error">
 						<option>Select Error</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -205,14 +205,14 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
-						onClick={() => copySelect({ lmClass: "s-l error" })}
+						className="pyo-button color-black"
+						onClick={() => copySelect({ pyoClass: "s-l error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
-					<select className="lm-input s-l" disabled>
+				<div className="pyo-panel-flex-inner">
+					<select className="pyo-input s-l" disabled>
 						<option>Select Disabled</option>
 						<option>select option1</option>
 						<option>select option2</option>
@@ -220,9 +220,9 @@ export const FormSelect = () => {
 						<option>select option4</option>
 					</select>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={() =>
-							copySelect({ lmClass: "s-l", state: "disabled" })
+							copySelect({ pyoClass: "s-l", state: "disabled" })
 						}
 					>
 						Disabled Copy

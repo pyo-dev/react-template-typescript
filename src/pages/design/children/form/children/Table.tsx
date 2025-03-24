@@ -1,11 +1,11 @@
-import {HOOK_LM_TOAST_POP} from '@/store/hooks/hookToastPop';
+import {HOOK_PYO_TOAST_POP} from '@/store/hooks/hookToastPop';
 import { getEvent } from "@/utils/getEvent";
 
 export const FormTable = () => {
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 
 	let tableHtml = `
-<table className="lm-board-basic">
+<table className="pyo-board-basic">
 	<thead>
 		<tr>
 			<th class="no">NO</th>
@@ -47,7 +47,7 @@ export const FormTable = () => {
 </table>
 `
 	let pagingHtml =
-`<div class="lm-paging">
+`<div class="pyo-paging">
 	<button class="arrow first" disabled></button>
 	<button class="arrow prev" disabled></button>
 	<div class="num">
@@ -62,12 +62,12 @@ export const FormTable = () => {
 </div>`;
 
 	let countHtml = [
-`<div class="lm-count-wrap s-s">
+`<div class="pyo-count-wrap s-s">
 	<button class="minus"></button>
 	<input type="text" value="1" readOnly />
 	<button class="plus"></button>
 </div>`,
-`<div class="lm-count-wrap">
+`<div class="pyo-count-wrap">
 	<button class="minus"></button>
 	<input type="text" value="1" readOnly />
 	<button class="plus"></button>
@@ -77,11 +77,11 @@ export const FormTable = () => {
 
 	const copyHtml = () => {
 		getEvent.copyText(tableHtml);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-board-basic 복사',
+				title: 'pyo-board-basic 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -89,11 +89,11 @@ export const FormTable = () => {
 
 	const copyPaging = () => {
 		getEvent.copyText(pagingHtml);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-paging 복사',
+				title: 'pyo-paging 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -101,11 +101,11 @@ export const FormTable = () => {
 	
 	const copyCount = (index: number) => {
 		getEvent.copyText(countHtml[index]);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
-				title: 'lm-count-wrap 복사',
+				title: 'pyo-count-wrap 복사',
 				contents: '클립보드에 복사되었습니다.',
 			}
 		});
@@ -113,9 +113,9 @@ export const FormTable = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Table</div>
-				<table className="lm-board-basic" onClick={() => copyHtml()}>
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Table</div>
+				<table className="pyo-board-basic" onClick={() => copyHtml()}>
 					<thead>
 						<tr>
 							<th className="no">NO</th>
@@ -148,9 +148,9 @@ export const FormTable = () => {
 				</table>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Paging</div>
-				<div className="lm-paging w-full" onClick={() => copyPaging()}>
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Paging</div>
+				<div className="pyo-paging w-full" onClick={() => copyPaging()}>
 					<button className="arrow first" disabled></button>
 					<button className="arrow prev" disabled></button>
 					<div className="num">
@@ -165,14 +165,14 @@ export const FormTable = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Count</div>
-				<div className="lm-count-wrap s-s" onClick={() => copyCount(0)}>
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Count</div>
+				<div className="pyo-count-wrap s-s" onClick={() => copyCount(0)}>
 					<button className="minus"></button>
 					<input type="text" defaultValue="1" readOnly />
 					<button className="plus"></button>
 				</div>
-				<div className="lm-count-wrap" onClick={() => copyCount(1)}>
+				<div className="pyo-count-wrap" onClick={() => copyCount(1)}>
 					<button className="minus"></button>
 					<input type="text" defaultValue="1" readOnly />
 					<button className="plus"></button>

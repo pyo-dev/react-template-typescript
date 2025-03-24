@@ -12,7 +12,7 @@ type ParentItem = {
 	children?: ChildItem[];
 };
 
-export const LmPluginSortablePreview = () => {
+export const PyoPluginSortablePreview = () => {
 	const [state, setState] = useState<ParentItem[]>([
 		{
 			id: 1,
@@ -45,7 +45,7 @@ export const LmPluginSortablePreview = () => {
 	};
 
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div className="sort-table-wrap">
 				<ReactSortable
 					className="sort-table"

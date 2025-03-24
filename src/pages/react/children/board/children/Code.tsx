@@ -1,6 +1,6 @@
 import Highlight from "react-highlight";
 
-const pagingHtml = `// @/components/board/LmPaging.jsx // 페이징
+const pagingHtml = `// @/components/board/PyoPaging.jsx // 페이징
 import { useNavigate, useLocation } from "react-router-dom";
 
 // PagingData 타입 정의
@@ -11,11 +11,11 @@ export interface PagingData {
 	maxPagesToShow: number;
 }
 
-interface LmPagingProps {
+interface PyoPagingProps {
 	data: PagingData;
 }
 
-export const LmPaging: React.FC<LmPagingProps> = ({ data }) => {
+export const PyoPaging: React.FC<PyoPagingProps> = ({ data }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { url, currentPage, totalPages, maxPagesToShow } = data;
@@ -89,7 +89,7 @@ export const LmPaging: React.FC<LmPagingProps> = ({ data }) => {
 		}
 
 		return (
-			<div className="lm-paging">
+			<div className="pyo-paging">
 				{arrowBt[0]}
 				{arrowBt[1]}
 				<div className="num">{pagesBt}</div>
@@ -103,10 +103,10 @@ export const LmPaging: React.FC<LmPagingProps> = ({ data }) => {
 };
 `;
 
-const basicHtml = `// @/components/board/basic/LmList.jsx // 베이직 스킨
+const basicHtml = `// @/components/board/basic/PyoList.jsx // 베이직 스킨
 import { useNavigate } from "react-router-dom";
-import { LmAxios } from '@/axios/LmAxios';
-import {HOOK_LM_POP} from '@/store/hooks/hookPop'
+import { PyoAxios } from '@/axios/PyoAxios';
+import {HOOK_PYO_POP} from '@/store/hooks/hookPop'
 import { getFilter } from '@/utils/getFilter';
 
 // BoardItem 타입 정의
@@ -118,27 +118,27 @@ export interface BoardItem {
 }
 
 // data 객체의 타입 정의
-export interface LmBoardListData {
+export interface PyoBoardListData {
 	url: string;
 	listHeader: Array<{ text: string; class: string }>;
 	list: BoardItem[];
 	totalPages: number;
 }
 
-export const LmBoardList = ({ data }: { data: LmBoardListData }) => {
+export const PyoBoardList = ({ data }: { data: PyoBoardListData }) => {
 	const { url, listHeader, list } = data;
 	const navigate = useNavigate();
-	const { setLmPop } = HOOK_LM_POP();
+	const { setPyoPop } = HOOK_PYO_POP();
 
 	const handleViewClick = async (id: string) => {
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: 'GET',
 				url: \`/board_detail.php?viewNo=\${id}\`,
 			});
 			const resData = res.data.data ? res.data.data : [];
 			resData.contents = getFilter.replaceNewlinesWithBr(resData.contents);
-			setLmPop({
+			setPyoPop({
 				show: true,
 				title: resData.subject,
 				contents: resData.contents,
@@ -150,7 +150,7 @@ export const LmBoardList = ({ data }: { data: LmBoardListData }) => {
 
 	return (
 		<>
-			<table className="lm-board-basic">
+			<table className="pyo-board-basic">
 				<thead>
 					<tr>
 						{listHeader.map((item, index) => (
@@ -189,7 +189,7 @@ export const LmBoardList = ({ data }: { data: LmBoardListData }) => {
 };
 `;
 
-const faqHtml = `// @/components/board/faq/LmList.jsx // faq 스킨
+const faqHtml = `// @/components/board/faq/PyoList.jsx // faq 스킨
 import { useEffect, useState } from "react";
 import { getFilter } from "@/utils/getFilter";
 
@@ -200,13 +200,13 @@ export interface BoardItem {
 	contents: string;
 }
 
-interface LmBoardListProps {
+interface PyoBoardListProps {
 	data: {
 		list: BoardItem[];
 	};
 }
 
-export const LmBoardList: React.FC<LmBoardListProps> = ({ data }) => {
+export const PyoBoardList: React.FC<PyoBoardListProps> = ({ data }) => {
 	const [showNum, setShowNum] = useState<boolean[]>([]);
 	const { list } = data;
 
@@ -225,10 +225,10 @@ export const LmBoardList: React.FC<LmBoardListProps> = ({ data }) => {
 	}, [data]);
 
 	return (
-		<div className="lm-board-faq">
+		<div className="pyo-board-faq">
 			{list.map((list, index) => (
 				<div
-					className={\`lm-board-item \${
+					className={\`pyo-board-item \${
 						showNum[index] ? "active" : ""
 					}\`}
 					key={index}
@@ -257,13 +257,13 @@ export const LmBoardList: React.FC<LmBoardListProps> = ({ data }) => {
 
 const basicPageHtml = `// basic 사용법
 import { useEffect, useState } from "react";
-import { LmAxios } from "@/axios/LmAxios";
+import { PyoAxios } from "@/axios/PyoAxios";
 import {
-	LmBoardList,
+	PyoBoardList,
 	BoardItem,
-	LmBoardListData,
-} from "@/components/board/basic/LmList";
-import { LmPaging, PagingData } from "@/components/board/LmPaging";
+	PyoBoardListData,
+} from "@/components/board/basic/PyoList";
+import { PyoPaging, PagingData } from "@/components/board/PyoPaging";
 
 export const 컴포넌트이름 = () => {
 	// const boardUrl = "/pyo-dev/react/board/notice";
@@ -275,7 +275,7 @@ export const 컴포넌트이름 = () => {
 	const pageRow = 10;
 	const maxPagesToShow = 5;
 
-	const listData: LmBoardListData = {
+	const listData: PyoBoardListData = {
 		url: boardUrl,
 		listHeader: [
 			{ text: "NO", class: "no" },
@@ -299,7 +299,7 @@ export const 컴포넌트이름 = () => {
 
 	const getList = async (currentPage: number) => {
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: "GET",
 				url: \`/board_list.php?pageNo=\${currentPage}&pageRow=\${pageRow}\`,
 			});
@@ -313,9 +313,9 @@ export const 컴포넌트이름 = () => {
 
 	return (
 		<>
-			<div className="lm-panel">
-				<LmBoardList data={listData} />
-				<LmPaging data={pagingData} />
+			<div className="pyo-panel">
+				<PyoBoardList data={listData} />
+				<PyoPaging data={pagingData} />
 			</div>
 		</>
 	);
@@ -324,9 +324,9 @@ export const 컴포넌트이름 = () => {
 
 const faqPageHtml = `// faq 사용법
 import { useEffect, useState } from "react";
-import { LmAxios } from "@/axios/LmAxios";
-import { LmBoardList, BoardItem } from "@/components/board/faq/LmList";
-import { LmPaging, PagingData } from "@/components/board/LmPaging";
+import { PyoAxios } from "@/axios/PyoAxios";
+import { PyoBoardList, BoardItem } from "@/components/board/faq/PyoList";
+import { PyoPaging, PagingData } from "@/components/board/PyoPaging";
 
 export const 컴포넌트이름 = () => {
 	// const boardUrl = "/pyo-dev/react/board/faq";
@@ -358,7 +358,7 @@ export const 컴포넌트이름 = () => {
 
 	const getList = async (currentPage: number) => {
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: "GET",
 				url: \`/board_list.php?pageNo=\${currentPage}&pageRow=\${pageRow}\`,
 			});
@@ -371,39 +371,39 @@ export const 컴포넌트이름 = () => {
 	};
 
 	return (
-		<div className="lm-panel">
-			<LmBoardList data={listData} />
-			<LmPaging data={pagingData} />
+		<div className="pyo-panel">
+			<PyoBoardList data={listData} />
+			<PyoPaging data={pagingData} />
 		</div>
 	);
 };
 `;
 
-export const LmReactBoardCode = () => {
+export const PyoReactBoardCode = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{pagingHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{basicHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{faqHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{basicPageHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{faqPageHtml}
 				</Highlight>
 			</div>

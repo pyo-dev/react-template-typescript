@@ -38,10 +38,10 @@ const [startDateF, endDateF] = dateRangeF;
 
 return (
 	<>
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>기본</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				dateFormat="yyyy-MM-dd"
 				selected={startDateA || null} // undefined -> null
@@ -51,10 +51,10 @@ return (
 			/>
 		</div>
 
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>년,월 선택</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				dateFormat="yyyy-MM-dd"
 				selected={startDateB || null} // undefined -> null
@@ -67,10 +67,10 @@ return (
 			/>
 		</div>
 
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>ranges 선택</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				selectsRange
 				startDate={startDateC} // undefined -> null
@@ -86,10 +86,10 @@ return (
 			/>
 		</div>
 
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>이전일 이후일 선택 금지</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				selectsRange
 				startDate={startDateD} // undefined -> null
@@ -107,10 +107,10 @@ return (
 			/>
 		</div>
 
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>듀얼 달력</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				selected={startDateE || null} // undefined -> null
 				onChange={(date: Date | null) =>
@@ -120,10 +120,10 @@ return (
 			/>
 		</div>
 
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div>듀얼 달력 + ranges 선택</div>
 			<DatePicker
-				className="lm-input"
+				className="pyo-input"
 				locale={ko}
 				selectsRange
 				startDate={startDateF} // undefined -> null
@@ -144,11 +144,11 @@ return (
 };
 `
 
-export const LmPluginDatepickerCode = () => {
+export const PyoPluginDatepickerCode = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{codeHtml}
 				</Highlight>
 			</div>

@@ -2,24 +2,24 @@ import { atom } from "recoil";
 import { recoilPersist } from "recoil-persist";
 
 const { persistAtom } = recoilPersist({
-	key: "LM_LODING",
+	key: "PYO_LODING",
 	// storage: sessionStorage,
 });
 
-const LM_LODING_RESET = {
+const PYO_LODING_RESET = {
 	show: false,
 };
 
-export interface LmLodingState {
+export interface PyoLodingState {
 	show: boolean;
-	reset: typeof LM_LODING_RESET;
+	reset: typeof PYO_LODING_RESET;
 }
 
-export const LM_LODING = atom<LmLodingState>({
-	key: "LM_LODING_ATOM",
+export const PYO_LODING = atom<PyoLodingState>({
+	key: "PYO_LODING_ATOM",
 	default: {
-		reset: LM_LODING_RESET,
-		...LM_LODING_RESET,
+		reset: PYO_LODING_RESET,
+		...PYO_LODING_RESET,
 	},
 	// persistAtom이 필요하다면, effects_UNSTABLE에 추가합니다.
 	effects_UNSTABLE: [persistAtom], // 이 줄을 활성화하면 persistAtom을 사용할 수 있습니다.

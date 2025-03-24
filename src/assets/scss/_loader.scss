@@ -1,4 +1,4 @@
-.lm-loader-sample-box{
+.pyo-loader-sample-box{
 	position: relative;
 	display: flex;
 	justify-content: center;
@@ -10,7 +10,7 @@
 	cursor: pointer;
 }
 
-.lm-loader-1{
+.pyo-loader-1{
 	width: fit-content;
 	font-weight: bold;
 	font-family: monospace;
@@ -30,7 +30,7 @@
 	}
 }
 
-.lm-loader-2 {
+.pyo-loader-2 {
 	width: fit-content;
 	font-weight: bold;
 	font-family: monospace;
@@ -51,7 +51,7 @@
 	}
 }
 
-.lm-loader-3 {
+.pyo-loader-3 {
 	width: 50px;
 	--b: 8px; 
 	aspect-ratio: 1;
@@ -67,7 +67,7 @@
 	@keyframes l4 {to{transform: rotate(1turn)}}
 }
 
-.lm-loader-4 {
+.pyo-loader-4 {
 	width: 50px;
 	aspect-ratio: 1;
 	display: grid;
@@ -96,7 +96,7 @@
 	}
 }
 
-.lm-loader-5 {
+.pyo-loader-5 {
 	width: 60px;
 	aspect-ratio: 1;
 	border: 15px solid #ddd;
@@ -120,7 +120,7 @@
 	}
 }
 
-.lm-loader-6 {
+.pyo-loader-6 {
 	width: 80px;
 	height: 40px;
 	color: #fff;
@@ -161,7 +161,7 @@
 	}
 }
 
-.lm-loader-7 {    
+.pyo-loader-7 {    
 	--r1: 154%;
 	--r2: 68.5%;
 	width: 60px;
@@ -184,7 +184,7 @@
 	}
 }
 
-.lm-loader-8 {
+.pyo-loader-8 {
 	width: 60px;
 	aspect-ratio: 1;
 	background: linear-gradient(#dc1818 0 0) bottom/100% 0% no-repeat #fff;
@@ -202,7 +202,7 @@
 	}
 }
 
-.lm-loader-9 {
+.pyo-loader-9 {
 	width: calc(80px / cos(45deg));
 	height: 14px;
 	background: repeating-linear-gradient(-45deg,#fff 0 15px,#0000 0 20px) left/200% 100%;
@@ -213,7 +213,7 @@
 	}
 }
 
-.lm-loader-10 {
+.pyo-loader-10 {
 	width: 20px;
 	aspect-ratio: 1;
 	border-radius: 50%;
@@ -240,7 +240,7 @@
 	}
 }
 
-.lm-loader-11 {
+.pyo-loader-11 {
 	width: 85px;
 	height: 35px;
 	--g1:conic-gradient(from  90deg at 3px  3px ,#0000 90deg,#fff 0);

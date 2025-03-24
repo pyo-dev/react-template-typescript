@@ -1,7 +1,7 @@
 @use "sass:list";
 @use "_function" as *;
 
-$LM-icon-name: (
+$PYO-icon-name: (
 	'all-menu-2',
 	'all-menu',
 	'arrow-down',
@@ -65,8 +65,8 @@ $LM-icon-name: (
 	'x'
 );
 
-.lm-icon {
-	@each $item in $LM-icon-name {
+.pyo-icon {
+	@each $item in $PYO-icon-name {
 		&-#{$item} {
 			display: inline-block;
 			width: 24px;
@@ -85,8 +85,8 @@ $LM-icon-name: (
 				mask-size: cover;
 			}
 
-			@each $color in $LM-point-color {
-				$i: list.index($LM-point-color, $color);
+			@each $color in $PYO-point-color {
+				$i: list.index($PYO-point-color, $color);
 				&.color-#{$i} {
 					background-color: $color;
 				}
@@ -97,22 +97,22 @@ $LM-icon-name: (
 		}
 	}
 }
-.lm-icon-box{
+.pyo-icon-box{
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	width: 60px;
 	height: 60px;
-	border-radius: $LM-radius-1;
+	border-radius: $PYO-radius-1;
 	background-color: #444;
-	box-shadow: $LM-shodow-2;
-	@each $color in $LM-point-color {
-		$i: list.index($LM-point-color, $color);
+	box-shadow: $PYO-shodow-2;
+	@each $color in $PYO-point-color {
+		$i: list.index($PYO-point-color, $color);
 		&.color-#{$i} {
 			background-color: $color;
 		}
 	}
-	[class^="lm-icon"] {
+	[class^="pyo-icon"] {
 		width: 30px;
 		height: 30px;
 	}

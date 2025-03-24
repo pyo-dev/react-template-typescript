@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { LmAxios } from "@/axios/LmAxios";
-import { LmBoardList, BoardItem } from "@/components/board/faq/LmList";
-import { LmPaging, PagingData } from "@/components/board/LmPaging";
+import { PyoAxios } from "@/axios/PyoAxios";
+import { PyoBoardList, BoardItem } from "@/components/board/faq/PyoList";
+import { PyoPaging, PagingData } from "@/components/board/PyoPaging";
 
-export const LmReactBoardFaq = () => {
+export const PyoReactBoardFaq = () => {
 	// const boardUrl = "/pyo-dev/react/board/faq";
 	const boardUrl = "/react?depth1=board";
 	const searchParams = new URLSearchParams(location.search);
@@ -33,7 +33,7 @@ export const LmReactBoardFaq = () => {
 
 	const getList = async (currentPage: number) => {
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: "GET",
 				url: `/board_list.php?pageNo=${currentPage}&pageRow=${pageRow}`,
 			});
@@ -46,9 +46,9 @@ export const LmReactBoardFaq = () => {
 	};
 
 	return (
-		<div className="lm-panel">
-			<LmBoardList data={listData} />
-			<LmPaging data={pagingData} />
+		<div className="pyo-panel">
+			<PyoBoardList data={listData} />
+			<PyoPaging data={pagingData} />
 		</div>
 	);
 };

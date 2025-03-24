@@ -3,7 +3,7 @@ import SunEditor from "suneditor-react";
 import { getFilter } from "@/utils/getFilter";
 import "suneditor/dist/css/suneditor.min.css";
 
-export const LmPluginEditorPreview = () => {
+export const PyoPluginEditorPreview = () => {
 	const [device] = useState<string>(getFilter.getDeviceCheck());
 	const [value, setValue] = useState<string>("<p>테스트 1111</p>");
 	const editorRef = useRef<any>(); // SunEditor 인스턴스를 위한 ref

@@ -8,13 +8,13 @@ export interface BoardItem {
 	contents: string;
 }
 
-interface LmBoardListProps {
+interface PyoBoardListProps {
 	data: {
 		list: BoardItem[];
 	};
 }
 
-export const LmBoardList: React.FC<LmBoardListProps> = ({ data }) => {
+export const PyoBoardList: React.FC<PyoBoardListProps> = ({ data }) => {
 	const [showNum, setShowNum] = useState<boolean[]>([]);
 	const { list } = data;
 
@@ -33,10 +33,10 @@ export const LmBoardList: React.FC<LmBoardListProps> = ({ data }) => {
 	}, [data]);
 
 	return (
-		<div className="lm-board-faq">
+		<div className="pyo-board-faq">
 			{list.map((list, index) => (
 				<div
-					className={`lm-board-item ${
+					className={`pyo-board-item ${
 						showNum[index] ? "active" : ""
 					}`}
 					key={index}

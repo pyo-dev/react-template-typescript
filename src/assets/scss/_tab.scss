@@ -1,15 +1,15 @@
 @use "sass:list";
 @use "_function" as *;
 
-.lm-tab{
+.pyo-tab{
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
 	padding: 10px;
 	margin-bottom: 20px;
-	border-radius: $LM-radius-1;
+	border-radius: $PYO-radius-1;
 	background-color: #fff;
-	box-shadow: $LM-shodow-1;
+	box-shadow: $PYO-shodow-1;
 	button{
 		display: flex;
 		align-items: center;
@@ -20,7 +20,7 @@
 		background-color: transparent;
 		color: #666;
 		transition: all 0.2s;
-		[class^="lm-icon"] {
+		[class^="pyo-icon"] {
 			width: 16px;
 			height: 16px;
 			opacity: 0.5;
@@ -31,10 +31,10 @@
 			background-color: #eee;
 		}
 		&.active{
-			background-color: list.nth($LM-point-color, 1);
+			background-color: list.nth($PYO-point-color, 1);
 			color: #fff;
-			box-shadow: $LM-shodow-2;
-			[class^="lm-icon"] {
+			box-shadow: $PYO-shodow-2;
+			[class^="pyo-icon"] {
 				background-color: #fff;
 				opacity: 1;
 			}
@@ -42,7 +42,7 @@
 	}
 }
 
-.lm-tab-type2{
+.pyo-tab-type2{
 	display: inline-flex;
 	margin-bottom: 20px;
 	button{
@@ -67,22 +67,22 @@
 		}
 		&.active{
 			z-index: 2;
-			border: 1px solid list.nth($LM-point-color, 1);
-			background-color: rgba($color: list.nth($LM-point-color, 1), $alpha: 0.05);
+			border: 1px solid list.nth($PYO-point-color, 1);
+			background-color: rgba($color: list.nth($PYO-point-color, 1), $alpha: 0.05);
 			font-weight: 500;
-			color: list.nth($LM-point-color, 1);
+			color: list.nth($PYO-point-color, 1);
 		}
 		&:not([disabled]):hover,
 		&:not([disabled]):focus{
 			box-shadow: inset 100rem 100rem rgba(0, 0, 0, 0.03);
 		}
 		&:not([disabled]):active{
-			box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.0), inset 100rem 100rem rgba(list.nth($LM-point-color, 1), 0.1);
+			box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.0), inset 100rem 100rem rgba(list.nth($PYO-point-color, 1), 0.1);
 		}
 	}
 }
 
-.lm-tab-type3{
+.pyo-tab-type3{
 	position: relative;
 	display: inline-flex;
 	margin-bottom: 20px;
@@ -108,8 +108,8 @@
 		font-size: 22px;
 		font-weight: 500;
 		&.active{
-			border-color: list.nth($LM-point-color, 1);
-			color: list.nth($LM-point-color, 1);
+			border-color: list.nth($PYO-point-color, 1);
+			color: list.nth($PYO-point-color, 1);
 		}
 	}
 }

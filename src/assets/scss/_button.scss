@@ -1,7 +1,7 @@
 @use "_function" as *;
 @use "sass:list";
 
-.lm-button{
+.pyo-button{
 	// set
 	$timer: 0.2s;
 	@mixin line( $padTb: 16, $padLr: 16) {
@@ -77,8 +77,8 @@
 	&.color-black{
 		@include color(#000);
 	}
-	@each $val in $LM-point-color {
-		$i: list.index($LM-point-color, $val);
+	@each $val in $PYO-point-color {
+		$i: list.index($PYO-point-color, $val);
 		&.color-#{$i}{
 			@include color($val);
 		}

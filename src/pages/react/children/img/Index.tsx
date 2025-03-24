@@ -31,22 +31,22 @@ export const 컴포넌트이름 = () => {
 };
 `;
 
-export const LmReactImg = () => {
+export const PyoReactImg = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{importHmtl1}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{importHmtl2}
 				</Highlight>
-				<Highlight className="javascript lm-panel-code">
+				<Highlight className="javascript pyo-panel-code">
 					{returnHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-sample-img-wrap">
-				<div className="lm-panel-inner-title">샘플</div>
+			<div className="pyo-panel pyo-sample-img-wrap">
+				<div className="pyo-panel-inner-title">샘플</div>
 				<img src={images["./banner-1.png"]} alt="배너이미지1" />
 				<img src={images["./banner-2.png"]} alt="배너이미지2" />
 			</div>

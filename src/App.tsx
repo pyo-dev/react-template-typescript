@@ -1,13 +1,13 @@
 import { RecoilRoot } from 'recoil';
 import { BrowserRouter } from 'react-router-dom';
 import MyRouter from '@/router';
-import { LmCommon } from '@/components/LmCommon';
+import { PyoCommon } from '@/components/PyoCommon';
 
 const App = () => {
 	return (
 		<RecoilRoot>
 			<BrowserRouter>
-				<LmCommon />
+				<PyoCommon />
 				<MyRouter />
 			</BrowserRouter>
 		</RecoilRoot>

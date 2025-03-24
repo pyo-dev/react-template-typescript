@@ -1,24 +1,24 @@
-import {HOOK_LM_TOAST_POP} from "@/store/hooks/hookToastPop";
+import {HOOK_PYO_TOAST_POP} from "@/store/hooks/hookToastPop";
 import { getEvent } from "@/utils/getEvent";
 
 interface CopyInputProps {
-	lmClass: string;
+	pyoClass: string;
 	state?: string;
 }
 
 export const FormInput = () => {
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 
-	const copyInput = ({ lmClass, state }: CopyInputProps): void => {
-		let inputHtml = `<input type="text" className="lm-input ${lmClass}" ${
+	const copyInput = ({ pyoClass, state }: CopyInputProps): void => {
+		let inputHtml = `<input type="text" className="pyo-input ${pyoClass}" ${
 			state ? state : ""
 		} />`;
 		getEvent.copyText(inputHtml);
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: "guide",
 				iconType: "check",
-				title: "lm-input input 복사",
+				title: "pyo-input input 복사",
 				contents: "클립보드에 복사되었습니다.",
 			},
 		});
@@ -26,58 +26,58 @@ export const FormInput = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Input s-s</div>
-				<div className="lm-panel-flex-inner">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Input s-s</div>
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-s"
+						className="pyo-input s-s"
 						placeholder="Text Default"
 					/>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copyInput({ lmClass: "s-s" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copyInput({ pyoClass: "s-s" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-s success"
+						className="pyo-input s-s success"
 						defaultValue="Text Success"
 					/>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copyInput({ lmClass: "s-s success" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copyInput({ pyoClass: "s-s success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-s error"
+						className="pyo-input s-s error"
 						defaultValue="Text Error"
 					/>
 					<button
-						className="lm-button color-black s-s"
-						onClick={() => copyInput({ lmClass: "s-s error" })}
+						className="pyo-button color-black s-s"
+						onClick={() => copyInput({ pyoClass: "s-s error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-s"
+						className="pyo-input s-s"
 						defaultValue="Text Disabled"
 						disabled
 					/>
 					<button
-						className="lm-button color-black s-s"
+						className="pyo-button color-black s-s"
 						onClick={() =>
-							copyInput({ lmClass: "s-s", state: "disabled" })
+							copyInput({ pyoClass: "s-s", state: "disabled" })
 						}
 					>
 						Disabled Copy
@@ -85,58 +85,58 @@ export const FormInput = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Input default</div>
-				<div className="lm-panel-flex-inner">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Input default</div>
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input"
+						className="pyo-input"
 						placeholder="Text Default"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input success"
+						className="pyo-input success"
 						defaultValue="Text Success"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "success" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input error"
+						className="pyo-input error"
 						defaultValue="Text Error"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "error" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input"
+						className="pyo-input"
 						defaultValue="Text Disabled"
 						disabled
 					/>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={() =>
-							copyInput({ lmClass: "", state: "disabled" })
+							copyInput({ pyoClass: "", state: "disabled" })
 						}
 					>
 						Disabled Copy
@@ -144,58 +144,58 @@ export const FormInput = () => {
 				</div>
 			</div>
 
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">Input s-l</div>
-				<div className="lm-panel-flex-inner">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">Input s-l</div>
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-l"
+						className="pyo-input s-l"
 						placeholder="Text Default"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "s-l" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "s-l" })}
 					>
 						Default Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-l success"
+						className="pyo-input s-l success"
 						defaultValue="Text Success"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "s-l success" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "s-l success" })}
 					>
 						Success Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-l error"
+						className="pyo-input s-l error"
 						defaultValue="Text Error"
 					/>
 					<button
-						className="lm-button color-black"
-						onClick={() => copyInput({ lmClass: "s-l error" })}
+						className="pyo-button color-black"
+						onClick={() => copyInput({ pyoClass: "s-l error" })}
 					>
 						Error Copy
 					</button>
 				</div>
-				<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-inner">
 					<input
 						type="text"
-						className="lm-input s-l"
+						className="pyo-input s-l"
 						defaultValue="Text Disabled"
 						disabled
 					/>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={() =>
-							copyInput({ lmClass: "s-l", state: "disabled" })
+							copyInput({ pyoClass: "s-l", state: "disabled" })
 						}
 					>
 						Disabled Copy

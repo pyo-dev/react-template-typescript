@@ -1,23 +1,23 @@
 export const LayoutAside = () => {
 	return (
-		<div className="lmAside">
-			<div className="lm-panel">
+		<div className="pyoAside">
+			<div className="pyo-panel">
 				aside <br />
 				aside
 			</div>
-			<div className="lm-panel">
+			<div className="pyo-panel">
 				aside <br />
 				aside
 			</div>
-			<div className="lm-panel">
+			<div className="pyo-panel">
 				aside <br />
 				aside
 			</div>
-			<div className="lm-panel">
+			<div className="pyo-panel">
 				aside <br />
 				aside
 			</div>
-			<div className="lm-panel">
+			<div className="pyo-panel">
 				aside <br />
 				aside <br />
 				aside <br />

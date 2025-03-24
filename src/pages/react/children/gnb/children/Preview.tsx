@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import SampleSitemap from "@/axios/mockup/sitemap.json";
-import { LmNavButton } from "@/components/LmNavButton";
+import { PyoNavButton } from "@/components/PyoNavButton";
 
 type SitemapItem = {
 	title: string;
 	children?: SitemapItem[];
 };
 
-export const LmReactGnbPreview = () => {
+export const PyoReactGnbPreview = () => {
 	const [sitemap, setSitemap] = useState<SitemapItem[]>([]);
 	const [childrenShow, setChildrenShow] = useState<boolean[]>([]);
 
@@ -30,21 +30,21 @@ export const LmReactGnbPreview = () => {
 	}, []);
 
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div className="w-full">
 				{sitemap.map((item, index) => (
 					<div key={index} style={{ padding: "5px" }}>
-						<LmNavButton
+						<PyoNavButton
 							to="/pyo-dev/design"
-							lmClass={"lm-button color-1"}
-							lmEvent={
+							pyoClass={"pyo-button color-1"}
+							pyoEvent={
 								item.children && item.children.length > 0
 									? () => toggleShow(index)
 									: undefined
 							}
 						>
 							{item.title}
-						</LmNavButton>
+						</PyoNavButton>
 						{item.children &&
 							item.children.length > 0 &&
 							childrenShow[index] && (
@@ -54,13 +54,13 @@ export const LmReactGnbPreview = () => {
 											key={sIndex}
 											style={{ padding: "1px" }}
 										>
-											<LmNavButton
-												lmClass={
-													"lm-button color-2 s-s"
+											<PyoNavButton
+												pyoClass={
+													"pyo-button color-2 s-s"
 												}
 											>
 												{sItem.title}
-											</LmNavButton>
+											</PyoNavButton>
 										</div>
 									))}
 								</div>

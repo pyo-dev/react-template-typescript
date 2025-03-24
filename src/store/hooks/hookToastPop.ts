@@ -1,18 +1,18 @@
 import { useRecoilState } from "recoil";
-import { LM_TOAST_POP, ToastPopState } from "@/store/storeToastPop"; // ToastPopState를 import 했습니다.
+import { PYO_TOAST_POP, ToastPopState } from "@/store/storeToastPop"; // ToastPopState를 import 했습니다.
 
-export const HOOK_LM_TOAST_POP = () => {
-	const [getLmToastPop, updateLmToastPop] = useRecoilState<ToastPopState>(LM_TOAST_POP);
+export const HOOK_PYO_TOAST_POP = () => {
+	const [getPyoToastPop, updatePyoToastPop] = useRecoilState<ToastPopState>(PYO_TOAST_POP);
 
-	const setLmToastPop = (data: Partial<ToastPopState>) => {
-		updateLmToastPop((prevLmToastPop) => ({
-			...prevLmToastPop,
+	const setPyoToastPop = (data: Partial<ToastPopState>) => {
+		updatePyoToastPop((prevPyoToastPop) => ({
+			...prevPyoToastPop,
 			...data,
 		}));
 	};
 
 	return {
-		getLmToastPop,
-		setLmToastPop,
+		getPyoToastPop,
+		setPyoToastPop,
 	};
 };

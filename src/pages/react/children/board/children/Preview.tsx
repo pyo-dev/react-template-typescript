@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmReactBoardNotice } from "./notice/List";
-import { LmReactBoardFaq } from "./faq/List";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoReactBoardNotice } from "./notice/List";
+import { PyoReactBoardFaq } from "./faq/List";
 
-export const LmReactBoardPreview = () => {
+export const PyoReactBoardPreview = () => {
 	// URL 쿼리 파라미터에서 'type' 값 추출
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -11,19 +11,19 @@ export const LmReactBoardPreview = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
+			<div className="pyo-tab">
 				{/* 소스 및 미리보기 버튼 */}
-				<LmNavButton to="/react?depth1=board&depth2=preview&boardType=basic" lmClass={ boardType === 'basic' ? 'active' : '' }>
-					<div className="lm-icon-pin"></div>공지사항
-				</LmNavButton>
-				<LmNavButton to="/react?depth1=board&depth2=preview&boardType=faq" lmClass={ boardType === 'faq' ? 'active' : '' }>
-					<div className="lm-icon-pin"></div>FAQ
-				</LmNavButton>
+				<PyoNavButton to="/react?depth1=board&depth2=preview&boardType=basic" pyoClass={ boardType === 'basic' ? 'active' : '' }>
+					<div className="pyo-icon-pin"></div>공지사항
+				</PyoNavButton>
+				<PyoNavButton to="/react?depth1=board&depth2=preview&boardType=faq" pyoClass={ boardType === 'faq' ? 'active' : '' }>
+					<div className="pyo-icon-pin"></div>FAQ
+				</PyoNavButton>
 			</div>
 				{boardType === 'basic' ? (
-					<LmReactBoardNotice />
+					<PyoReactBoardNotice />
 				) : (
-					<LmReactBoardFaq />
+					<PyoReactBoardFaq />
 				)}
 		</>
 	);

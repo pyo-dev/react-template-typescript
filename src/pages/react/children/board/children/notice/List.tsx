@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { LmAxios } from "@/axios/LmAxios";
+import { PyoAxios } from "@/axios/PyoAxios";
 import {
-	LmBoardList,
+	PyoBoardList,
 	BoardItem,
-	LmBoardListData,
-} from "@/components/board/basic/LmList";
-import { LmPaging, PagingData } from "@/components/board/LmPaging";
+	PyoBoardListData,
+} from "@/components/board/basic/PyoList";
+import { PyoPaging, PagingData } from "@/components/board/PyoPaging";
 
-export const LmReactBoardNotice = () => {
+export const PyoReactBoardNotice = () => {
 	// const boardUrl = "/pyo-dev/react/board/notice";
 	const boardUrl = "/react?depth1=board";
 	const searchParams = new URLSearchParams(location.search);
@@ -17,7 +17,7 @@ export const LmReactBoardNotice = () => {
 	const pageRow = 10;
 	const maxPagesToShow = 5;
 
-	const listData: LmBoardListData = {
+	const listData: PyoBoardListData = {
 		url: boardUrl,
 		listHeader: [
 			{ text: "NO", class: "no" },
@@ -41,7 +41,7 @@ export const LmReactBoardNotice = () => {
 
 	const getList = async (currentPage: number) => {
 		try {
-			const res = await LmAxios({
+			const res = await PyoAxios({
 				method: "GET",
 				url: `/board_list.php?pageNo=${currentPage}&pageRow=${pageRow}`,
 			});
@@ -55,9 +55,9 @@ export const LmReactBoardNotice = () => {
 
 	return (
 		<>
-			<div className="lm-panel">
-				<LmBoardList data={listData} />
-				<LmPaging data={pagingData} />
+			<div className="pyo-panel">
+				<PyoBoardList data={listData} />
+				<PyoPaging data={pagingData} />
 			</div>
 		</>
 	);

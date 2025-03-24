@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom";
-import { LmNavButton } from "@/components/LmNavButton";
-import { LmReactDataCode } from "./children/Code";
-import { LmReactDataPreview } from "./children/Preview";
+import { PyoNavButton } from "@/components/PyoNavButton";
+import { PyoReactDataCode } from "./children/Code";
+import { PyoReactDataPreview } from "./children/Preview";
 
-export const LmReactData = () => {
+export const PyoReactData = () => {
 	// URL 쿼리 파라미터에서 'type' 값 추출
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -12,19 +12,19 @@ export const LmReactData = () => {
 
 	return (
 		<>
-			<div className="lm-tab">
+			<div className="pyo-tab">
 				{/* 소스 및 미리보기 버튼 */}
-				<LmNavButton to="/react?depth1=data">
-					<div className="lm-icon-pin"></div>소스
-				</LmNavButton>
-				<LmNavButton to="/react?depth1=data&depth2=preview">
-					<div className="lm-icon-pin"></div>미리보기
-				</LmNavButton>
+				<PyoNavButton to="/react?depth1=data">
+					<div className="pyo-icon-pin"></div>소스
+				</PyoNavButton>
+				<PyoNavButton to="/react?depth1=data&depth2=preview">
+					<div className="pyo-icon-pin"></div>미리보기
+				</PyoNavButton>
 			</div>
 			{getDepth2 === 'code' ? (
-				<LmReactDataCode />
+				<PyoReactDataCode />
 			) : (
-				<LmReactDataPreview />
+				<PyoReactDataPreview />
 			)}
 		</>
 	);

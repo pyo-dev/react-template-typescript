@@ -2,11 +2,11 @@ import { atom } from "recoil";
 import { recoilPersist } from "recoil-persist";
 
 const { persistAtom } = recoilPersist({
-	key: "LM_POP",
+	key: "PYO_POP",
 	// storage: sessionStorage,
 });
 
-export interface LmPopState {
+export interface PyoPopState {
 	// 인터페이스를 export로 바꿨습니다.
 	show: boolean;
 	type: "alert" | "confirm";
@@ -18,7 +18,7 @@ export interface LmPopState {
 	success_fun: ((hidePop: () => void) => void) | null; // 수정
 }
 
-const LM_POP_RESET: LmPopState = {
+const PYO_POP_RESET: PyoPopState = {
 	show: false,
 	type: "alert",
 	title: null,
@@ -29,8 +29,8 @@ const LM_POP_RESET: LmPopState = {
 	success_fun: null,
 };
 
-export const LM_POP = atom<LmPopState>({
-	key: "LM_POP_ATOM",
-	default: LM_POP_RESET,
+export const PYO_POP = atom<PyoPopState>({
+	key: "PYO_POP_ATOM",
+	default: PYO_POP_RESET,
 	effects_UNSTABLE: [persistAtom],
 });

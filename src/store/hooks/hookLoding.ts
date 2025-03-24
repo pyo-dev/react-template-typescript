@@ -1,23 +1,23 @@
 import { useRecoilState } from "recoil";
-import { LM_LODING, LmLodingState } from "@/store/storeLoding"; // LmLodingState를 import
+import { PYO_LODING, PyoLodingState } from "@/store/storeLoding"; // PyoLodingState를 import
 
-interface HookLmLoding {
-	getLmLoding: LmLodingState;
-	setLmLoding: (data: Partial<LmLodingState>) => void;
+interface HookPyoLoding {
+	getPyoLoding: PyoLodingState;
+	setPyoLoding: (data: Partial<PyoLodingState>) => void;
 }
 
-export const HOOK_LM_LODING = (): HookLmLoding => {
-	const [getLmLoding, updateLmLoding] = useRecoilState(LM_LODING);
+export const HOOK_PYO_LODING = (): HookPyoLoding => {
+	const [getPyoLoding, updatePyoLoding] = useRecoilState(PYO_LODING);
 
-	const setLmLoding = (data: Partial<LmLodingState>) => {
-		updateLmLoding((prevLmLoding) => ({
-			...prevLmLoding,
+	const setPyoLoding = (data: Partial<PyoLodingState>) => {
+		updatePyoLoding((prevPyoLoding) => ({
+			...prevPyoLoding,
 			...data,
 		}));
 	};
 
 	return {
-		getLmLoding,
-		setLmLoding,
+		getPyoLoding,
+		setPyoLoding,
 	};
 };

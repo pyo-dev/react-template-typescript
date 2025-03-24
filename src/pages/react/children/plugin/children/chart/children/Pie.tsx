@@ -14,7 +14,7 @@ const data: DataItem[] = [
 
 const COLORS: string[] = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-export const LmPluginChartPie = () => {
+export const PyoPluginChartPie = () => {
 	return (
 		<ResponsiveContainer width="100%" height={500}>
 			<PieChart width={400} height={400}>

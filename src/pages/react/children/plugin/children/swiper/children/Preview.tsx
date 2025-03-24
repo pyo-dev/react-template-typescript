@@ -7,9 +7,9 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
 
-export const LmPluginSwiperPreview = () => {
+export const PyoPluginSwiperPreview = () => {
 	return (
-		<div className='lm-panel lm-panel-flex-wrap'>
+		<div className='pyo-panel pyo-panel-flex-wrap'>
 			<Swiper
 				modules={[Navigation, Pagination, Autoplay]}
 				spaceBetween={50}

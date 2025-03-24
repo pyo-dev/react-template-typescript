@@ -130,11 +130,11 @@ return (
 };
 `
 
-export const LmPluginEditorCode = () => {
+export const PyoPluginEditorCode = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{codeHtml}
 				</Highlight>
 			</div>

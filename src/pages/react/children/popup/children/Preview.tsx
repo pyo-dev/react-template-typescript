@@ -1,30 +1,30 @@
-import {HOOK_LM_LODING} from '@/store/hooks/hookLoding'
-import {HOOK_LM_POP} from '@/store/hooks/hookPop'
-import {HOOK_LM_TOAST_POP} from '@/store/hooks/hookToastPop';
+import {HOOK_PYO_LODING} from '@/store/hooks/hookLoding'
+import {HOOK_PYO_POP} from '@/store/hooks/hookPop'
+import {HOOK_PYO_TOAST_POP} from '@/store/hooks/hookToastPop';
 
-export const LmReactPopupPreview = () => {
+export const PyoReactPopupPreview = () => {
 
-	const { setLmLoding } = HOOK_LM_LODING();
-	const { setLmPop } = HOOK_LM_POP();
-	const { setLmToastPop } = HOOK_LM_TOAST_POP();
+	const { setPyoLoding } = HOOK_PYO_LODING();
+	const { setPyoPop } = HOOK_PYO_POP();
+	const { setPyoToastPop } = HOOK_PYO_TOAST_POP();
 
 	const loadingOpen1 = () => {
-		setLmLoding({show: true});
+		setPyoLoding({show: true});
 		setTimeout(() => {
-			setLmLoding({show: false});
+			setPyoLoding({show: false});
 		}, 2000);
 	}
 
 	const popOpen1 = () => {
 		console.log(123);
-		setLmPop({
+		setPyoPop({
 			show: true,
 			title: '팝업 타이틀'
 		});
 	}
 
 	const popOpen2 = () => {
-		setLmPop({
+		setPyoPop({
 			show: true,
 			title: '팝업 타이틀',
 			contents: '팝업 콘텐츠',
@@ -32,7 +32,7 @@ export const LmReactPopupPreview = () => {
 	}
 
 	const popOpen3 = () => {
-		setLmPop({
+		setPyoPop({
 			show: true,
 			type: 'confirm',
 			title: '컨펌창이다',
@@ -58,7 +58,7 @@ export const LmReactPopupPreview = () => {
 	}
 
 	const toastPopOpen1 = () => {
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				title: '11 -- 토스트 팝업 테스트',
 				contents: '토스트 팝업 테스트 중입니다 잘 작동하나요?',
@@ -67,7 +67,7 @@ export const LmReactPopupPreview = () => {
 	}
 
 	const toastPopOpen2 = () => {
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'guide',
 				iconType: 'check',
@@ -78,7 +78,7 @@ export const LmReactPopupPreview = () => {
 	}
 
 	const toastPopOpen3 = () => {
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'warning',
 				iconType: 'feel',
@@ -89,7 +89,7 @@ export const LmReactPopupPreview = () => {
 	}
 
 	const toastPopOpen4 = () => {
-		setLmToastPop({
+		setPyoToastPop({
 			items: {
 				type: 'error',
 				iconType: 'feel',
@@ -101,15 +101,15 @@ export const LmReactPopupPreview = () => {
 
 	return (
 		<>
-			<div className='lm-panel lm-panel-flex-wrap'>
-				<button className="lm-button color-1 line" onClick={()=> loadingOpen1()}>Loading</button>
-				<button className="lm-button color-1 line" onClick={()=> popOpen1()}>Pop Default</button>
-				<button className="lm-button color-3 line" onClick={()=> popOpen2()}>Pop Title Contents</button>
-				<button className="lm-button color-4 line" onClick={()=> popOpen3()}>Pop Custom</button>
-				<button className="lm-button color-1 line" onClick={()=> toastPopOpen1()}>Toast Pop Default</button>
-				<button className="lm-button color-3 line" onClick={()=> toastPopOpen2()}>Toast Pop Guide</button>
-				<button className="lm-button color-4 line" onClick={()=> toastPopOpen3()}>Toast Pop Warning</button>
-				<button className="lm-button color-5 line" onClick={()=> toastPopOpen4()}>Toast Pop Error</button>
+			<div className='pyo-panel pyo-panel-flex-wrap'>
+				<button className="pyo-button color-1 line" onClick={()=> loadingOpen1()}>Loading</button>
+				<button className="pyo-button color-1 line" onClick={()=> popOpen1()}>Pop Default</button>
+				<button className="pyo-button color-3 line" onClick={()=> popOpen2()}>Pop Title Contents</button>
+				<button className="pyo-button color-4 line" onClick={()=> popOpen3()}>Pop Custom</button>
+				<button className="pyo-button color-1 line" onClick={()=> toastPopOpen1()}>Toast Pop Default</button>
+				<button className="pyo-button color-3 line" onClick={()=> toastPopOpen2()}>Toast Pop Guide</button>
+				<button className="pyo-button color-4 line" onClick={()=> toastPopOpen3()}>Toast Pop Warning</button>
+				<button className="pyo-button color-5 line" onClick={()=> toastPopOpen4()}>Toast Pop Error</button>
 			</div>
 		</>
 	);

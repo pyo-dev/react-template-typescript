@@ -11,9 +11,9 @@ const Layout = () => {
 			<Helmet>
 				<title>PYO-DEV TEMPLATE GUIDE</title>
 			</Helmet>
-			<div className="lmWrap">
+			<div className="pyoWrap">
 				<LayoutHeader />
-				<div className='lmContents'>
+				<div className='pyoContents'>
 					<Outlet />
 				</div>
 				{asideShow && <LayoutAside />}

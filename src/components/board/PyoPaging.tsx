@@ -8,11 +8,11 @@ export interface PagingData {
 	maxPagesToShow: number;
 }
 
-interface LmPagingProps {
+interface PyoPagingProps {
 	data: PagingData;
 }
 
-export const LmPaging: React.FC<LmPagingProps> = ({ data }) => {
+export const PyoPaging: React.FC<PyoPagingProps> = ({ data }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { url, currentPage, totalPages, maxPagesToShow } = data;
@@ -86,7 +86,7 @@ export const LmPaging: React.FC<LmPagingProps> = ({ data }) => {
 		}
 
 		return (
-			<div className="lm-paging">
+			<div className="pyo-paging">
 				{arrowBt[0]}
 				{arrowBt[1]}
 				<div className="num">{pagesBt}</div>

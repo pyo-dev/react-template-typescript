@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import {HOOK_LM_POP} from "@/store/hooks/hookPop"; // default import
+import {HOOK_PYO_POP} from "@/store/hooks/hookPop"; // default import
 
-export const LmPop = () => {
-	const { getLmPop, setLmPop } = HOOK_LM_POP();
+export const PyoPop = () => {
+	const { getPyoPop, setPyoPop } = HOOK_PYO_POP();
 	const [showClass, setShowClass] = useState<string>("");
 
 	useEffect(() => {
-		setLmPop({
+		setPyoPop({
 			show: false,
 			type: "alert",
 			title: null,
@@ -19,15 +19,15 @@ export const LmPop = () => {
 	}, []);
 
 	useEffect(() => {
-		if (getLmPop.show) {
+		if (getPyoPop.show) {
 			setShowClass("show");
 		}
-	}, [getLmPop]);
+	}, [getPyoPop]);
 
 	const hidePop = () => {
 		setShowClass("");
 		setTimeout(() => {
-			setLmPop({
+			setPyoPop({
 				show: false,
 				type: "alert",
 				title: null,
@@ -41,78 +41,78 @@ export const LmPop = () => {
 	};
 
 	const funCancle = () => {
-		if (getLmPop.cancle_fun) {
-			getLmPop.cancle_fun(hidePop); // hidePop을 인자로 전달
+		if (getPyoPop.cancle_fun) {
+			getPyoPop.cancle_fun(hidePop); // hidePop을 인자로 전달
 		} else {
 			hidePop();
 		}
 	};
 
 	const funSuccess = () => {
-		if (getLmPop.success_fun) {
-			getLmPop.success_fun(hidePop); // hidePop을 인자로 전달
+		if (getPyoPop.success_fun) {
+			getPyoPop.success_fun(hidePop); // hidePop을 인자로 전달
 		} else {
 			hidePop();
 		}
 	};
 
 	return (
-		getLmPop.show && (
-			<div className="lm-pop">
+		getPyoPop.show && (
+			<div className="pyo-pop">
 				<div
-					className={`lm-pop-inner ${showClass}`}
+					className={`pyo-pop-inner ${showClass}`}
 					onClick={() => {
 						hidePop();
 					}}
 				>
 					<div
-						className="lm-pop-container"
+						className="pyo-pop-container"
 						onClick={(e) => {
 							e.stopPropagation();
 						}}
 					>
-						{getLmPop.title && (
+						{getPyoPop.title && (
 							<div
-								className="lm-pop-title"
+								className="pyo-pop-title"
 								dangerouslySetInnerHTML={{
-									__html: getLmPop.title,
+									__html: getPyoPop.title,
 								}}
 							/>
 						)}
-						{getLmPop.contents &&
-							(typeof getLmPop.contents === "object" ? (
-								<div className="lm-pop-contents">
-									{getLmPop.contents}
+						{getPyoPop.contents &&
+							(typeof getPyoPop.contents === "object" ? (
+								<div className="pyo-pop-contents">
+									{getPyoPop.contents}
 								</div>
 							) : (
 								<div
-									className="lm-pop-contents"
+									className="pyo-pop-contents"
 									dangerouslySetInnerHTML={{
-										__html: getLmPop.contents,
+										__html: getPyoPop.contents,
 									}}
 								/>
 							))}
 						<div
-							className={`lm-pop-bt-wrap ${
-								!getLmPop.title && !getLmPop.contents
+							className={`pyo-pop-bt-wrap ${
+								!getPyoPop.title && !getPyoPop.contents
 									? "no-data"
 									: ""
 							}`}
 						>
-							{getLmPop.type === "confirm" && (
+							{getPyoPop.type === "confirm" && (
 								<button
-									className="lm-pop-bt-cancle"
+									className="pyo-pop-bt-cancle"
 									onClick={funCancle}
 									dangerouslySetInnerHTML={{
-										__html: getLmPop.cancle_title,
+										__html: getPyoPop.cancle_title,
 									}}
 								/>
 							)}
 							<button
-								className="lm-pop-bt-success"
+								className="pyo-pop-bt-success"
 								onClick={funSuccess}
 								dangerouslySetInnerHTML={{
-									__html: getLmPop.success_title,
+									__html: getPyoPop.success_title,
 								}}
 							/>
 						</div>

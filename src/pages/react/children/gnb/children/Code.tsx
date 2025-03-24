@@ -1,20 +1,20 @@
 import Highlight from 'react-highlight'
-const buttonHtml = `// @/components/LmNavButton.tsx
+const buttonHtml = `// @/components/PyoNavButton.tsx
 import { useNavigate, useLocation } from "react-router-dom";
 
-interface LmNavButtonProps {
+interface PyoNavButtonProps {
 	to?: string; // 선택적 속성
-	lmClass?: string;
-	lmParents?: boolean;
-	lmEvent?: (() => void) | undefined;
+	pyoClass?: string;
+	pyoParents?: boolean;
+	pyoEvent?: (() => void) | undefined;
 	children: React.ReactNode;
 }
 
-export const LmNavButton: React.FC<LmNavButtonProps> = ({
+export const PyoNavButton: React.FC<PyoNavButtonProps> = ({
 	to,
-	lmClass = "",
-	lmParents = false,
-	lmEvent,
+	pyoClass = "",
+	pyoParents = false,
+	pyoEvent,
 	children,
 }) => {
 	const navigate = useNavigate();
@@ -22,14 +22,14 @@ export const LmNavButton: React.FC<LmNavButtonProps> = ({
 	const currentPath = \`\${pathname}\${search}\`;
 
 	// 부모 경로 포함 여부에 따른 활성화 클래스 설정
-	const isActive = lmParents
+	const isActive = pyoParents
 		? (pathname === "/" && to === "/") || (to !== undefined && pathname.includes(to))
 		: to === currentPath;
 
 	const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
 		event.preventDefault();
-		if (lmEvent) {
-			lmEvent(); // 전달된 이벤트 호출
+		if (pyoEvent) {
+			pyoEvent(); // 전달된 이벤트 호출
 		} else if (to) {
 			navigate(to); // to가 정의된 경우에만 navigate 호출
 		} else {
@@ -40,7 +40,7 @@ export const LmNavButton: React.FC<LmNavButtonProps> = ({
 	return (
 		<button
 			onClick={handleClick}
-			className={\`\${isActive ? "active" : ""} \${lmClass}\`}
+			className={\`\${isActive ? "active" : ""} \${pyoClass}\`}
 		>
 			{children}
 		</button>
@@ -51,7 +51,7 @@ export const LmNavButton: React.FC<LmNavButtonProps> = ({
 const gnbHtml = `// 사용법
 import { useEffect, useState } from "react";
 import SampleSitemap from "@/axios/mockup/sitemap.json";
-import { LmNavButton } from "@/components/LmNavButton";
+import { PyoNavButton } from "@/components/PyoNavButton";
 
 type SitemapItem = {
 	title: string;
@@ -81,21 +81,21 @@ export const 컴포넌트이름 = () => {
 	}, []);
 
 	return (
-		<div className="lm-panel lm-panel-flex-wrap">
+		<div className="pyo-panel pyo-panel-flex-wrap">
 			<div className="w-full">
 				{sitemap.map((item, index) => (
 					<div key={index} style={{ padding: "5px" }}>
-						<LmNavButton
+						<PyoNavButton
 							to="/pyo-dev/design"
-							lmClass={"lm-button color-1"}
-							lmEvent={
+							pyoClass={"pyo-button color-1"}
+							pyoEvent={
 								item.children && item.children.length > 0
 									? () => toggleShow(index)
 									: undefined
 							}
 						>
 							{item.title}
-						</LmNavButton>
+						</PyoNavButton>
 						{item.children &&
 							item.children.length > 0 &&
 							childrenShow[index] && (
@@ -105,13 +105,13 @@ export const 컴포넌트이름 = () => {
 											key={sIndex}
 											style={{ padding: "1px" }}
 										>
-											<LmNavButton
-												lmClass={
-													"lm-button color-2 s-s"
+											<PyoNavButton
+												pyoClass={
+													"pyo-button color-2 s-s"
 												}
 											>
 												{sItem.title}
-											</LmNavButton>
+											</PyoNavButton>
 										</div>
 									))}
 								</div>
@@ -124,17 +124,17 @@ export const 컴포넌트이름 = () => {
 };
 `
 
-export const LmReactGnbCode = () => {
+export const PyoReactGnbCode = () => {
 
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{buttonHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{gnbHtml}
 				</Highlight>
 			</div>

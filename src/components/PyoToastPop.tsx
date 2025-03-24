@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import {HOOK_LM_TOAST_POP} from "@/store/hooks/hookToastPop";
-import {LmToastPopItem} from "@/components/LmToastPopItem";
+import {HOOK_PYO_TOAST_POP} from "@/store/hooks/hookToastPop";
+import {PyoToastPopItem} from "@/components/PyoToastPopItem";
 
 interface ToastPopItem {
 	type: string;
@@ -11,8 +11,8 @@ interface ToastPopItem {
 	addItem: boolean;
 }
 
-export const LmToastPop = () => {
-	const { getLmToastPop, setLmToastPop } = HOOK_LM_TOAST_POP();
+export const PyoToastPop = () => {
+	const { getPyoToastPop, setPyoToastPop } = HOOK_PYO_TOAST_POP();
 	const [items, setItems] = useState<ToastPopItem[]>([]);
 
 	// 항목 삭제
@@ -32,39 +32,39 @@ export const LmToastPop = () => {
 	}, [items])
 
 	useEffect(() => {
-		// getLmToastPop.items가 null이 아니면만 배열에 추가
-		if (getLmToastPop.items) {
+		// getPyoToastPop.items가 null이 아니면만 배열에 추가
+		if (getPyoToastPop.items) {
 			setItems((prevItems) => {
 				// 고유한 id를 추가하여 ToastPopItem 배열에 추가
 				return [
 					...prevItems,
-					{ ...getLmToastPop.items, id: Date.now(), addItem: true }, // 고유 id 추가
+					{ ...getPyoToastPop.items, id: Date.now(), addItem: true }, // 고유 id 추가
 				].filter(Boolean) as ToastPopItem[];
 			});
 		}
 		
 		// 상태 초기화
 		return () => {
-			if (getLmToastPop.reset) {
-				setLmToastPop(getLmToastPop.reset);
+			if (getPyoToastPop.reset) {
+				setPyoToastPop(getPyoToastPop.reset);
 			} else {
-				setLmToastPop({}); // 기본값 설정
+				setPyoToastPop({}); // 기본값 설정
 			}
 		};
-	}, [getLmToastPop.items]);
+	}, [getPyoToastPop.items]);
 
 	return (
 		items.length > 0 && (
 			<div
-				className="lm-pop-toast-wrap"
+				className="pyo-pop-toast-wrap"
 				style={{
-					...getLmToastPop.position,
-					width: getLmToastPop.width,
-					padding: getLmToastPop.padding,
+					...getPyoToastPop.position,
+					width: getPyoToastPop.width,
+					padding: getPyoToastPop.padding,
 				}}
 			>
 				{items.map((item, index) => (
-					<LmToastPopItem
+					<PyoToastPopItem
 						data={item}
 						closeAc={() => closeToastPop(item.id)}  // closeToastPop 연동
 						key={index}

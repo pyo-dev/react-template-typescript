@@ -1,18 +1,18 @@
 import { useNavigate, useLocation } from "react-router-dom";
 
-interface LmNavButtonProps {
+interface PyoNavButtonProps {
 	to?: string; // 선택적 속성
-	lmClass?: string;
-	lmParents?: boolean;
-	lmEvent?: (() => void) | undefined;
+	pyoClass?: string;
+	pyoParents?: boolean;
+	pyoEvent?: (() => void) | undefined;
 	children: React.ReactNode;
 }
 
-export const LmNavButton: React.FC<LmNavButtonProps> = ({
+export const PyoNavButton: React.FC<PyoNavButtonProps> = ({
 	to,
-	lmClass = "",
-	lmParents = false,
-	lmEvent,
+	pyoClass = "",
+	pyoParents = false,
+	pyoEvent,
 	children,
 }) => {
 	const navigate = useNavigate();
@@ -20,14 +20,14 @@ export const LmNavButton: React.FC<LmNavButtonProps> = ({
 	const currentPath = `${pathname}${search}`;
 
 	// 부모 경로 포함 여부에 따른 활성화 클래스 설정
-	const isActive = lmParents
+	const isActive = pyoParents
 		? (pathname === "/" && to === "/") || (to !== undefined && pathname.includes(to))
 		: to === currentPath;
 
 	const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
 		event.preventDefault();
-		if (lmEvent) {
-			lmEvent(); // 전달된 이벤트 호출
+		if (pyoEvent) {
+			pyoEvent(); // 전달된 이벤트 호출
 		} else if (to) {
 			navigate(to); // to가 정의된 경우에만 navigate 호출
 		} else {
@@ -38,7 +38,7 @@ export const LmNavButton: React.FC<LmNavButtonProps> = ({
 	return (
 		<button
 			onClick={handleClick}
-			className={`${isActive ? "active" : ""} ${lmClass}`}
+			className={`${isActive ? "active" : ""} ${pyoClass}`}
 		>
 			{children}
 		</button>

@@ -16,7 +16,7 @@ import 'swiper/css/scrollbar';
 
 export const 컴포넌트이름 = () => {
 	return (
-		<div className='lm-panel lm-panel-flex-wrap'>
+		<div className='pyo-panel pyo-panel-flex-wrap'>
 			<Swiper
 				modules={[Navigation, Pagination, Autoplay]}
 				spaceBetween={50}
@@ -39,16 +39,16 @@ export const 컴포넌트이름 = () => {
 };
 `
 
-export const LmPluginSwiperCode = () => {
+export const PyoPluginSwiperCode = () => {
 	return (
 		<>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{commonHtml}
 				</Highlight>
 			</div>
-			<div className="lm-panel lm-panel-flex-wrap">
-				<Highlight className="javascript lm-panel-code">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<Highlight className="javascript pyo-panel-code">
 					{codeHtml}
 				</Highlight>
 			</div>

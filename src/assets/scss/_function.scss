@@ -7,20 +7,20 @@
 @use "@/assets/font/Pretendard/Pretendard.scss" as *;
 
 // default font family
-$LM-font-family : 'Pretendard', Malgun Gothic, '맑은 고딕', dotum, '돋움', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial,sans-serif;
+$PYO-font-family : 'Pretendard', Malgun Gothic, '맑은 고딕', dotum, '돋움', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial,sans-serif;
 //// default font family
 
 // font size
-$LM-default-font-size : 16px;
+$PYO-default-font-size : 16px;
 //// font size
 
 // default font color
-$LM-default-font-color : #000;
-$LM-default-font-color-link : #3399cc;
+$PYO-default-font-color : #000;
+$PYO-default-font-color-link : #3399cc;
 //// default font color
 
 // point color
-$LM-point-color:(
+$PYO-point-color:(
 	#0068FF,
 	#6200EE,
 	#06C755,
@@ -30,25 +30,25 @@ $LM-point-color:(
 //// point color
 
 // radius
-$LM-radius-1: 10px;
+$PYO-radius-1: 10px;
 //// radius
 
 // shadow
-$LM-shodow-1: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
-$LM-shodow-2: 0 4px 20px 0 rgba(0, 0, 0, .14), 0 7px 10px -5px rgba(64, 64, 64, .4);
+$PYO-shodow-1: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
+$PYO-shodow-2: 0 4px 20px 0 rgba(0, 0, 0, .14), 0 7px 10px -5px rgba(64, 64, 64, .4);
 //// shadow
 
 // width
-$LM-w-max: 1224px;
-$LM-w-full: 100%;
+$PYO-w-max: 1224px;
+$PYO-w-full: 100%;
 //// width
 
 // mixin style
 @mixin box-style( $padding: 20px, $radius: 10px, $backgroundColor: '#fff' ) {
 	padding: $padding;
-	border-radius: $LM-radius-1;
+	border-radius: $PYO-radius-1;
 	background-color: #fff;
-	box-shadow: $LM-shodow-1;
+	box-shadow: $PYO-shodow-1;
 }
 @mixin flex-box( $getSpace: 20, $getCount: 5 ) {
 	$spaceWidth1: calc(100 / $getCount);

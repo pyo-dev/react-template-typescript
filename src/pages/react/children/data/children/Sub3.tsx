@@ -3,7 +3,7 @@ import { useState } from "react";
 import { PropData } from '../types'; // 공통 타입을 import
 
 // Props 인터페이스 정의: 데이터 변경 함수
-interface LmReactDataSub3Props {
+interface PyoReactDataSub3Props {
 	dataChange1: (
 		e: React.ChangeEvent<HTMLInputElement>,
 		childData?: PropData
@@ -14,10 +14,10 @@ interface LmReactDataSub3Props {
 	) => void;
 }
 
-export const LmReactDataSub3 = ({
+export const PyoReactDataSub3 = ({
 	dataChange1,
 	dataChange2,
-}: LmReactDataSub3Props) => {
+}: PyoReactDataSub3Props) => {
 	// 자식 컴포넌트에서 관리하는 데이터 상태
 	const [reqData, setReqData] = useState<PropData[]>([]);
 
@@ -58,33 +58,33 @@ export const LmReactDataSub3 = ({
 	return (
 		<>
 			{/* 첫 번째 데이터 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					자식 컴포넌트3 데이터1
 				</div>
-				<div className="lm-panel-flex-wrap">
-					<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-wrap">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="name"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[0]?.name || ""}
 							onChange={(e) => handleChangeData(e, 0)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터1 이름"
 						/>
 					</div>
-					<div className="lm-panel-flex-inner">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="tell"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[0]?.tell || ""}
 							onChange={(e) => handleChangeData(e, 0)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터1 전화번호"
 						/>
 					</div>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={(e) => parentDataChange(e, 0)}
 					>
 						부모 데이터1 변경
@@ -93,33 +93,33 @@ export const LmReactDataSub3 = ({
 			</div>
 
 			{/* 두 번째 데이터 입력 폼 */}
-			<div className="lm-panel lm-panel-flex-wrap">
-				<div className="lm-panel-inner-title">
+			<div className="pyo-panel pyo-panel-flex-wrap">
+				<div className="pyo-panel-inner-title">
 					자식 컴포넌트3 데이터2
 				</div>
-				<div className="lm-panel-flex-wrap">
-					<div className="lm-panel-flex-inner">
+				<div className="pyo-panel-flex-wrap">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="name"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[1]?.name || ""}
 							onChange={(e) => handleChangeData(e, 1)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터2 이름"
 						/>
 					</div>
-					<div className="lm-panel-flex-inner">
+					<div className="pyo-panel-flex-inner">
 						<input
 							type="text"
 							name="tell"
-							className="lm-input"
+							className="pyo-input"
 							value={reqData[1]?.tell || ""}
 							onChange={(e) => handleChangeData(e, 1)} // 데이터 변경 시 호출되는 함수
 							placeholder="데이터2 전화번호"
 						/>
 					</div>
 					<button
-						className="lm-button color-black"
+						className="pyo-button color-black"
 						onClick={(e) => parentDataChange(e, 1)}
 					>
 						부모 데이터2 변경

@@ -107,7 +107,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
 };
 
 // 차트 컴포넌트
-export const LmPluginChartLine = () => {
+export const PyoPluginChartLine = () => {
 	const [tooltipPos, setTooltipPos] = useState<TooltipPosition>({
 		xPosOver: false,
 		x: 0,

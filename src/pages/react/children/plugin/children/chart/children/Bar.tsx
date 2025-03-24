@@ -62,7 +62,7 @@ const data: DataItem[] = [
 	},
 ];
 
-export const LmPluginChartBar = () => {
+export const PyoPluginChartBar = () => {
 	return (
 		<ResponsiveContainer width="100%" height={500}>
 			<BarChart
