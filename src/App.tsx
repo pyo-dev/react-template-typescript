@@ -6,7 +6,8 @@ import { PyoCommon } from '@/components/PyoCommon';
 const App = () => {
 	return (
 		<RecoilRoot>
-			<BrowserRouter>
+			{/* <BrowserRouter basename="/react/template/"> */}
+			<BrowserRouter basename="/react/template/">
 				<PyoCommon />
 				<MyRouter />
 			</BrowserRouter>
