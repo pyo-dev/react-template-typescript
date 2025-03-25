@@ -4,6 +4,7 @@
 .pyo-check-radio-box-wrap{
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 20px;
 }
 .pyo-check-box{
@@ -52,7 +53,7 @@
 		}
 	}
 	.text{
-		font-size: 16px;
+		font-size: 1rem;
 	}
 	&.s-l{
 		gap: 12px;
@@ -65,7 +66,7 @@
 			}
 		}
 		.text{
-			font-size: 18px;
+			font-size: 1.125rem;
 		}
 	}
 }
@@ -116,7 +117,7 @@
 		}
 	}
 	.text{
-		font-size: 16px;
+		font-size: 1rem;
 	}
 	&.s-l{
 		gap: 12px;
@@ -129,7 +130,7 @@
 			}
 		}
 		.text{
-			font-size: 18px;
+			font-size: 1.125rem;
 		}
 	}
 }
@@ -145,11 +146,11 @@
 	}
 	&.s-s{
 		padding: 7px 12px;
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 	&.s-l{
 		padding: 21px 24px;
-		font-size: 18px;
+		font-size: 1.125rem;
 	}
 	&:focus,
 	&:hover{
@@ -230,7 +231,7 @@
 		height: 32px;
 		input{
 			width: 44px;
-			font-size: 12px;
+			font-size: 0.75rem;
 		}
 		button{
 			width: 32px;

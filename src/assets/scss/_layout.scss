@@ -9,7 +9,8 @@ body,
 }
 
 .pyoWrap{
-	overflow: auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 	position: relative;
 	display: flex;
 	align-items: flex-start;
@@ -44,7 +45,7 @@ body,
 	}
 	.logo{
 		padding: 20px;
-		font-size: 24px;
+		font-size: 1.5rem;
 		font-weight: bold ;
 		color: #fff;
 		text-align: center;
@@ -69,7 +70,7 @@ body,
 			background-size: cover;
 		}
 		.info{
-			font-size: 12px;
+			font-size: 0.75rem;
 			color: #aaa;
 		}
 	}
@@ -80,7 +81,7 @@ body,
 		}
 		.title{
 			padding: 5px 10px;
-			font-size: 12px;
+			font-size: 0.75rem;
 			color: rgba($color: white, $alpha: 0.5);
 		}
 		button{
@@ -93,7 +94,7 @@ body,
 			border: none;
 			background-color: rgba($color: white, $alpha: 0);
 			color: #fff;
-			font-size: 12px;
+			font-size: 0.75rem;
 			opacity: 0.7;
 			transition: all 0.2s;
 			span{
@@ -112,9 +113,14 @@ body,
 	}
 }
 
+.pyo-mob-all-menu{
+	display: none;
+}
+
 .pyoContents{
 	flex: 1;
-	min-width: 900px;
+	width: 100%;
+	overflow: hidden;
 }
 .pyoAside{
 	display: flex;
@@ -125,4 +131,114 @@ body,
 	top: 0;
 	width: 200px;
 	min-height: 100%;
+}
+
+@media all and (max-width: 1000px) {
+	html{
+		font-size: 12px;
+	}
+	.pyoHeader{
+		overflow-y: auto;
+		z-index: 9999;
+		position: fixed;
+		top: 0;
+		left: 0;
+		border-radius: 0;
+		width: 200px;
+		height: 100%;
+		transform: translateX(-100%);
+		transition: transform 0.5s;
+		&.active{
+			transform: translateX(0);
+		}
+	}
+	.pyo-mob-all-menu{
+		overflow: hidden;
+		z-index: 9999;
+		position: fixed;
+		bottom: 15px;
+		left: 15px;
+		display: block;
+		width: 60px;
+		height: 60px;
+		border: none;
+		border-radius: 50%;
+		background-image: linear-gradient(195deg, #42424a, #191919);
+		transition: left 0.5s;
+		i{
+			position: absolute;
+			top: 50%;
+			left: 15px;
+			width: 30px;
+			height: 2px;
+			border-radius: 10px;
+			background-color: #fff;
+			transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+			&:nth-child(1){
+				margin-top: -10px;
+			}
+			&:nth-child(2){
+				transition-delay: 0.1s;
+			}
+			&:nth-child(3){
+				margin-top: 10px;
+				transition-delay: 0.2s;
+			}
+			&:nth-child(4){
+				transform: rotate(-45deg) translate3d(70px, 0, 0);
+			}
+			&:nth-child(5){
+				transform: rotate(45deg) translate3d(-70px, 0, 0);
+			}
+		}
+		&.active{
+			left: 215px;
+			i{
+				&:nth-child(1){
+					width: 0;
+				}
+				&:nth-child(2){
+					width: 0;
+				}
+				&:nth-child(3){
+					width: 0;
+				}
+				&:nth-child(4){
+					transition-delay: 0.1s;
+					transform: rotate(-45deg) translate3d(0, 0, 0);
+				}
+				&:nth-child(5){
+					transition-delay: 0.2s;
+					transform: rotate(45deg) translate3d(0, 0, 0);
+				}
+			}
+		}
+	}
+	.pyoHeader-dim{
+		z-index: 9998;
+		position: fixed;
+		top: 100%;
+		left: 100%;
+		width: 300px;
+		height: 300px;
+		border-radius: 50%;
+		background-color: rgba($color: #000000, $alpha: 0.7);
+		transform: translate(150%, 150%);
+		transition:
+			top 0.5s,
+			left 0.5s,
+			width 0.5s 0.3s,
+			height 0.5s 0.3s,
+			border-radius 0.5s 0.3s,
+			transform 0.5s,
+		;
+		&.active {
+			top: 50%;
+			left: 50%;
+			width: 100%;
+			height: 100%;
+			border-radius: 0;
+			transform: translate(-50%, -50%);
+		}
+	}
 }

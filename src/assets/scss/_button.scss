@@ -44,7 +44,7 @@
 	border: none;
 	border-radius: 3px;
 	background-color: #fff;
-	font-size: 16px;
+	font-size: 1rem;
 	font-weight: 500;
 	color: #000;
 	text-align: center;
@@ -64,12 +64,12 @@
 	&.s-s{
 		@include line(9, 10);
 		border-radius: 2px;
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 	&.s-l{
 		@include line(23, 24);
 		border-radius: 4px;
-		font-size: 18px;
+		font-size: 1.125rem;
 	}
 	&.w-full{
 		width: 100%;

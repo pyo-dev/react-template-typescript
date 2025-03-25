@@ -14,7 +14,7 @@
 	width: fit-content;
 	font-weight: bold;
 	font-family: monospace;
-	font-size: 20px;
+	font-size: 1.25rem;
 	background:linear-gradient(90deg,#fff 50%,#0000 0) right/200% 100%;
 	animation: l21 2s infinite linear;
 	&::before {
@@ -34,7 +34,7 @@
 	width: fit-content;
 	font-weight: bold;
 	font-family: monospace;
-	font-size: 20px;
+	font-size: 1.25rem;
 	background: radial-gradient(circle closest-side,#fff 94%,#0000) right/calc(200% - 1em) 100%;
 	animation: l24 1s infinite alternate linear;
 	&::before {
