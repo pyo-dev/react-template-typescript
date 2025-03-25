@@ -1,0 +1,128 @@
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	margin: 0;
+	background-color: #f4f4f4;
+}
+
+.circle-menu {
+	position: relative;
+	width: 300px;
+	height: 300px;
+	border-radius: 50%;
+	/* background-color: #333; */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	/* overflow: hidden; */
+	transform-origin: center center;
+}
+
+.center-box {
+	position: absolute;
+	width: 80px;
+	height: 80px;
+	background-color: #fff;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 5px;
+	font-size: 14px;
+	color: #333;
+	z-index: 1;
+	transition: transform 0.3s;
+}
+
+.menu-item {
+	position: absolute;
+	width: 80px;
+	height: 80px;
+	background-color: #333;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 50%;
+	font-size: 14px;
+	color: #fff;
+	cursor: pointer;
+	transition: transform 0.3s;
+}
+
+/* 초기 상태에서 각 버튼을 정확하게 12시, 1시, 2시 등의 위치에 맞추기 */
+.menu-item:nth-child(1) {
+	transform: rotate(-17.5142deg) translateX(120px) rotate(17.5142deg);
+	/* 12시 방향 */
+}
+
+.menu-item:nth-child(2) {
+	transform: rotate(54.4858deg) translateX(120px) rotate(-54.4858deg);
+	/* 1시 방향 */
+}
+
+.menu-item:nth-child(3) {
+	transform: rotate(126.486deg) translateX(120px) rotate(-126.486deg);
+	/* 2시 방향 */
+}
+
+.menu-item:nth-child(4) {
+	transform: rotate(198.486deg) translateX(120px) rotate(-198.486deg);
+	/* 3시 방향 */
+}
+
+.menu-item:nth-child(5) {
+	transform: rotate(270.486deg) translateX(120px) rotate(-270.486deg);
+	/* 4시 방향 */
+}
+
+
+/* 
+위치를 잡아 주기 위한 scss 계산식
+// SCSS 함수: 원형 메뉴의 회전 값 계산
+@function calculate-rotation($index, $total-items) {
+	$angle: 360 / $total-items;
+	$offset: -($angle / 2); // 첫 번째 항목이 정확히 12시 방향에 맞추기 위한 오프셋
+	$rotation: $angle * $index + $offset;
+	@return $rotation;
+}
+
+// 원형 메뉴 스타일 정의
+.circle-menu {
+	position: relative;
+	width: 300px;
+	height: 300px;
+	border-radius: 50%;
+	background-color: #333;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	overflow: hidden;
+	transform-origin: center center;
+
+	.menu-item {
+		position: absolute;
+		width: 80px;
+		height: 30px;
+		background-color: #fff;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		border-radius: 5px;
+		font-size: 14px;
+		color: #333;
+		cursor: pointer;
+		transition: transform 0.3s ease;
+
+		// 각 메뉴 항목에 대한 회전 값 적용
+		@for $i from 1 through 5 {
+
+			// 5개의 메뉴 항목에 대해 반복
+			&:nth-child(#{$i}) {
+				$rotation: calculate-rotation($i - 1, 5); // 회전값 계산
+				transform: rotate(#{$rotation}deg) translateX(120px) rotate(-#{$rotation}deg);
+			}
+		}
+	}
+}
+*/
