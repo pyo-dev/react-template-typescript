@@ -7,7 +7,7 @@ const App = () => {
 	return (
 		<RecoilRoot>
 			{/* <BrowserRouter basename="/react/template/"> */}
-			<BrowserRouter basename="/react/template/">
+			<BrowserRouter>
 				<PyoCommon />
 				<MyRouter />
 			</BrowserRouter>
