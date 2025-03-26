@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		plugins: [react()],
-		// base: "/react/template/",
+		base: "/react/template/",
 		resolve: {
 			alias: {
 				'@': path.resolve(__dirname, 'src'),

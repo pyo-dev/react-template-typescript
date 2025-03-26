@@ -59,7 +59,8 @@ export const PyoToastPop = () => {
 				className="pyo-pop-toast-wrap"
 				style={{
 					...getPyoToastPop.position,
-					width: getPyoToastPop.width,
+					width: '100%',
+					maxWidth: getPyoToastPop.width,
 					padding: getPyoToastPop.padding,
 				}}
 			>
