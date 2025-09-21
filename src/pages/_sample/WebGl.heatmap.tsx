@@ -285,24 +285,27 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
 
       // 패닝
       if (isPanningRef.current && panStartRef.current) {
-        const dx = ev.clientX - panStartRef.current.x;
-        const dy = ev.clientY - panStartRef.current.y;
-        const nx = dx / canvas.width * (vw.xMax - vw.xMin);
-        const ny = dy / canvas.height * (vw.yMax - vw.yMin);
+		const dx = ev.clientX - panStartRef.current.x;
+		const dy = ev.clientY - panStartRef.current.y;
 
-        let newXMin = vw.xMin - nx;
-        let newXMax = vw.xMax - nx;
-        let newYMin = vw.yMin - ny;
-        let newYMax = vw.yMax - ny;
+		const speed = 0.1; // 패닝 속도: 0~1 느리게, 1 원래, 1 이상 빠르게
+		const nx = dx / canvas.width * (vw.xMax - vw.xMin) * speed;
+		const ny = dy / canvas.height * (vw.yMax - vw.yMin) * speed;
 
-        if (newXMin < 0) { newXMin = 0; newXMax = vw.xMax - vw.xMin; }
-        if (newXMax > xBoxCount) { newXMax = xBoxCount; newXMin = xBoxCount - (vw.xMax - vw.xMin); }
-        if (newYMin < 0) { newYMin = 0; newYMax = vw.yMax - vw.yMin; }
-        if (newYMax > yBoxCount) { newYMax = yBoxCount; newYMin = yBoxCount - (vw.yMax - vw.yMin); }
+		let newXMin = vw.xMin - nx;
+		let newXMax = vw.xMax - nx;
+		let newYMin = vw.yMin - ny;
+		let newYMax = vw.yMax - ny;
 
-        viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
-        renderGL();
-        return;
+		// 경계 제한
+		if (newXMin < 0) { newXMin = 0; newXMax = vw.xMax - vw.xMin; }
+		if (newXMax > xBoxCount) { newXMax = xBoxCount; newXMin = xBoxCount - (vw.xMax - vw.xMin); }
+		if (newYMin < 0) { newYMin = 0; newYMax = vw.yMax - vw.yMin; }
+		if (newYMax > yBoxCount) { newYMax = yBoxCount; newYMin = yBoxCount - (vw.yMax - vw.yMin); }
+
+		viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+		renderGL();
+		return;
       }
 
       // 드래그 확대
