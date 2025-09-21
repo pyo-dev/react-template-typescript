@@ -451,3 +451,194 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
 
 export default WebGLDetailChart;
 
+
+
+
+// WebGLDetailChartLite.tsx
+import React, { useEffect, useRef } from "react";
+
+type Pointer = { boxIndex: number; x: number; y: number };
+
+interface WebGLDetailChartLiteProps {
+  height: number;
+  xBoxCount: number;
+  yBoxCount: number;
+  pointers: Pointer[];
+}
+
+const vertexShaderSource = `
+  attribute vec2 a_pos;
+  uniform float u_xMin;
+  uniform float u_xMax;
+  uniform float u_yMin;
+  uniform float u_yMax;
+  void main() {
+    float nx = (a_pos.x - u_xMin) / (u_xMax - u_xMin);
+    float ny = (a_pos.y - u_yMin) / (u_yMax - u_yMin);
+    float clipX = nx * 2.0 - 1.0;
+    float clipY = 1.0 - ny * 2.0;
+    gl_Position = vec4(clipX, clipY, 0.0, 1.0);
+  }
+`;
+
+const fragmentShaderSource = `
+  precision mediump float;
+  uniform vec4 u_color;
+  void main() {
+    gl_FragColor = u_color;
+  }
+`;
+
+const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => {
+  const sh = gl.createShader(type)!;
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const err = gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    throw new Error("Shader compile error: " + err);
+  }
+  return sh;
+};
+
+const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) => {
+  const vs = compileShader(gl, vsrc, gl.VERTEX_SHADER);
+  const fs = compileShader(gl, fsrc, gl.FRAGMENT_SHADER);
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    const err = gl.getProgramInfoLog(prog);
+    gl.deleteProgram(prog);
+    throw new Error("Program link error: " + err);
+  }
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+  return prog;
+};
+
+const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) => {
+  const parent = canvas.parentElement!;
+  const displayWidth = parent.clientWidth;
+  const displayHeight = heightPx;
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.floor(displayWidth * dpr));
+  const height = Math.max(1, Math.floor(displayHeight * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+  }
+};
+
+const WebGLDetailChartLite: React.FC<WebGLDetailChartLiteProps> = ({
+  height,
+  xBoxCount,
+  yBoxCount,
+  pointers,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const glRef = useRef<WebGLRenderingContext | null>(null);
+  const programRef = useRef<WebGLProgram | null>(null);
+  const attribLocRef = useRef<number | null>(null);
+  const uniformLocsRef = useRef<any>(null);
+  const bufferBlueRef = useRef<WebGLBuffer | null>(null);
+  const bufferRedRef = useRef<WebGLBuffer | null>(null);
+
+  const viewRef = useRef({ xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount });
+
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    const gl = canvas.getContext("webgl", { antialias: false });
+    if (!gl) return console.error("WebGL 미지원");
+    glRef.current = gl;
+
+    const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+    programRef.current = program;
+    gl.useProgram(program);
+
+    const a_pos = gl.getAttribLocation(program, "a_pos");
+    const u_xMin = gl.getUniformLocation(program, "u_xMin");
+    const u_xMax = gl.getUniformLocation(program, "u_xMax");
+    const u_yMin = gl.getUniformLocation(program, "u_yMin");
+    const u_yMax = gl.getUniformLocation(program, "u_yMax");
+    const u_color = gl.getUniformLocation(program, "u_color");
+
+    attribLocRef.current = a_pos;
+    uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax, u_color };
+
+    bufferBlueRef.current = gl.createBuffer();
+    bufferRedRef.current = gl.createBuffer();
+
+    resizeCanvasToDisplaySize(canvas, height);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.98, 0.98, 0.98, 1.0);
+
+    renderGL();
+
+    return () => {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    };
+  }, [height]);
+
+  const renderGL = () => {
+    const gl = glRef.current;
+    if (!gl || !programRef.current) return;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const a_pos = attribLocRef.current!;
+    const u = uniformLocsRef.current;
+    const vw = viewRef.current;
+
+    gl.uniform1f(u.u_xMin, vw.xMin);
+    gl.uniform1f(u.u_xMax, vw.xMax);
+    gl.uniform1f(u.u_yMin, vw.yMin);
+    gl.uniform1f(u.u_yMax, vw.yMax);
+
+    const verticesBlue: number[] = [];
+    const verticesRed: number[] = [];
+
+    pointers.forEach((p) => {
+      const boxX = p.boxIndex % xBoxCount;
+      const boxY = Math.floor(p.boxIndex / xBoxCount);
+      const xPos = boxX + p.x / 100;
+      const yTop = boxY;
+      const yBottom = boxY + 1;
+
+      if (p.x > 50) verticesRed.push(xPos, yTop, xPos, yBottom);
+      else verticesBlue.push(xPos, yTop, xPos, yBottom);
+    });
+
+    if (verticesBlue.length > 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufferBlueRef.current);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesBlue), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(a_pos);
+      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform4f(u.u_color, 0, 0, 1, 1);
+      gl.drawArrays(gl.LINES, 0, verticesBlue.length / 2);
+    }
+
+    if (verticesRed.length > 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufferRedRef.current);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesRed), gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(a_pos);
+      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform4f(u.u_color, 1, 0, 0, 1);
+      gl.drawArrays(gl.LINES, 0, verticesRed.length / 2);
+    }
+  };
+
+  return (
+    <div style={{ width: "100%", position: "relative" }}>
+      <canvas
+        ref={canvasRef}
+        style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
+      />
+    </div>
+  );
+};
+
+export default WebGLDetailChartLite;
+
