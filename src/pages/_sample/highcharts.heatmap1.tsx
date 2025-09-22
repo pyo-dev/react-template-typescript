@@ -330,46 +330,47 @@ useEffect(() => {
     };
 
     const onPointerUp = () => {
-      if (isPanningRef.current) {
-        isPanningRef.current = false;
-        panStartRef.current = null;
-        viewStartRef.current = viewRef.current;
-        canvas.style.cursor = "default";
-        return;
-      }
+  if (isPanningRef.current) {
+    isPanningRef.current = false;
+    panStartRef.current = null;
+    viewStartRef.current = viewRef.current;
+    canvas.style.cursor = "default";
+  }
 
-      if (!isDraggingRef.current || !dragStartRef.current || !dragEndRef.current) return;
+  if (isDraggingRef.current && dragStartRef.current && dragEndRef.current) {
+    const canvasW = canvas.clientWidth;
+    const canvasH = canvas.clientHeight;
+    const vw = viewRef.current;
+    const s = dragStartRef.current;
+    const e = dragEndRef.current;
 
-      const canvasW = canvas.clientWidth;
-      const canvasH = canvas.clientHeight;
-      const vw = viewRef.current;
-      const s = dragStartRef.current;
-      const e = dragEndRef.current;
+    const worldXMin = vw.xMin + Math.min(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
+    const worldXMax = vw.xMin + Math.max(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
+    const worldYMin = vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
+    const worldYMax = vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
 
-      const worldXMin = vw.xMin + Math.min(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-      const worldXMax = vw.xMin + Math.max(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-      const worldYMin = vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
-      const worldYMax = vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
+    const selectedPointers = pointers.filter(p => {
+      const boxX = p.boxIndex % xBoxCount;
+      const boxY = Math.floor(p.boxIndex / xBoxCount);
+      const xPos = boxX + p.x / 100;
+      const yTop = boxY;
+      const yBottom = boxY + 1;
+      return xPos >= worldXMin && xPos <= worldXMax && yBottom > worldYMin && yTop < worldYMax;
+    });
+    console.log("선택 포인터:", selectedPointers);
 
-      // 선택 포인터 로그
-      const selectedPointers = pointers.filter(p => {
-        const boxX = p.boxIndex % xBoxCount;
-        const boxY = Math.floor(p.boxIndex / xBoxCount);
-        const xPos = boxX + p.x / 100;
-        const yTop = boxY;
-        const yBottom = boxY + 1;
-        return xPos >= worldXMin && xPos <= worldXMax && yBottom > worldYMin && yTop < worldYMax;
-      });
-      console.log("선택 포인터:", selectedPointers);
+    // 뷰 확대
+    viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
 
-      // 뷰 확대
-      viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-      renderGL();
+    // 드래그 종료
+    isDraggingRef.current = false;
+    dragStartRef.current = null;
+    dragEndRef.current = null;
+  }
 
-      isDraggingRef.current = false;
-      dragStartRef.current = null;
-      dragEndRef.current = null;
-    };
+  // 클릭만 해도 항상 GL 다시 그리기 → 그리드와 포인터 유지
+  renderGL();
+};
 
     canvas.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("pointermove", onPointerMove);
