@@ -330,6 +330,10 @@ useEffect(() => {
     };
 
     const onPointerUp = () => {
+  const canvas = canvasRef.current!;
+  const overlay = overlayRef.current!;
+  if (!canvas || !overlay) return;
+
   if (isPanningRef.current) {
     isPanningRef.current = false;
     panStartRef.current = null;
@@ -361,14 +365,18 @@ useEffect(() => {
 
     // 뷰 확대
     viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-
-    // 드래그 종료
-    isDraggingRef.current = false;
-    dragStartRef.current = null;
-    dragEndRef.current = null;
   }
 
-  // 클릭만 해도 항상 GL 다시 그리기 → 그리드와 포인터 유지
+  // 드래그/패닝 초기화
+  isDraggingRef.current = false;
+  dragStartRef.current = null;
+  dragEndRef.current = null;
+
+  // 오버레이 초기화
+  const ctx = overlay.getContext("2d")!;
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+  // 항상 다시 그리기 → 그리드 + 포인터 유지
   renderGL();
 };
 
