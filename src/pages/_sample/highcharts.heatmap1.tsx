@@ -98,6 +98,26 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
+
+useEffect(() => {
+  const canvas = canvasRef.current!;
+  const overlay = overlayRef.current!;
+  if (!canvas || !overlay) return;
+
+  const ro = new ResizeObserver(() => {
+    requestAnimationFrame(() => {
+      resizeCanvasToDisplaySize(canvas, height);
+      const gl = glRef.current;
+      if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+      drawGrid();      // overlay 다시 그리기
+      renderGL();      // 포인터도 다시 그리기
+    });
+  });
+
+  ro.observe(canvas.parentElement!);
+  return () => ro.disconnect();
+}, [height]);
+  
   // 초기 WebGL
   useEffect(() => {
     const canvas = canvasRef.current!;
