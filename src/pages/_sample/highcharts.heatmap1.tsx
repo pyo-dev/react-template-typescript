@@ -1,4 +1,3 @@
-
 // WebGLDetailChart.tsx
 import React, { useEffect, useRef, useState } from "react";
 
@@ -105,9 +104,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
   const programRef = useRef<WebGLProgram | null>(null);
   const attribLocRef = useRef<number | null>(null);
   const uniformLocsRef = useRef<any>(null);
-
-  const bufferBlueRef = useRef<WebGLBuffer | null>(null);
-  const bufferRedRef = useRef<WebGLBuffer | null>(null);
+  const bufferRef = useRef<WebGLBuffer | null>(null);
 
   // 툴팁 상태
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
@@ -134,8 +131,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     attribLocRef.current = a_pos;
     uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax, u_color };
 
-    bufferBlueRef.current = gl.createBuffer();
-    bufferRedRef.current = gl.createBuffer();
+    bufferRef.current = gl.createBuffer();
 
     resizeCanvasToDisplaySize(canvas, height);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -153,7 +149,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     const overlay = overlayRef.current;
     if (!overlay) return;
     const ctx = overlay.getContext("2d")!;
-
     const parent = overlay.parentElement!;
     const dpr = window.devicePixelRatio || 1;
 
@@ -167,13 +162,10 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     const v = viewRef.current;
     const cellW = w / (v.xMax - v.xMin);
     const cellH = h / (v.yMax - v.yMin);
-
     ctx.clearRect(0, 0, w, h);
 
     ctx.strokeStyle = "#ccc";
     ctx.lineWidth = 1;
-
-    // 수직
     for (let i = Math.floor(v.xMin); i <= Math.ceil(v.xMax); i++) {
       const x = (i - v.xMin) * cellW + 0.5;
       ctx.beginPath();
@@ -181,7 +173,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       ctx.lineTo(x, h);
       ctx.stroke();
     }
-    // 수평
     for (let i = Math.floor(v.yMin); i <= Math.ceil(v.yMax); i++) {
       const y = (i - v.yMin) * cellH + 0.5;
       ctx.beginPath();
@@ -212,7 +203,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     return () => ro.disconnect();
   }, [height, xBoxCount, yBoxCount]);
 
-  /** WebGL 렌더링 */
+  /** WebGL 렌더링 (그라데이션 포함) */
   const renderGL = () => {
     const gl = glRef.current;
     if (!gl || !programRef.current) return;
@@ -227,10 +218,10 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     gl.uniform1f(u.u_yMin, vw.yMin);
     gl.uniform1f(u.u_yMax, vw.yMax);
 
-    const verticesBlue: number[] = [];
-    const verticesRed: number[] = [];
+    const vertices: number[] = [];
+    const colors: number[] = [];
 
-    // 포인터 좌표 계산, 색상 분류
+    // 포인터 좌표 계산, 그라데이션 색상
     pointers.forEach((p) => {
       const boxX = p.boxIndex % xBoxCount;
       const boxY = Math.floor(p.boxIndex / xBoxCount);
@@ -238,28 +229,25 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       const yTop = boxY;
       const yBottom = boxY + 1;
 
-      if (p.x > 50) verticesRed.push(xPos, yTop, xPos, yBottom);
-      else verticesBlue.push(xPos, yTop, xPos, yBottom);
+      vertices.push(xPos, yTop, xPos, yBottom);
+
+      // x: Blue→Red
+      const t = Math.min(Math.max(p.x / 100, 0), 1);
+      colors.push(t, 0, 1 - t, 1); // RGBA: Red 비율 = t, Blue 비율 = 1-t
     });
 
-    // Blue
-    if (verticesBlue.length > 0) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, bufferBlueRef.current);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesBlue), gl.DYNAMIC_DRAW);
+    if (vertices.length > 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
       gl.enableVertexAttribArray(a_pos);
       gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform4f(u.u_color, 0, 0, 1, 1);
-      gl.drawArrays(gl.LINES, 0, verticesBlue.length / 2);
-    }
 
-    // Red
-    if (verticesRed.length > 0) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, bufferRedRef.current);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesRed), gl.DYNAMIC_DRAW);
-      gl.enableVertexAttribArray(a_pos);
-      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform4f(u.u_color, 1, 0, 0, 1);
-      gl.drawArrays(gl.LINES, 0, verticesRed.length / 2);
+      // draw each line with its color (간단히 개별 draw)
+      for (let i = 0; i < vertices.length / 4; i++) {
+        const color = colors.slice(i * 4, i * 4 + 4);
+        gl.uniform4f(u.u_color, color[0], color[1], color[2], color[3]);
+        gl.drawArrays(gl.LINES, i * 2, 2);
+      }
     }
 
     drawGrid();
@@ -271,7 +259,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     const overlay = overlayRef.current!;
     if (!canvas || !overlay) return;
 
-    // 드래그 사각형 그리기
     const drawSelectionRect = () => {
       const ctx = overlay.getContext("2d")!;
       drawGrid();
@@ -286,11 +273,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(s.x - e.x), Math.abs(s.y - e.y));
     };
 
-    // 마우스 이동 이벤트
     const onPointerMove = (ev: PointerEvent) => {
       const vw = viewRef.current;
 
-      // Shift+드래그 또는 우클릭 드래그 → 패닝
       if (isPanningRef.current && panStartRef.current) {
         const dx = ev.clientX - panStartRef.current.x;
         const dy = ev.clientY - panStartRef.current.y;
@@ -311,14 +296,13 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         return;
       }
 
-      // 일반 드래그
       if (isDraggingRef.current && dragStartRef.current) {
         const rect = canvas.getBoundingClientRect();
         dragEndRef.current = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
         drawSelectionRect();
       }
 
-      // 툴팁 계산
+      // 툴팁
       const rect = canvas.getBoundingClientRect();
       const mouseX = ev.clientX - rect.left;
       const mouseY = ev.clientY - rect.top;
@@ -338,13 +322,11 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       }
     };
 
-    // 마우스 다운 이벤트
     const onPointerDown = (ev: PointerEvent) => {
       const vw = viewRef.current;
       const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
       const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
 
-      // Shift+드래그 또는 우클릭 → 패닝
       if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
         isPanningRef.current = true;
         panStartRef.current = { x: ev.clientX, y: ev.clientY };
@@ -353,105 +335,44 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         return;
       }
 
-      if (ev.button !== 0) return; // 좌클릭만 드래그 처리
+      if (ev.button !== 0) return;
       isDraggingRef.current = true;
       const rect = canvas.getBoundingClientRect();
       dragStartRef.current = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
       dragEndRef.current = null;
-      drawSelectionRect();
     };
 
-    // 마우스 업 이벤트
-    const onPointerUp = () => {
-      if (isPanningRef.current) {
-        isPanningRef.current = false;
-        panStartRef.current = null;
-        viewStartRef.current = viewRef.current;
-        canvas.style.cursor = "default";
-        return;
-      }
-
-      if (!isDraggingRef.current || !dragStartRef.current || !dragEndRef.current) return;
-
-      const s = dragStartRef.current;
-      const e = dragEndRef.current;
-      const vw = viewRef.current;
-      const canvasW = canvas.width;
-      const canvasH = canvas.height;
-
-      const xMinPx = Math.max(0, Math.min(s.x, e.x));
-      const xMaxPx = Math.min(canvasW, Math.max(s.x, e.x));
-      const yMinPx = Math.max(0, Math.min(s.y, e.y));
-      const yMaxPx = Math.min(canvasH, Math.max(s.y, e.y));
-
-      // 화면 픽셀 → 월드 좌표 변환
-      const worldXMin = vw.xMin + (xMinPx / canvasW) * (vw.xMax - vw.xMin);
-      const worldXMax = vw.xMin + (xMaxPx / canvasW) * (vw.xMax - vw.xMin);
-      const worldYMin = vw.yMin + (yMinPx / canvasH) * (vw.yMax - vw.yMin);
-      const worldYMax = vw.yMin + (yMaxPx / canvasH) * (vw.yMax - vw.yMin);
-
-      // 선택된 포인터 필터링
-      const selectedPointers = pointers.filter((p) => {
-        const boxX = p.boxIndex % xBoxCount;
-        const boxY = Math.floor(p.boxIndex / xBoxCount);
-        const xPos = boxX + p.x / 100;
-        const yTop = boxY;
-        const yBottom = boxY + 1;
-        return xPos >= worldXMin && xPos <= worldXMax && yBottom > worldYMin && yTop < worldYMax;
-      });
-      console.log("드래그 영역 포인터:", selectedPointers);
-
-      // 뷰 확대 적용
-      viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-      renderGL();
-
-      // 드래그 상태 초기화
+    const onPointerUp = (ev: PointerEvent) => {
       isDraggingRef.current = false;
       dragStartRef.current = null;
       dragEndRef.current = null;
+      isPanningRef.current = false;
+      panStartRef.current = null;
+      canvas.style.cursor = "default";
+      drawGrid();
     };
 
-    const onMouseLeave = () => setTooltip(null);
+    const onPointerOut = () => {
+      setTooltip(null);
+    };
 
-    // 이벤트 바인딩
+    canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
-    canvas.addEventListener("mouseleave", onMouseLeave);
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("pointerout", onPointerOut);
 
     return () => {
+      canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
-      canvas.removeEventListener("mouseleave", onMouseLeave);
+      canvas.removeEventListener("pointerout", onPointerOut);
     };
-  }, [pointers, xBoxCount, yBoxCount]);
-
-  /** 뷰 리셋 버튼 */
-  const handleReset = () => {
-    viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
-    renderGL();
-  };
+  }, [xBoxCount, yBoxCount]);
 
   return (
-    <div style={{ width: "100%", position: "relative" }}>
-      <canvas
-        ref={canvasRef}
-        style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
-      />
-      <canvas
-        ref={overlayRef}
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          pointerEvents: "none",
-          width: "100%",
-          height: `${height}px`,
-        }}
-      />
-      {/* 툴팁 표시 */}
+    <div style={{ position: "relative", width: "100%", height }}>
+      <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
+      <canvas ref={overlayRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
       {tooltip && (
         <div
           style={{
@@ -461,19 +382,14 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
             background: "rgba(0,0,0,0.7)",
             color: "#fff",
             padding: "2px 6px",
-            fontSize: 12,
             borderRadius: 4,
+            fontSize: 12,
             pointerEvents: "none",
-            zIndex: 1000,
           }}
         >
           {tooltip.text}
         </div>
       )}
-      <div style={{ marginTop: 8 }}>
-        <button onClick={handleReset}>원상태 복원</button>
-        <span style={{ marginLeft: 12 }}>Shift+드래그 또는 우클릭 드래그 = 패닝</span>
-      </div>
     </div>
   );
 };
