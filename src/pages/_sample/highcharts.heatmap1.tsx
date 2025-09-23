@@ -1,17 +1,19 @@
 // WebGLDetailChart.tsx
 import React, { useEffect, useRef, useState } from "react";
 
-type Pointer = { boxIndex: number; x: number; value: number }; // value로 색상 결정
+type Pointer = { boxIndex: number; x: number; y: number; value: number };
 
 interface WebGLDetailChartProps {
   height: number;
   xBoxCount: number;
   yBoxCount: number;
   pointers: Pointer[];
-  valueMin: number; // 색상 최소값
-  valueMax: number; // 색상 최대값
+  valueMin: number; // 색상 계산용 최소 값
+  valueMax: number; // 색상 계산용 최대 값
+  lineWidth?: number; // 포인터 라인 두께
 }
 
+// Vertex Shader: 좌표를 WebGL 클립 좌표로 변환
 const vertexShaderSource = `
 attribute vec2 a_pos;
 uniform float u_xMin;
@@ -27,6 +29,7 @@ void main() {
 }
 `;
 
+// Fragment Shader: 색상 지정
 const fragmentShaderSource = `
 precision mediump float;
 uniform vec4 u_color;
@@ -35,6 +38,7 @@ void main() {
 }
 `;
 
+// Shader 컴파일
 const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => {
   const sh = gl.createShader(type)!;
   gl.shaderSource(sh, src);
@@ -47,6 +51,7 @@ const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => 
   return sh;
 };
 
+// Program 생성
 const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) => {
   const vs = compileShader(gl, vsrc, gl.VERTEX_SHADER);
   const fs = compileShader(gl, fsrc, gl.FRAGMENT_SHADER);
@@ -64,6 +69,7 @@ const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) =>
   return prog;
 };
 
+// 캔버스 리사이즈
 const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) => {
   const parent = canvas.parentElement!;
   const displayWidth = parent.clientWidth;
@@ -86,31 +92,42 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
   pointers,
   valueMin,
   valueMax,
+  lineWidth = 2,
 }) => {
+  // 캔버스 참조
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
 
+  // 뷰포트 정보
   const viewRef = useRef({ xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount });
+  const viewStartRef = useRef(viewRef.current);
+
+  // 드래그 상태
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragEndRef = useRef<{ x: number; y: number } | null>(null);
+
+  // 패닝 상태
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
-  const viewStartRef = useRef(viewRef.current);
 
+  // WebGL 관련
   const glRef = useRef<WebGLRenderingContext | null>(null);
   const programRef = useRef<WebGLProgram | null>(null);
   const attribLocRef = useRef<number | null>(null);
   const uniformLocsRef = useRef<any>(null);
   const bufferRef = useRef<WebGLBuffer | null>(null);
 
+  // 툴팁
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
-  const [zoomLevel, setZoomLevel] = useState(0); // 현재 확대 레벨
-  const maxZoom = 5; // 최대 확대 제한
+  // 확대/축소 버튼 상태
+  const [zoomLevel, setZoomLevel] = useState(0);
+  const maxZoom = 5; // 최대 확대 단계
+  const minZoom = 0; // 기본 크기
 
-  // 화면 크기 변화에 맞춰 캔버스 리사이즈
+  // 캔버스 리사이즈 및 그리드 다시 그리기
   useEffect(() => {
     const canvas = canvasRef.current!;
     const overlay = overlayRef.current!;
@@ -121,16 +138,15 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
         resizeCanvasToDisplaySize(canvas, height);
         const gl = glRef.current;
         if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-        drawGrid();      // 그리드 다시 그리기
-        renderGL();      // 포인터 다시 렌더링
+        drawGrid(); // 오버레이 그리드
+        renderGL(); // 포인터 렌더링
       });
     });
-
     ro.observe(canvas.parentElement!);
     return () => ro.disconnect();
   }, [height]);
 
-  // 초기 WebGL 설정
+  // WebGL 초기화
   useEffect(() => {
     const canvas = canvasRef.current!;
     const gl = canvas.getContext("webgl", { antialias: false });
@@ -158,9 +174,13 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     gl.clearColor(0.98, 0.98, 0.98, 1.0);
 
     renderGL();
+
+    return () => {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    };
   }, [height]);
 
-  // 2D 그리드
+// 오버레이 그리드
   const drawGrid = () => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -215,8 +235,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     gl.uniform1f(u.u_yMax, vw.yMax);
 
     const vertices: number[] = [];
-    const colors: number[] = [];
+    const tValues: number[] = [];
 
+    // 포인터 위치와 색상 비율 계산
     pointers.forEach((p) => {
       const boxX = p.boxIndex % xBoxCount;
       const boxY = Math.floor(p.boxIndex / xBoxCount);
@@ -225,10 +246,10 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       const yBottom = boxY + 1;
       vertices.push(xPos, yTop, xPos, yBottom);
 
-      // value 기반 색상 t 계산 (0 ~ 1)
+      // valueMin, valueMax 기준 0~1 비율
       let t = (p.value - valueMin) / (valueMax - valueMin);
-      t = Math.max(0, Math.min(1, t)); // 0~1 clamp
-      colors.push(t);
+      t = Math.min(1, Math.max(0, t));
+      tValues.push(t);
     });
 
     if (vertices.length > 0) {
@@ -238,16 +259,14 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
 
       for (let i = 0; i < vertices.length / 2; i += 2) {
-        const t = colors[i / 2]; // 0 ~ 1
-
-        // 대비가 강하게 보이는 색상 (연파랑 → 진파랑)
-        const r = 0.7 * (1 - t) + 0.0 * t;
-        const g = 0.85 * (1 - t) + 0.1 * t;
+        const t = tValues[i / 2];
+        // 연파랑 → 진파랑 색상 보정 대비 증가
+        const r = 0.5 * (1 - t) + 0.0 * t;
+        const g = 0.75 * (1 - t) + 0.2 * t;
         const b = 1.0 * (1 - t) + 0.6 * t;
         const a = 1.0;
-
+        gl.lineWidth(lineWidth); // 라인 두께
         gl.uniform4f(u.u_color, r, g, b, a);
-        gl.lineWidth && (gl.lineWidth = 2); // 라인 두께
         gl.drawArrays(gl.LINES, i, 2);
       }
     }
@@ -255,14 +274,14 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     drawGrid();
   };
 
-  // 마우스 좌표 계산
+  // 마우스 좌표 변환
   const getMousePos = (ev: PointerEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
   };
 
-  // 드래그, 패닝 이벤트
+  // 드래그/패닝 이벤트
   useEffect(() => {
     const canvas = canvasRef.current!;
     const overlay = overlayRef.current!;
@@ -286,7 +305,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       const vw = viewRef.current;
       const mouse = getMousePos(ev);
 
-      // 툴팁 계산
+      // 툴팁
       const cellW = canvas.clientWidth / (vw.xMax - vw.xMin);
       const cellH = canvas.clientHeight / (vw.yMax - vw.yMin);
       const cellX = Math.floor(vw.xMin + mouse.x / cellW);
@@ -322,7 +341,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
         if (newXMin < 0) { newXMin = 0; newXMax = vwWidth; }
         if (newXMax > xBoxCount) { newXMax = xBoxCount; newXMin = xBoxCount - vwWidth; }
         if (newYMin < 0) { newYMin = 0; newYMax = vwHeight; }
-        if (newYMax > yBoxCount) { newYMax = yBoxCount - vwHeight; newYMin = yBoxCount - vwHeight; }
+        if (newYMax > yBoxCount) { newYMax = yBoxCount; newYMin = yBoxCount - vwHeight; }
 
         viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
         renderGL();
@@ -331,11 +350,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 
     const onPointerDown = (ev: PointerEvent) => {
       const vw = viewRef.current;
-      const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
-      const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
 
       // Shift 또는 우클릭 = 패닝
-      if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
+      if ((ev.shiftKey || ev.button === 2)) {
         isPanningRef.current = true;
         panStartRef.current = getMousePos(ev);
         viewStartRef.current = { ...viewRef.current };
@@ -376,21 +393,34 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
         const worldYMin = vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
         const worldYMax = vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
 
-        if (zoomLevel >= maxZoom) {
-          alert("최대 확대에 도달했습니다.");
-        } else {
+        // 선택 영역 내 포인터
+        const selectedPointers = pointers.filter(p => {
+          const boxX = p.boxIndex % xBoxCount;
+          const boxY = Math.floor(p.boxIndex / xBoxCount);
+          const xPos = boxX + p.x / 100;
+          const yTop = boxY;
+          const yBottom = boxY + 1;
+          return xPos >= worldXMin && xPos <= worldXMax &&
+                 yBottom > worldYMin && yTop < worldYMax;
+        });
+        console.log("선택 포인터:", selectedPointers);
+
+        // 최대 확대 체크
+        if (zoomLevel < maxZoom) {
           viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-          setZoomLevel(z => z + 1);
+          setZoomLevel(zoomLevel + 1);
+        } else {
+          alert("최대 확대입니다.");
         }
       }
 
+      // 드래그 초기화
       isDraggingRef.current = false;
       dragStartRef.current = null;
       dragEndRef.current = null;
 
       const ctx = overlay.getContext("2d")!;
       ctx.clearRect(0, 0, overlay.width, overlay.height);
-
       renderGL();
     };
 
@@ -403,98 +433,109 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);
     };
-  }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, zoomLevel]);
+  }, [pointers, xBoxCount, yBoxCount, zoomLevel]);
 
-// 뷰 초기화
-const handleReset = () => {
-  viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
-  setZoomLevel(0);
-  renderGL();
-};
+  // 확대/축소 레벨 상태
+  const [zoomLevel, setZoomLevel] = useState(0);
+  const maxZoom = 3; // 최대 확대 제한
+  const minZoom = 0; // 최소 축소 = 기본 뷰
 
-// 확대 버튼
-const handleZoomIn = () => {
-  if (zoomLevel >= maxZoom) {
-    alert("최대 확대에 도달했습니다.");
-    return;
-  }
-  const vw = viewRef.current;
-  const dx = (vw.xMax - vw.xMin) * 0.1;
-  const dy = (vw.yMax - vw.yMin) * 0.1;
-  viewRef.current = {
-    xMin: vw.xMin + dx,
-    xMax: vw.xMax - dx,
-    yMin: vw.yMin + dy,
-    yMax: vw.yMax - dy,
+  // 확대 버튼 클릭
+  const handleZoomIn = () => {
+    if (zoomLevel >= maxZoom) {
+      alert("최대 확대입니다.");
+      return;
+    }
+    const vw = viewRef.current;
+    const midX = (vw.xMin + vw.xMax) / 2;
+    const midY = (vw.yMin + vw.yMax) / 2;
+    const width = (vw.xMax - vw.xMin) / 2;
+    const height = (vw.yMax - vw.yMin) / 2;
+
+    viewRef.current = {
+      xMin: Math.max(0, midX - width / 2),
+      xMax: Math.min(xBoxCount, midX + width / 2),
+      yMin: Math.max(0, midY - height / 2),
+      yMax: Math.min(yBoxCount, midY + height / 2),
+    };
+    setZoomLevel(zoomLevel + 1);
+    renderGL();
   };
-  setZoomLevel(z => z + 1);
-  renderGL();
-};
 
-// 축소 버튼
-const handleZoomOut = () => {
-  if (zoomLevel <= 0) return;
-  const vw = viewRef.current;
-  const dx = (vw.xMax - vw.xMin) * 0.1;
-  const dy = (vw.yMax - vw.yMin) * 0.1;
-  let newXMin = vw.xMin - dx;
-  let newXMax = vw.xMax + dx;
-  let newYMin = vw.yMin - dy;
-  let newYMax = vw.yMax + dy;
+  // 축소 버튼 클릭
+  const handleZoomOut = () => {
+    if (zoomLevel <= minZoom) return; // 최소일 때 축소 안됨
+    const vw = viewRef.current;
+    const midX = (vw.xMin + vw.xMax) / 2;
+    const midY = (vw.yMin + vw.yMax) / 2;
+    const width = Math.min(xBoxCount, (vw.xMax - vw.xMin) * 2);
+    const height = Math.min(yBoxCount, (vw.yMax - vw.yMin) * 2);
 
-  // 기본 뷰보다 커지지 않도록 제한
-  if (newXMin < 0) newXMin = 0;
-  if (newXMax > xBoxCount) newXMax = xBoxCount;
-  if (newYMin < 0) newYMin = 0;
-  if (newYMax > yBoxCount) newYMax = yBoxCount;
+    viewRef.current = {
+      xMin: Math.max(0, midX - width / 2),
+      xMax: Math.min(xBoxCount, midX + width / 2),
+      yMin: Math.max(0, midY - height / 2),
+      yMax: Math.min(yBoxCount, midY + height / 2),
+    };
+    setZoomLevel(zoomLevel - 1);
+    renderGL();
+  };
 
-  viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
-  setZoomLevel(z => z - 1);
-  renderGL();
-};
+  // 초기화 버튼
+  const handleReset = () => {
+    viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
+    setZoomLevel(0);
+    renderGL();
+  };
 
-return (
-  <div style={{ width: "100%", position: "relative" }}>
-    <canvas
-      ref={canvasRef}
-      style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
-    />
-    <canvas
-      ref={overlayRef}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: `${height}px`,
-        pointerEvents: "none",
-      }}
-    />
-    {tooltip && (
-      <div
+  return (
+    <div style={{ width: "100%", position: "relative" }}>
+      <canvas
+        ref={canvasRef}
+        style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
+      />
+      <canvas
+        ref={overlayRef}
         style={{
-          position: "fixed",
-          left: tooltip.x + 10,
-          top: tooltip.y + 10,
-          background: "rgba(0,0,0,0.7)",
-          color: "#fff",
-          padding: "2px 6px",
-          fontSize: 12,
-          borderRadius: 3,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: `${height}px`,
           pointerEvents: "none",
-          zIndex: 1000,
         }}
-      >
-        {tooltip.text}
+      />
+      {tooltip && (
+        <div
+          style={{
+            position: "fixed",
+            left: tooltip.x + 10,
+            top: tooltip.y + 10,
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            padding: "2px 6px",
+            fontSize: 12,
+            borderRadius: 3,
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+      {/* 확대/축소/초기화 버튼 */}
+      <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: "4px" }}>
+        <button onClick={handleZoomIn} disabled={zoomLevel >= maxZoom}>
+          +
+        </button>
+        <button onClick={handleZoomOut} disabled={zoomLevel <= minZoom}>
+          -
+        </button>
+        <button onClick={handleReset}>Reset</button>
       </div>
-    )}
-    <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
-      <button onClick={handleReset}>Reset</button>
-      <button onClick={handleZoomIn} disabled={zoomLevel >= maxZoom}>Zoom In</button>
-      <button onClick={handleZoomOut} disabled={zoomLevel <= 0}>Zoom Out</button>
     </div>
-  </div>
-);
+  );
 };
 
 export default WebGLDetailChart;
+  
