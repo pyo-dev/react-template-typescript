@@ -224,10 +224,17 @@ useEffect(() => {
       gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
 
       for (let i = 0; i < vertices.length / 2; i += 2) {
-        const t = colors[i / 2];
-        gl.uniform4f(u.u_color, t, 0, 1 - t, 1);
-        gl.drawArrays(gl.LINES, i, 2);
-      }
+  const t = colors[i / 2]; // 0 ~ 1
+
+  // 연파랑 (RGB: 0.7, 0.85, 1.0) → 진파랑 (RGB: 0.0, 0.2, 0.6)
+  const r = 0.7 * (1 - t) + 0.0 * t;
+  const g = 0.85 * (1 - t) + 0.2 * t;
+  const b = 1.0 * (1 - t) + 0.6 * t;
+  const a = 1.0;
+
+  gl.uniform4f(u.u_color, r, g, b, a);
+  gl.drawArrays(gl.LINES, i, 2);
+}
     }
 
     drawGrid();
