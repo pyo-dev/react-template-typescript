@@ -295,6 +295,29 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y));
     };
 
+    const onPointerDown = (ev: PointerEvent) => {
+  const vw = viewRef.current;
+  const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
+  const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
+
+  // Shift 키 또는 우클릭이면 패닝 시작
+  if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
+    isPanningRef.current = true;
+    panStartRef.current = getMousePos(ev); // 시작 위치 저장
+    viewStartRef.current = { ...viewRef.current }; // 시작 뷰 저장
+    canvasRef.current!.style.cursor = "grab";
+    return;
+  }
+
+  // 좌클릭만 드래그 처리
+  if (ev.button !== 0) return;
+  isDraggingRef.current = true;
+  const pos = getMousePos(ev);
+  dragStartRef.current = pos;
+  dragEndRef.current = pos;
+  drawSelectionRect(); // 시작 시 선택 영역 그리기
+};
+
     // 마우스 이동 이벤트
     const onPointerMove = (ev: PointerEvent) => {
       const vw = viewRef.current;
