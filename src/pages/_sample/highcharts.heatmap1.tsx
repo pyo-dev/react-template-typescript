@@ -98,27 +98,27 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
+  /** 리사이즈 핸들링 */
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    const overlay = overlayRef.current!;
+    if (!canvas || !overlay) return;
 
-useEffect(() => {
-  const canvas = canvasRef.current!;
-  const overlay = overlayRef.current!;
-  if (!canvas || !overlay) return;
-
-  const ro = new ResizeObserver(() => {
-    requestAnimationFrame(() => {
-      resizeCanvasToDisplaySize(canvas, height);
-      const gl = glRef.current;
-      if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-      drawGrid();      // overlay 다시 그리기
-      renderGL();      // 포인터도 다시 그리기
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        resizeCanvasToDisplaySize(canvas, height);
+        const gl = glRef.current;
+        if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        renderGL();
+      });
     });
-  });
 
-  ro.observe(canvas.parentElement!);
-  return () => ro.disconnect();
-}, [height]);
-  
-  // 초기 WebGL
+    ro.observe(canvas.parentElement!);
+    return () => ro.disconnect();
+  }, [height]);
+
+  /** WebGL 초기화 */
   useEffect(() => {
     const canvas = canvasRef.current!;
     const gl = canvas.getContext("webgl", { antialias: false });
@@ -152,6 +152,7 @@ useEffect(() => {
     };
   }, [height]);
 
+  /** 그리드 */
   const drawGrid = () => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -190,6 +191,7 @@ useEffect(() => {
     }
   };
 
+  /** 포인터 + 컬러 그리기 */
   const renderGL = () => {
     const gl = glRef.current;
     if (!gl || !programRef.current) return;
@@ -224,30 +226,27 @@ useEffect(() => {
       gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
 
       for (let i = 0; i < vertices.length / 2; i += 2) {
-  const t = colors[i / 2]; // 0 ~ 1
-
-  // 연파랑 (RGB: 0.7, 0.85, 1.0) → 진파랑 (RGB: 0.0, 0.2, 0.6)
-  const r = 0.7 * (1 - t) + 0.0 * t;
-  const g = 0.85 * (1 - t) + 0.2 * t;
-  const b = 1.0 * (1 - t) + 0.6 * t;
-  const a = 1.0;
-
-  gl.uniform4f(u.u_color, r, g, b, a);
-  gl.drawArrays(gl.LINES, i, 2);
-}
+        const t = colors[i / 2]; // 0 ~ 1
+        const r = 0.7 * (1 - t) + 0.0 * t;
+        const g = 0.85 * (1 - t) + 0.2 * t;
+        const b = 1.0 * (1 - t) + 0.6 * t;
+        const a = 1.0;
+        gl.uniform4f(u.u_color, r, g, b, a);
+        gl.drawArrays(gl.LINES, i, 2);
+      }
     }
 
     drawGrid();
   };
 
-  // 마우스 좌표 (CSS 픽셀 기준)
+  /** 마우스 좌표 */
   const getMousePos = (ev: PointerEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
   };
 
-  // 드래그, 패닝 이벤트
+  /** 드래그 + 패닝 이벤트 */
   useEffect(() => {
     const canvas = canvasRef.current!;
     const overlay = overlayRef.current!;
@@ -298,10 +297,10 @@ useEffect(() => {
         const dy = mouse.y - panStartRef.current.y;
         const vwWidth = viewStartRef.current.xMax - viewStartRef.current.xMin;
         const vwHeight = viewStartRef.current.yMax - viewStartRef.current.yMin;
-        let newXMin = viewStartRef.current.xMin - dx / canvas.clientWidth * vwWidth;
-        let newXMax = viewStartRef.current.xMax - dx / canvas.clientWidth * vwWidth;
-        let newYMin = viewStartRef.current.yMin - dy / canvas.clientHeight * vwHeight;
-        let newYMax = viewStartRef.current.yMax - dy / canvas.clientHeight * vwHeight;
+        let newXMin = viewStartRef.current.xMin - (dx / canvas.clientWidth) * vwWidth;
+        let newXMax = viewStartRef.current.xMax - (dx / canvas.clientWidth) * vwWidth;
+        let newYMin = viewStartRef.current.yMin - (dy / canvas.clientHeight) * vwHeight;
+        let newYMax = viewStartRef.current.yMax - (dy / canvas.clientHeight) * vwHeight;
 
         // 패닝 제한
         if (newXMin < 0) { newXMin = 0; newXMax = vwWidth; }
@@ -319,7 +318,7 @@ useEffect(() => {
       const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
       const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
 
-      // Shift 또는 우클릭 = 패닝
+      // Shift or 우클릭 = 패닝
       if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
         isPanningRef.current = true;
         panStartRef.current = getMousePos(ev);
@@ -337,55 +336,51 @@ useEffect(() => {
     };
 
     const onPointerUp = () => {
-  const canvas = canvasRef.current!;
-  const overlay = overlayRef.current!;
-  if (!canvas || !overlay) return;
+      if (isPanningRef.current) {
+        isPanningRef.current = false;
+        panStartRef.current = null;
+        viewStartRef.current = viewRef.current;
+        canvas.style.cursor = "default";
+      }
 
-  if (isPanningRef.current) {
-    isPanningRef.current = false;
-    panStartRef.current = null;
-    viewStartRef.current = viewRef.current;
-    canvas.style.cursor = "default";
-  }
+      if (isDraggingRef.current && dragStartRef.current && dragEndRef.current) {
+        const canvasW = canvas.clientWidth;
+        const canvasH = canvas.clientHeight;
+        const vw = viewRef.current;
+        const s = dragStartRef.current;
+        const e = dragEndRef.current;
 
-  if (isDraggingRef.current && dragStartRef.current && dragEndRef.current && (dragStartRef.current !== dragEndRef.current)) {
-    const canvasW = canvas.clientWidth;
-    const canvasH = canvas.clientHeight;
-    const vw = viewRef.current;
-    const s = dragStartRef.current;
-    const e = dragEndRef.current;
+        if (s.x !== e.x && s.y !== e.y) {
+          const worldXMin = vw.xMin + (Math.min(s.x, e.x) / canvasW) * (vw.xMax - vw.xMin);
+          const worldXMax = vw.xMin + (Math.max(s.x, e.x) / canvasW) * (vw.xMax - vw.xMin);
+          const worldYMin = vw.yMin + (Math.min(s.y, e.y) / canvasH) * (vw.yMax - vw.yMin);
+          const worldYMax = vw.yMin + (Math.max(s.y, e.y) / canvasH) * (vw.yMax - vw.yMin);
 
-    const worldXMin = vw.xMin + Math.min(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-    const worldXMax = vw.xMin + Math.max(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-    const worldYMin = vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
-    const worldYMax = vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
+          const selectedPointers = pointers.filter(p => {
+            const boxX = p.boxIndex % xBoxCount;
+            const boxY = Math.floor(p.boxIndex / xBoxCount);
+            const xPos = boxX + p.x / 100;
+            const yTop = boxY;
+            const yBottom = boxY + 1;
+            return xPos >= worldXMin && xPos <= worldXMax && yBottom > worldYMin && yTop < worldYMax;
+          });
+          console.log("선택 포인터:", selectedPointers);
 
-    const selectedPointers = pointers.filter(p => {
-      const boxX = p.boxIndex % xBoxCount;
-      const boxY = Math.floor(p.boxIndex / xBoxCount);
-      const xPos = boxX + p.x / 100;
-      const yTop = boxY;
-      const yBottom = boxY + 1;
-      return xPos >= worldXMin && xPos <= worldXMax && yBottom > worldYMin && yTop < worldYMax;
-    });
-    console.log("선택 포인터:", selectedPointers);
+          viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
+        }
+      }
 
-    // 뷰 확대
-    viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-  }
+      // 드래그/패닝 초기화
+      isDraggingRef.current = false;
+      dragStartRef.current = null;
+      dragEndRef.current = null;
 
-  // 드래그/패닝 초기화
-  isDraggingRef.current = false;
-  dragStartRef.current = null;
-  dragEndRef.current = null;
+      // 오버레이 초기화
+      const ctx = overlay.getContext("2d")!;
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-  // 오버레이 초기화
-  const ctx = overlay.getContext("2d")!;
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-  // 항상 다시 그리기 → 그리드 + 포인터 유지
-  renderGL();
-};
+      renderGL();
+    };
 
     canvas.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("pointermove", onPointerMove);
@@ -394,10 +389,11 @@ useEffect(() => {
     return () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("pointerup",onPointerUp);
     };
   }, [pointers, xBoxCount, yBoxCount]);
 
+  /** 뷰 초기화 버튼 */
   const handleReset = () => {
     viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
     renderGL();
@@ -411,13 +407,15 @@ useEffect(() => {
       />
       <canvas
         ref={overlayRef}
-        style={{ position: "absolute",top: 0,
-        left: 0,
-        width: "100%",
-        height: `${height}px`,
-        pointerEvents: "none", // 오버레이는 이벤트 막음
-      }}
-    />
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: `${height}px`,
+          pointerEvents: "none", // 오버레이는 이벤트 막음
+        }}
+      />
       {tooltip && (
         <div
           style={{
