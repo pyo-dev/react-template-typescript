@@ -1,18 +1,17 @@
 // WebGLDetailChart.tsx
 import React, { useEffect, useRef, useState } from "react";
 
-// Pointer 타입 정의: 각 박스 인덱스, x/y 위치, value 포함
 type Pointer = { boxIndex: number; x: number; y: number; value: number };
 
-// props 정의
 interface WebGLDetailChartProps {
   height: number;
   xBoxCount: number;
   yBoxCount: number;
   pointers: Pointer[];
+  valueMin: number; // value 최소값
+  valueMax: number; // value 최대값
 }
 
-// Vertex Shader: 좌표를 WebGL 클립좌표로 변환
 const vertexShaderSource = `
 attribute vec2 a_pos;
 uniform float u_xMin;
@@ -28,7 +27,6 @@ void main() {
 }
 `;
 
-// Fragment Shader: 색상을 uniform으로 받아 픽셀 색상 지정
 const fragmentShaderSource = `
 precision mediump float;
 uniform vec4 u_color;
@@ -37,7 +35,6 @@ void main() {
 }
 `;
 
-// Shader 컴파일
 const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => {
   const sh = gl.createShader(type)!;
   gl.shaderSource(sh, src);
@@ -50,7 +47,6 @@ const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => 
   return sh;
 };
 
-// 프로그램 생성
 const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) => {
   const vs = compileShader(gl, vsrc, gl.VERTEX_SHADER);
   const fs = compileShader(gl, fsrc, gl.FRAGMENT_SHADER);
@@ -68,7 +64,6 @@ const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) =>
   return prog;
 };
 
-// Canvas 크기 재조정
 const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) => {
   const parent = canvas.parentElement!;
   const displayWidth = parent.clientWidth;
@@ -84,18 +79,26 @@ const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) 
   }
 };
 
-// 최종 컴포넌트
-const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, yBoxCount, pointers }) => {
+const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
+  height,
+  xBoxCount,
+  yBoxCount,
+  pointers,
+  valueMin,
+  valueMax
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 뷰포트 범위
+  // 뷰 영역 상태
   const viewRef = useRef({ xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount });
 
-  // 드래그/패닝 상태
+  // 드래그 관련
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragEndRef = useRef<{ x: number; y: number } | null>(null);
+
+  // 패닝 관련
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
   const viewStartRef = useRef(viewRef.current);
@@ -107,11 +110,11 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
   const uniformLocsRef = useRef<any>(null);
   const bufferRef = useRef<WebGLBuffer | null>(null);
 
-  // 툴팁 상태
+  // 툴팁
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
-  // Canvas 리사이즈 후 다시 그림
+  /** 캔버스 리사이즈 관찰 */
   useEffect(() => {
     const canvas = canvasRef.current!;
     const overlay = overlayRef.current!;
@@ -122,8 +125,8 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         resizeCanvasToDisplaySize(canvas, height);
         const gl = glRef.current;
         if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-        drawGrid();      
-        renderGL();      
+        drawGrid(); // overlay 그리드
+        renderGL(); // WebGL 포인터
       });
     });
 
@@ -131,7 +134,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     return () => ro.disconnect();
   }, [height]);
 
-  // WebGL 초기화
+  /** WebGL 초기화 */
   useEffect(() => {
     const canvas = canvasRef.current!;
     const gl = canvas.getContext("webgl", { antialias: false });
@@ -151,11 +154,13 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
 
     attribLocRef.current = a_pos;
     uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax, u_color };
+
     bufferRef.current = gl.createBuffer();
 
     resizeCanvasToDisplaySize(canvas, height);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.98, 0.98, 0.98, 1.0);
+
     renderGL();
 
     return () => {
@@ -163,7 +168,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     };
   }, [height]);
 
-  // 그리드 그리기
+  /** 그리드 그리기 (overlay) */
   const drawGrid = () => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -186,7 +191,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     ctx.strokeStyle = "#ccc";
     ctx.lineWidth = 1;
 
-    // 세로선
     for (let i = Math.floor(vw.xMin); i <= Math.ceil(vw.xMax); i++) {
       const x = (i - vw.xMin) * cellW + 0.5;
       ctx.beginPath();
@@ -194,7 +198,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       ctx.lineTo(x, h);
       ctx.stroke();
     }
-    // 가로선
     for (let i = Math.floor(vw.yMin); i <= Math.ceil(vw.yMax); i++) {
       const y = (i - vw.yMin) * cellH + 0.5;
       ctx.beginPath();
@@ -204,7 +207,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     }
   };
 
-  // WebGL 포인터 렌더링
+  /** WebGL 렌더링 (포인터 + 색상) */
   const renderGL = () => {
     const gl = glRef.current;
     if (!gl || !programRef.current) return;
@@ -220,9 +223,8 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     gl.uniform1f(u.u_yMax, vw.yMax);
 
     const vertices: number[] = [];
-    const colors: number[] = [];
+    const colors: number[][] = [];
 
-    // 포인터 반복
     pointers.forEach((p) => {
       const boxX = p.boxIndex % xBoxCount;
       const boxY = Math.floor(p.boxIndex / xBoxCount);
@@ -231,12 +233,16 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       const yBottom = boxY + 1;
       vertices.push(xPos, yTop, xPos, yBottom);
 
-      // value 기반 색상 비율 계산
-      const minValue = 300;  // 예시 최소값
-      const maxValue = 2000; // 예시 최대값
-      let t = (p.value - minValue) / (maxValue - minValue);
-      t = Math.max(0, Math.min(1, t)); // 0~1로 클램프
-      colors.push(t);
+      // value 기반 0~1 비율
+      const t = Math.min(Math.max((p.value - valueMin) / (valueMax - valueMin), 0), 1);
+
+      // 연파랑 → 진파랑
+      const r = 0.7 * (1 - t) + 0.0 * t;
+      const g = 0.85 * (1 - t) + 0.2 * t;
+      const b = 1.0 * (1 - t) + 0.6 * t;
+      const a = 1.0;
+
+      colors.push([r, g, b, a]);
     });
 
     if (vertices.length > 0) {
@@ -246,14 +252,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
 
       for (let i = 0; i < vertices.length / 2; i += 2) {
-        const t = colors[i / 2];
-
-        // 연파랑 → 진파랑
-        const r = 0.7 * (1 - t) + 0.0 * t;
-        const g = 0.85 * (1 - t) + 0.2 * t;
-        const b = 1.0 * (1 - t) + 0.6 * t;
-        const a = 1.0;
-
+        const [r, g, b, a] = colors[i / 2];
         gl.uniform4f(u.u_color, r, g, b, a);
         gl.drawArrays(gl.LINES, i, 2);
       }
@@ -262,19 +261,20 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
     drawGrid();
   };
 
-  // 마우스 좌표 변환
+  /** 마우스 위치 계산 (CSS 픽셀 기준) */
   const getMousePos = (ev: PointerEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
   };
 
-  // 드래그/패닝 이벤트
+  /** 드래그/패닝 이벤트 */
   useEffect(() => {
     const canvas = canvasRef.current!;
     const overlay = overlayRef.current!;
     if (!canvas || !overlay) return;
 
+    // 드래그 사각형 그리기
     const drawSelectionRect = () => {
       const ctx = overlay.getContext("2d")!;
       drawGrid();
@@ -289,11 +289,12 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y));
     };
 
+    // 마우스 이동
     const onPointerMove = (ev: PointerEvent) => {
       const vw = viewRef.current;
       const mouse = getMousePos(ev);
 
-      // 툴팁 계산: 마우스 위치의 셀 좌표 계산
+      // 툴팁
       const cellW = canvas.clientWidth / (vw.xMax - vw.xMin);
       const cellH = canvas.clientHeight / (vw.yMax - vw.yMin);
       const cellX = Math.floor(vw.xMin + mouse.x / cellW);
@@ -308,19 +309,21 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         lastTooltipRef.current = { cellX, cellY };
       }
 
-      // 드래그 중일 경우
+      // 드래그
       if (isDraggingRef.current && dragStartRef.current) {
-        dragEndRef.current = mouse;
+        dragEndRef.current = {
+          x: Math.min(Math.max(mouse.x, 0), canvas.clientWidth),
+          y: Math.min(Math.max(mouse.y, 0), canvas.clientHeight)
+        };
         drawSelectionRect();
       }
 
-      // 패닝 중일 경우
+      // 패닝
       if (isPanningRef.current && panStartRef.current) {
         const dx = mouse.x - panStartRef.current.x;
         const dy = mouse.y - panStartRef.current.y;
         const vwWidth = viewStartRef.current.xMax - viewStartRef.current.xMin;
         const vwHeight = viewStartRef.current.yMax - viewStartRef.current.yMin;
-
         let newXMin = viewStartRef.current.xMin - dx / canvas.clientWidth * vwWidth;
         let newXMax = viewStartRef.current.xMax - dx / canvas.clientWidth * vwWidth;
         let newYMin = viewStartRef.current.yMin - dy / canvas.clientHeight * vwHeight;
@@ -337,12 +340,13 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       }
     };
 
+    // 마우스 다운
     const onPointerDown = (ev: PointerEvent) => {
       const vw = viewRef.current;
       const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
       const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
 
-      // Shift 또는 우클릭 시 패닝 시작
+      // Shift 또는 우클릭 = 패닝
       if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
         isPanningRef.current = true;
         panStartRef.current = getMousePos(ev);
@@ -351,20 +355,16 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         return;
       }
 
-      if (ev.button !== 0) return; // 좌클릭만 드래그 허용
-      isDraggingRef.current = true;
+      if (ev.button !== 0) return; // 좌클릭만
+      isDraggingRef.current =true;
       const pos = getMousePos(ev);
       dragStartRef.current = pos;
       dragEndRef.current = pos;
       drawSelectionRect();
     };
 
+    // 마우스 업
     const onPointerUp = () => {
-      const canvas = canvasRef.current!;
-      const overlay = overlayRef.current!;
-      if (!canvas || !overlay) return;
-
-      // 패닝 종료
       if (isPanningRef.current) {
         isPanningRef.current = false;
         panStartRef.current = null;
@@ -372,20 +372,19 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         canvas.style.cursor = "default";
       }
 
-      // 드래그 선택 종료
-      if (isDraggingRef.current && dragStartRef.current && dragEndRef.current && (dragStartRef.current !== dragEndRef.current)) {
+      if (isDraggingRef.current && dragStartRef.current && dragEndRef.current) {
         const canvasW = canvas.clientWidth;
         const canvasH = canvas.clientHeight;
         const vw = viewRef.current;
         const s = dragStartRef.current;
         const e = dragEndRef.current;
 
-        const worldXMin = vw.xMin + Math.min(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-        const worldXMax = vw.xMin + Math.max(s.x, e.x) / canvasW * (vw.xMax - vw.xMin);
-        const worldYMin = vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
-        const worldYMax = vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin);
+        // 드래그 영역을 뷰 범위 내로 제한
+        const worldXMin = Math.max(vw.xMin + Math.min(s.x, e.x) / canvasW * (vw.xMax - vw.xMin), 0);
+        const worldXMax = Math.min(vw.xMin + Math.max(s.x, e.x) / canvasW * (vw.xMax - vw.xMin), xBoxCount);
+        const worldYMin = Math.max(vw.yMin + Math.min(s.y, e.y) / canvasH * (vw.yMax - vw.yMin), 0);
+        const worldYMax = Math.min(vw.yMin + Math.max(s.y, e.y) / canvasH * (vw.yMax - vw.yMin), yBoxCount);
 
-        // 선택된 포인터
         const selectedPointers = pointers.filter(p => {
           const boxX = p.boxIndex % xBoxCount;
           const boxY = Math.floor(p.boxIndex / xBoxCount);
@@ -396,7 +395,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
         });
         console.log("선택 포인터:", selectedPointers);
 
-        // 뷰 확대
+        // 선택 영역으로 뷰 확대
         viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
       }
 
@@ -421,9 +420,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({ height, xBoxCount, 
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);
     };
-  }, [pointers, xBoxCount, yBoxCount]);
+  }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax]);
 
-  // 뷰 리셋
+  // 뷰 리셋 버튼
   const handleReset = () => {
     viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
     renderGL();
