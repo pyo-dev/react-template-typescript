@@ -551,3 +551,119 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 };
 
 export default WebGLDetailChart;
+
+
+
+
+
+const onPointerUp = () => {
+  const canvas = canvasRef.current!;
+  const overlay = overlayRef.current!;
+  if (!canvas || !overlay) return;
+
+  // 패닝 종료 처리
+  if (isPanningRef.current) {
+    isPanningRef.current = false;
+    panStartRef.current = null;
+    viewStartRef.current = viewRef.current;
+    canvas.style.cursor = "default";
+  }
+
+  // 드래그 종료 후 처리
+  if (
+    isDraggingRef.current &&
+    dragStartRef.current &&
+    dragEndRef.current &&
+    (dragStartRef.current.x !== dragEndRef.current.x || dragStartRef.current.y !== dragEndRef.current.y)
+  ) {
+    const s = dragStartRef.current;
+    const e = dragEndRef.current;
+    const canvasW = canvas.clientWidth;
+    const canvasH = canvas.clientHeight;
+    const vw = viewRef.current;
+
+    // 드래그 좌표를 캔버스 영역으로 클램핑
+    const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+    const x0 = clamp(s.x, 0, canvasW);
+    const x1 = clamp(e.x, 0, canvasW);
+    const y0 = clamp(s.y, 0, canvasH);
+    const y1 = clamp(e.y, 0, canvasH);
+
+    // 클램프된 드래그 영역을 world 좌표로 변환
+    const worldXMin = vw.xMin + Math.min(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+    const worldXMax = vw.xMin + Math.max(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+    const worldYMin = vw.yMin + Math.min(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+    const worldYMax = vw.yMin + Math.max(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+
+    // 드래그 영역 내 포인터 데이터를 모아서 로그 출력
+    const selectedPointers: Pointer[] = [];
+    pointers.forEach(p => {
+      const boxX = p.boxIndex % xBoxCount;
+      const boxY = Math.floor(p.boxIndex / xBoxCount);
+      if (chartType === "vertical") {
+        const xPos = boxX + p.x / 100;
+        if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
+          selectedPointers.push(p);
+        }
+      } else {
+        const yPos = boxY + p.y / 100;
+        if (boxX >= worldXMin && boxX <= worldXMax && yPos >= worldYMin && yPos <= worldYMax) {
+          selectedPointers.push(p);
+        }
+      }
+    });
+    console.log("드래그 영역 내 포인터 데이터:", selectedPointers);
+
+    // 드래그 영역으로 뷰 확대
+    viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
+
+    // 확대 후 zoomLevel 계산: 최소 뷰 기준으로 축소 버튼 활성화/비활성화
+    const newZoomX = xBoxCount / (worldXMax - worldXMin);
+    const newZoomY = yBoxCount / (worldYMax - worldYMin);
+    const newZoomLevel = Math.min(newZoomX, newZoomY);
+    setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
+  }
+
+  // 드래그 상태 초기화
+  isDraggingRef.current = false;
+  dragStartRef.current = null;
+  dragEndRef.current = null;
+
+  // 오버레이 초기화
+  const ctx = overlay.getContext("2d")!;
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+  // 렌더링 갱신
+  renderGL();
+};
+
+
+
+
+const handleZoomOut = () => {
+  const vw = viewRef.current;
+  const midX = (vw.xMin + vw.xMax) / 2;
+  const midY = (vw.yMin + vw.yMax) / 2;
+  const width = (vw.xMax - vw.xMin) * 2;
+  const height = (vw.yMax - vw.yMin) * 2;
+
+  let newXMin = midX - width / 2;
+  let newXMax = midX + width / 2;
+  let newYMin = midY - height / 2;
+  let newYMax = midY + height / 2;
+
+  // 캔버스 영역 클램핑
+  if (newXMin < 0) { newXMin = 0; newXMax = vw.xMax - vw.xMin; }
+  if (newXMax > xBoxCount) { newXMax = xBoxCount; newXMin = xBoxCount - (vw.xMax - vw.xMin); }
+  if (newYMin < 0) { newYMin = 0; newYMax = vw.yMax - vw.yMin; }
+  if (newYMax > yBoxCount) { newYMax = yBoxCount; newYMin = yBoxCount - (vw.yMax - vw.yMin); }
+
+  viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+
+  // 축소 후 zoomLevel 갱신
+  const newZoomX = xBoxCount / (newXMax - newXMin);
+  const newZoomY = yBoxCount / (newYMax - newYMin);
+  setZoomLevel(Math.max(MIN_ZOOM, Math.min(newZoomX, newZoomY)));
+
+  renderGL();
+};
