@@ -411,6 +411,8 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       drawGrid();
     };
 
+
+    
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
@@ -423,8 +425,20 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     };
   }, [pointers, xBoxCount, yBoxCount]);
 
+  const handleReset = () => {
+    viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
+    renderGL(); // WebGL + overlay 다시 그리기
+  };
+
+  
   return (
     <div style={{ position: "relative", width: "100%", height }}>
+      <button
+       style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}
+       onClick={handleReset}
+      >
+       Reset View
+      </button>
       <canvas
         ref={canvasRef}
         style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%" }}
