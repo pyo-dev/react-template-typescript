@@ -341,7 +341,7 @@ useEffect(() => {
     canvas.style.cursor = "default";
   }
 
-  if (isDraggingRef.current && dragStartRef.current && dragEndRef.current) {
+  if (isDraggingRef.current && dragStartRef.current && dragEndRef.current && (dragStartRef.current !== dragEndRef.current)) {
     const canvasW = canvas.clientWidth;
     const canvasH = canvas.clientHeight;
     const vw = viewRef.current;
