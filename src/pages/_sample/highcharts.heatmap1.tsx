@@ -122,7 +122,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 	// WebGL refs
 	const glRef = useRef<WebGLRenderingContext | null>(null);
 	const programRef = useRef<WebGLProgram | null>(null);
-	const attribLocRef = useRef<number | null>(null);
+	const attribLocRef = useRef<{ a_pos: number; a_color: number } | null>(null);
 	const uniformLocsRef = useRef<any>(null);
 	const bufferRef = useRef<WebGLBuffer | null>(null);
 
