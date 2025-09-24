@@ -16,27 +16,32 @@ interface WebGLDetailChartProps {
 }
 
 // GLSL Vertex Shader
+// vertex shader
 const vertexShaderSource = `
 attribute vec2 a_pos;
+attribute vec3 a_color;      // 추가
 uniform float u_xMin;
 uniform float u_xMax;
 uniform float u_yMin;
 uniform float u_yMax;
+varying vec3 v_color;        // fragment로 전달
+
 void main() {
   float nx = (a_pos.x - u_xMin) / (u_xMax - u_xMin);
   float ny = (a_pos.y - u_yMin) / (u_yMax - u_yMin);
   float clipX = nx * 2.0 - 1.0;
   float clipY = 1.0 - ny * 2.0;
   gl_Position = vec4(clipX, clipY, 0.0, 1.0);
+  v_color = a_color;         // 색상 전달
 }
 `;
 
-// GLSL Fragment Shader
+// fragment shader
 const fragmentShaderSource = `
 precision mediump float;
-uniform vec4 u_color;
+varying vec3 v_color;
 void main() {
-  gl_FragColor = u_color;
+  gl_FragColor = vec4(v_color, 1.0);
 }
 `;
 
@@ -150,36 +155,41 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 	}, [height]);
 
 	// WebGL 초기화
-	useEffect(() => {
-		const canvas = canvasRef.current!;
-		const gl = canvas.getContext("webgl", { antialias: false });
-		if (!gl) return console.error("WebGL 미지원");
-		glRef.current = gl;
+useEffect(() => {
+  const canvas = canvasRef.current!;
+  const gl = canvas.getContext("webgl", { antialias: false });
+  if (!gl) return console.error("WebGL 미지원");
+  glRef.current = gl;
 
-		const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-		programRef.current = program;
-		gl.useProgram(program);
+  // 셰이더 프로그램 생성
+  const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+  programRef.current = program;
+  gl.useProgram(program);
 
-		const a_pos = gl.getAttribLocation(program, "a_pos");
-		const u_xMin = gl.getUniformLocation(program, "u_xMin");
-		const u_xMax = gl.getUniformLocation(program, "u_xMax");
-		const u_yMin = gl.getUniformLocation(program, "u_yMin");
-		const u_yMax = gl.getUniformLocation(program, "u_yMax");
-		const u_color = gl.getUniformLocation(program, "u_color");
+  // ✅ attribute 등록 (pos + color)
+  const a_pos = gl.getAttribLocation(program, "a_pos");
+  const a_color = gl.getAttribLocation(program, "a_color"); // 추가
+  attribLocRef.current = { a_pos, a_color }; // 객체로 저장
 
-		attribLocRef.current = a_pos;
-		uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax, u_color };
-		bufferRef.current = gl.createBuffer();
+  // ✅ uniform 등록 (u_color 제거됨)
+  const u_xMin = gl.getUniformLocation(program, "u_xMin");
+  const u_xMax = gl.getUniformLocation(program, "u_xMax");
+  const u_yMin = gl.getUniformLocation(program, "u_yMin");
+  const u_yMax = gl.getUniformLocation(program, "u_yMax");
 
-		resizeCanvasToDisplaySize(canvas, height);
-		gl.viewport(0, 0, canvas.width, canvas.height);
-		gl.clearColor(0.98, 0.98, 0.98, 1.0);
+  uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax };
 
-		renderGL();
-		return () => {
-			gl.clear(gl.COLOR_BUFFER_BIT);
-		};
-	}, [height]);
+  // 버퍼 생성
+  bufferRef.current = gl.createBuffer();
+
+  // 초기 상태
+  gl.clearColor(0, 0, 0, 0);
+
+  return () => {
+    if (bufferRef.current) gl.deleteBuffer(bufferRef.current);
+    if (programRef.current) gl.deleteProgram(programRef.current);
+  };
+}, [height]);
 
 	// 그리드 그리기
 	const drawGrid = () => {
@@ -223,65 +233,73 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 	};
 
 	// WebGL 렌더링 (포인터) - 최적화: 화면에 보이는 것만
-	const renderGL = () => {
-		const gl = glRef.current;
-		if (!gl || !programRef.current) return;
-		gl.clear(gl.COLOR_BUFFER_BIT);
+	// ✅ 수정된 renderGL (draw call 1회)
+const renderGL = () => {
+  const gl = glRef.current;
+  if (!gl || !programRef.current) return;
+  gl.clear(gl.COLOR_BUFFER_BIT);
 
-		const a_pos = attribLocRef.current!;
-		const u = uniformLocsRef.current;
-		const vw = viewRef.current;
+  const { a_pos, a_color } = attribLocRef.current!;
+  const u = uniformLocsRef.current;
+  const vw = viewRef.current;
 
-		gl.uniform1f(u.u_xMin, vw.xMin);
-		gl.uniform1f(u.u_xMax, vw.xMax);
-		gl.uniform1f(u.u_yMin, vw.yMin);
-		gl.uniform1f(u.u_yMax, vw.yMax);
+  gl.uniform1f(u.u_xMin, vw.xMin);
+  gl.uniform1f(u.u_xMax, vw.xMax);
+  gl.uniform1f(u.u_yMin, vw.yMin);
+  gl.uniform1f(u.u_yMax, vw.yMax);
 
-		const vertices: number[] = [];
-		const colors: number[] = [];
+  const vertices: number[] = [];
 
-		// 화면에 보이는 포인터만 vertex에 추가 (LOD)
-		pointers.forEach((p) => {
-			const boxX = p.boxIndex % xBoxCount;
-			const boxY = Math.floor(p.boxIndex / xBoxCount);
+  // 포인터마다 (x,y,r,g,b) 두 점씩 넣기
+  pointers.forEach((p) => {
+    const boxX = p.boxIndex % xBoxCount;
+    const boxY = Math.floor(p.boxIndex / xBoxCount);
 
-			// 화면 영역 체크 보이는 영역만 GL vertex 생성
-			if (
-				boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
-				boxY < vw.yMin - 1 || boxY > vw.yMax + 1
-			) return;
+    // 화면 영역 벗어나면 스킵
+    if (
+      boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
+      boxY < vw.yMin - 1 || boxY > vw.yMax + 1
+    ) return;
 
-			if (chartType === "vertical") {
-				const xPos = boxX + p.x / 100;
-				vertices.push(xPos, boxY, xPos, boxY + 1);
-			} else {
-				const yPos = boxY + p.y / 100;
-				vertices.push(boxX, yPos, boxX + 1, yPos);
-			}
+    // 값 -> 색상 맵핑
+    const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
+    const r = 0.0 * t + 0.0 * (1 - t);
+    const g = 0.8 * (1 - t) + 0.3 * t;
+    const b = 1.0 * (1 - t) + 0.6 * t;
 
-			const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
-			colors.push(t);
-		});
+    if (chartType === "vertical") {
+      const xPos = boxX + p.x / 100;
+      // 시작점
+      vertices.push(xPos, boxY, r, g, b);
+      // 끝점
+      vertices.push(xPos, boxY + 1, r, g, b);
+    } else {
+      const yPos = boxY + p.y / 100;
+      vertices.push(boxX, yPos, r, g, b);
+      vertices.push(boxX + 1, yPos, r, g, b);
+    }
+  });
 
-		if (vertices.length > 0) {
-			// 매 프레임마다 새 버퍼 생성 없이 동일 buffer 재사용.
-			gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
-			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
-			gl.enableVertexAttribArray(a_pos);
-			gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
+  if (vertices.length > 0) {
+    const stride = 5 * 4; // (x,y,r,g,b) float 5개, 1 float = 4 byte
 
-			for (let i = 0; i < vertices.length / 2; i += 2) {
-				const t = colors[i / 2];
-				const r = 0.0 * t + 0.0 * (1 - t);
-				const g = 0.8 * (1 - t) + 0.3 * t;
-				const b = 1.0 * (1 - t) + 0.6 * t;
-				gl.uniform4f(u.u_color, r, g, b, 1.0);
-				gl.drawArrays(gl.LINES, i, 2);
-			}
-		}
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 
-		drawGrid(); // 오버레이 그리드
-	};
+    // pos attribute
+    gl.enableVertexAttribArray(a_pos);
+    gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
+
+    // color attribute
+    gl.enableVertexAttribArray(a_color);
+    gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
+
+    // ✅ draw call 단 1회
+    gl.drawArrays(gl.LINES, 0, vertices.length / 5);
+  }
+
+  drawGrid(); // 오버레이 그리드
+};
 
 	// 마우스 위치 계산
 	const getMousePos = (ev: PointerEvent) => {
