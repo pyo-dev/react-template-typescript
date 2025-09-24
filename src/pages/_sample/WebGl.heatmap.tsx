@@ -150,6 +150,66 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
   // 기존 useRef, useState, useEffect 등 전부 유지
 
   // -------------------- 그리드 그리기 --------------------
+  // 그룹축 렌더링 함수
+const drawGroupAxis = (
+  ctx: CanvasRenderingContext2D,
+  groups: any[],
+  axis: "x" | "y",
+  w: number,
+  h: number,
+  labelHeight: number,
+  level: number = 0
+) => {
+  const vw = viewRef.current;
+  const cellW = w / (vw.xMax - vw.xMin);
+  const cellH = h / (vw.yMax - vw.yMin);
+
+  groups.forEach(group => {
+    if (axis === "x") {
+      const start = Math.max(group.range[0], vw.xMin);
+      const end   = Math.min(group.range[1] + 1, vw.xMax);
+      if (end <= start) return;
+
+      const x0 = (start - vw.xMin) * cellW;
+      const x1 = (end - vw.xMin) * cellW;
+      const mid = (x0 + x1) / 2;
+
+      // 그룹 라인
+      ctx.beginPath();
+      ctx.moveTo(x0, -level * labelHeight);
+      ctx.lineTo(x1, -level * labelHeight);
+      ctx.stroke();
+
+      // 그룹 텍스트 (차트 위쪽에 표시됨)
+      ctx.fillText(group.name, mid, -level * labelHeight - 4);
+
+      if (group.children) {
+        drawGroupAxis(ctx, group.children, "x", w, h, labelHeight, level + 1);
+      }
+    } else {
+      const start = Math.max(group.range[0], vw.yMin);
+      const end   = Math.min(group.range[1] + 1, vw.yMax);
+      if (end <= start) return;
+
+      const y0 = (start - vw.yMin) * cellH;
+      const y1 = (end - vw.yMin) * cellH;
+      const mid = (y0 + y1) / 2;
+
+      // 그룹 라인
+      ctx.beginPath();
+      ctx.moveTo(-level * labelHeight, y0);
+      ctx.lineTo(-level * labelHeight, y1);
+      ctx.stroke();
+
+      // 그룹 텍스트 (차트 왼쪽에 표시됨)
+      ctx.fillText(group.name, -level * labelHeight - 4, mid);
+
+      if (group.children) {
+        drawGroupAxis(ctx, group.children, "y", w, h, labelHeight, level + 1);
+      }
+    }
+  });
+};
   const drawGrid = () => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -193,6 +253,24 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     drawXAxisGroupsTop(ctx, w, vw);   // 상단 X축 그룹
     drawYAxisGroupsLeft(ctx, h, vw); // 좌측 Y축 그룹
     // -----------------------------------------------------
+    // === 그룹축 라벨 그리기 ===
+ctx.save();
+ctx.font = "12px sans-serif";
+ctx.fillStyle = "#000";
+ctx.strokeStyle = "#000";
+ctx.textAlign = "center";
+ctx.textBaseline = "bottom";
+
+// X축 그룹 (차트 상단)
+drawGroupAxis(ctx, xGroups, "x", w, h, 16);
+
+ctx.textAlign = "right";
+ctx.textBaseline = "middle";
+
+// Y축 그룹 (차트 좌측)
+drawGroupAxis(ctx, yGroups, "y", w, h, 16);
+
+ctx.restore();
   };
 
   // -------------------- 나머지 WebGL 렌더링 및 이벤트 로직 --------------------
