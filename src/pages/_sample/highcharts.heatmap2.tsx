@@ -489,6 +489,53 @@ setTooltip({ text: `박스(${boxIndex}) 셀(${cellX}, ${cellY})`, x: ev.clientX,
     };
   }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
+  // 마우스 캔퍼스영역 체크
+	useEffect(() => {
+  const canvas = canvasRef.current!;
+  if (!canvas) return;
+
+  let isHover = false; // 마우스가 캔버스 위에 있는지 상태
+
+  const handleMouseEnter = () => { 
+    isHover = true; 
+  };
+
+  const handleMouseLeave = () => { 
+    isHover = false;
+    setTooltip(null);
+    lastTooltipRef.current = null;
+    if (!isPanningRef.current) canvas.style.cursor = "default";
+  };
+
+  const handleKeyDown = (ev: KeyboardEvent) => {
+    const vw = viewRef.current;
+    const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
+    const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
+
+    if (isHover && ev.key === "Shift" && (!fullX || !fullY)) {
+      canvas.style.cursor = "grab";
+    }
+  };
+
+  const handleKeyUp = (ev: KeyboardEvent) => {
+    if (isHover && ev.key === "Shift" && !isPanningRef.current) {
+      canvas.style.cursor = "default";
+    }
+  };
+
+  canvas.addEventListener("mouseenter", handleMouseEnter);
+  canvas.addEventListener("mouseleave", handleMouseLeave);
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("keyup", handleKeyUp);
+
+  return () => {
+    canvas.removeEventListener("mouseenter", handleMouseEnter);
+    canvas.removeEventListener("mouseleave", handleMouseLeave);
+    document.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("keyup", handleKeyUp);
+  };
+}, [xBoxCount, yBoxCount]);
+
   // 확대 버튼 클릭
   const handleZoomIn = () => {
     const vw = viewRef.current;
