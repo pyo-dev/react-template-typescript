@@ -417,3 +417,22 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 };
 
 export default WebGLDetailChart;
+
+
+
+
+const vw = viewRef.current;
+const chartW = canvas.clientWidth - marginLeft;
+const chartH = canvas.clientHeight - marginTop;
+
+if (chartType === "vertical") {
+  const xPos = marginLeft + ((boxX + p.x / 100 - vw.xMin) / (vw.xMax - vw.xMin)) * chartW;
+  const yPos1 = marginTop + ((boxY - vw.yMin) / (vw.yMax - vw.yMin)) * chartH;
+  const yPos2 = marginTop + ((boxY + 1 - vw.yMin) / (vw.yMax - vw.yMin)) * chartH;
+  vertices.push(xPos, yPos1, xPos, yPos2);
+} else {
+  const xPos1 = marginLeft + ((boxX - vw.xMin) / (vw.xMax - vw.xMin)) * chartW;
+  const xPos2 = marginLeft + ((boxX + 1 - vw.xMin) / (vw.xMax - vw.xMin)) * chartW;
+  const yPos = marginTop + ((boxY + p.y / 100 - vw.yMin) / (vw.yMax - vw.yMin)) * chartH;
+  vertices.push(xPos1, yPos, xPos2, yPos);
+}
