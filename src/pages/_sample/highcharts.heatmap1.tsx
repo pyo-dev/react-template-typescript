@@ -192,7 +192,7 @@ useEffect(() => {
 }, [height, renderGL]);
 
 	// 초기화감지
-	const const renderGL = useCallback(() => { = useCallback(() => {
+	useCallback(() => {
   viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
   setZoomLevel(MIN_ZOOM);
   renderGL(); // useCallback으로 최신 deps 반영
@@ -241,7 +241,7 @@ useEffect(() => {
 
 	// WebGL 렌더링 (포인터) - 최적화: 화면에 보이는 것만
 	// ✅ 수정된 renderGL (draw call 1회)
-const renderGL = () => {
+const renderGL = useCallback(() => {
   const gl = glRef.current;
   if (!gl || !programRef.current) return;
   gl.clear(gl.COLOR_BUFFER_BIT);
