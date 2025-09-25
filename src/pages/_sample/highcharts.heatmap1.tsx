@@ -224,35 +224,55 @@ const WebGLDetailChartFull: React.FC<WebGLDetailChartProps> = ({
 
   // ====== WebGL 렌더링 ======
   const renderGL = useCallback(() => {
-    const gl = glRef.current;
-    if (!gl || !programRef.current) return;
-    gl.clear(gl.COLOR_BUFFER_BIT);
+  const gl = glRef.current;
+  if (!gl || !programRef.current) return;
+  gl.clear(gl.COLOR_BUFFER_BIT);
 
-    const { a_pos, a_color } = attribLocRef.current!;
-    const u = uniformLocsRef.current;
-    const vw = viewRef.current;
+  const { a_pos, a_color } = attribLocRef.current!;
+  const u = uniformLocsRef.current;
+  const vw = viewRef.current;
 
-    gl.uniform1f(u.u_xMin, vw.xMin);
-    gl.uniform1f(u.u_xMax, vw.xMax);
-    gl.uniform1f(u.u_yMin, vw.yMin);
-    gl.uniform1f(u.u_yMax, vw.yMax);
+  gl.uniform1f(u.u_xMin, vw.xMin);
+  gl.uniform1f(u.u_xMax, vw.xMax);
+  gl.uniform1f(u.u_yMin, vw.yMin);
+  gl.uniform1f(u.u_yMax, vw.yMax);
 
-    const vertices: number[] = [];
-    const type = chartTypeRef.current;
-    pointers.forEach((p) => {
-      const boxX = p.boxIndex % xBoxCount;
-      const boxY = Math.floor(p.boxIndex / xBoxCount);
+  const vertices: number[] = [];
+  const type = chartTypeRef.current;
 
-      if (
-        boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
-        boxY < vw.yMin - 1 || boxY > vw.yMax + 1
-      ) return;
+  const BOX_TO_LINE_THRESHOLD = 2; // 예: zoomLevel 2 이상이면 라인만
 
-      const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
-      const r = 0.0 * t + 0.0 * (1 - t);
-      const g = 0.8 * (1 - t) + 0.3 * t;
-      const b = 1.0 * (1 - t) + 0.6 * t;
+  pointers.forEach((p) => {
+    const boxX = p.boxIndex % xBoxCount;
+    const boxY = Math.floor(p.boxIndex / xBoxCount);
 
+    if (
+      boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
+      boxY < vw.yMin - 1 || boxY > vw.yMax + 1
+    ) return;
+
+    const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
+    const r = 0.0 * t + 0.0 * (1 - t);
+    const g = 0.8 * (1 - t) + 0.3 * t;
+    const b = 1.0 * (1 - t) + 0.6 * t;
+
+    if (zoomLevel < BOX_TO_LINE_THRESHOLD) {
+      // 박스 색칠 (초기/적은 줌)
+      const x0 = boxX;
+      const x1 = boxX + 1;
+      const y0 = boxY;
+      const y1 = boxY + 1;
+
+      vertices.push(
+        x0, y0, r, g, b,
+        x1, y0, r, g, b,
+        x1, y1, r, g, b,
+        x0, y0, r, g, b,
+        x1, y1, r, g, b,
+        x0, y1, r, g, b
+      );
+    } else {
+      // 포인터 라인
       if (type === "vertical") {
         const xPos = boxX + p.x / 100;
         vertices.push(xPos, boxY, r, g, b);
@@ -262,24 +282,30 @@ const WebGLDetailChartFull: React.FC<WebGLDetailChartProps> = ({
         vertices.push(boxX, yPos, r, g, b);
         vertices.push(boxX + 1, yPos, r, g, b);
       }
-    });
-
-    if (vertices.length > 0) {
-      const stride = 5 * 4;
-      gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
-
-      gl.enableVertexAttribArray(a_pos);
-      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
-
-      gl.enableVertexAttribArray(a_color);
-      gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
-
-      gl.drawArrays(gl.LINES, 0, vertices.length / 5);
     }
+  });
 
-    drawGrid();
-  }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax]);
+  if (vertices.length > 0) {
+    const stride = 5 * 4;
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+
+    gl.enableVertexAttribArray(a_pos);
+    gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
+
+    gl.enableVertexAttribArray(a_color);
+    gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
+
+    // zoomLevel에 따라 gl.TRIANGLES or gl.LINES
+    gl.drawArrays(
+      zoomLevel < BOX_TO_LINE_THRESHOLD ? gl.TRIANGLES : gl.LINES,
+      0,
+      vertices.length / 5
+    );
+  }
+
+  drawGrid();
+}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType, zoomLevel]);
 
   // ====== 마우스 위치 계산 ======
   const getMousePos = (ev: PointerEvent) => {
