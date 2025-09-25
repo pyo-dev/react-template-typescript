@@ -446,10 +446,11 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 
 				// 드래그 영역 내 포인터 데이터를 모아서 로그 출력
 				const selectedPointers: Pointer[] = [];
+				const type = chartTypeRef.current;
 				pointers.forEach(p => {
 					const boxX = p.boxIndex % xBoxCount;
 					const boxY = Math.floor(p.boxIndex / xBoxCount);
-					if (chartType === "vertical") {
+					if (type === "vertical") {
 						const xPos = boxX + p.x / 100;
 						if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
 							selectedPointers.push(p);
