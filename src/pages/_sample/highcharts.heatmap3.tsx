@@ -1,289 +1,290 @@
 // WebGLDetailChart.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 
 // 포인터 데이터 타입
 type Pointer = { boxIndex: number; x: number; y: number; value: number };
 
 // Props 타입
 interface WebGLDetailChartProps {
-	height: number;           // 캔버스 높이
-	xBoxCount: number;        // 가로 박스 개수
-	yBoxCount: number;        // 세로 박스 개수
-	pointers: Pointer[];      // 포인터 데이터
-	valueMin: number;         // 값 최소
-	valueMax: number;         // 값 최대
-	chartType?: "vertical" | "horizontal"; // 포인터 라인 방향
+  height: number;           // 캔버스 높이
+  xBoxCount: number;        // 가로 박스 개수
+  yBoxCount: number;        // 세로 박스 개수
+  pointers: Pointer[];      // 포인터 데이터
+  valueMin: number;         // 값 최소
+  valueMax: number;         // 값 최대
+  chartType?: "vertical" | "horizontal"; // 포인터 라인 방향
 }
 
 // GLSL Vertex Shader
 const vertexShaderSource = `
 attribute vec2 a_pos;
+attribute vec3 a_color;
 uniform float u_xMin;
 uniform float u_xMax;
 uniform float u_yMin;
 uniform float u_yMax;
+varying vec3 v_color;
+
 void main() {
   float nx = (a_pos.x - u_xMin) / (u_xMax - u_xMin);
   float ny = (a_pos.y - u_yMin) / (u_yMax - u_yMin);
   float clipX = nx * 2.0 - 1.0;
   float clipY = 1.0 - ny * 2.0;
   gl_Position = vec4(clipX, clipY, 0.0, 1.0);
+  v_color = a_color;
 }
 `;
 
 // GLSL Fragment Shader
 const fragmentShaderSource = `
 precision mediump float;
-uniform vec4 u_color;
+varying vec3 v_color;
 void main() {
-  gl_FragColor = u_color;
+  gl_FragColor = vec4(v_color, 1.0);
 }
 `;
 
 // 셰이더 컴파일
 const compileShader = (gl: WebGLRenderingContext, src: string, type: number) => {
-	const sh = gl.createShader(type)!;
-	gl.shaderSource(sh, src);
-	gl.compileShader(sh);
-	if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-		const err = gl.getShaderInfoLog(sh);
-		gl.deleteShader(sh);
-		throw new Error("Shader compile error: " + err);
-	}
-	return sh;
+  const sh = gl.createShader(type)!;
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const err = gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    throw new Error("Shader compile error: " + err);
+  }
+  return sh;
 };
 
 // 프로그램 생성
 const createProgram = (gl: WebGLRenderingContext, vsrc: string, fsrc: string) => {
-	const vs = compileShader(gl, vsrc, gl.VERTEX_SHADER);
-	const fs = compileShader(gl, fsrc, gl.FRAGMENT_SHADER);
-	const prog = gl.createProgram()!;
-	gl.attachShader(prog, vs);
-	gl.attachShader(prog, fs);
-	gl.linkProgram(prog);
-	if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-		const err = gl.getProgramInfoLog(prog);
-		gl.deleteProgram(prog);
-		throw new Error("Program link error: " + err);
-	}
-	gl.deleteShader(vs);
-	gl.deleteShader(fs);
-	return prog;
+  const vs = compileShader(gl, vsrc, gl.VERTEX_SHADER);
+  const fs = compileShader(gl, fsrc, gl.FRAGMENT_SHADER);
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    const err = gl.getProgramInfoLog(prog);
+    gl.deleteProgram(prog);
+    throw new Error("Program link error: " + err);
+  }
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+  return prog;
 };
 
-// 캔버스 리사이즈 처리
+// 캔버스 리사이즈
 const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) => {
-	const parent = canvas.parentElement!;
-	const displayWidth = parent.clientWidth;
-	const displayHeight = heightPx;
-	const dpr = window.devicePixelRatio || 1;
-	const width = Math.max(1, Math.floor(displayWidth * dpr));
-	const height = Math.max(1, Math.floor(displayHeight * dpr));
-	if (canvas.width !== width || canvas.height !== height) {
-		canvas.width = width;
-		canvas.height = height;
-		canvas.style.width = `${displayWidth}px`;
-		canvas.style.height = `${displayHeight}px`;
-	}
+  const parent = canvas.parentElement!;
+  const displayWidth = parent.clientWidth;
+  const displayHeight = heightPx;
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.floor(displayWidth * dpr));
+  const height = Math.max(1, Math.floor(displayHeight * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+  }
 };
 
 // 메인 컴포넌트
 const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
-	height,
-	xBoxCount,
-	yBoxCount,
-	pointers,
-	valueMin,
-	valueMax,
-	chartType = "vertical",
+  height,
+  xBoxCount,
+  yBoxCount,
+  pointers,
+  valueMin,
+  valueMax,
+  chartType = "vertical",
 }) => {
-	// 캔버스 참조
-	const canvasRef = useRef<HTMLCanvasElement | null>(null);
-	const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  // ====== refs ======
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const viewRef = useRef({ xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dragEndRef = useRef<{ x: number; y: number } | null>(null);
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+  const viewStartRef = useRef(viewRef.current);
+  const glRef = useRef<WebGLRenderingContext | null>(null);
+  const programRef = useRef<WebGLProgram | null>(null);
+  const attribLocRef = useRef<{ a_pos: number; a_color: number } | null>(null);
+  const uniformLocsRef = useRef<any>(null);
+  const bufferRef = useRef<WebGLBuffer | null>(null);
+  const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
+	const chartTypeRef = useRef(chartType);
 
-	// 화면 범위
-	const viewRef = useRef({ xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount });
+  // ====== state ======
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const MAX_ZOOM = 5;
+  const MIN_ZOOM = 1;
 
-	// 드래그 상태
-	const isDraggingRef = useRef(false);
-	const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-	const dragEndRef = useRef<{ x: number; y: number } | null>(null);
+  // ====== WebGL 초기화 ======
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const gl = canvas.getContext("webgl", { antialias: false });
+    if (!gl) return console.error("WebGL 미지원");
+    glRef.current = gl;
 
-	// 패닝 상태
-	const isPanningRef = useRef(false);
-	const panStartRef = useRef<{ x: number; y: number } | null>(null);
-	const viewStartRef = useRef(viewRef.current);
+    // 셰이더 프로그램
+    const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+    programRef.current = program;
+    gl.useProgram(program);
 
-	// WebGL refs
-	const glRef = useRef<WebGLRenderingContext | null>(null);
-	const programRef = useRef<WebGLProgram | null>(null);
-	const attribLocRef = useRef<number | null>(null);
-	const uniformLocsRef = useRef<any>(null);
-	const bufferRef = useRef<WebGLBuffer | null>(null);
+    // attribute / uniform
+    const a_pos = gl.getAttribLocation(program, "a_pos");
+    const a_color = gl.getAttribLocation(program, "a_color");
+    attribLocRef.current = { a_pos, a_color };
+    uniformLocsRef.current = {
+      u_xMin: gl.getUniformLocation(program, "u_xMin")!,
+      u_xMax: gl.getUniformLocation(program, "u_xMax")!,
+      u_yMin: gl.getUniformLocation(program, "u_yMin")!,
+      u_yMax: gl.getUniformLocation(program, "u_yMax")!,
+    };
 
-	// 툴팁
-	const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
-	const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+    bufferRef.current = gl.createBuffer();
+    gl.clearColor(0, 0, 0, 0);
 
-	// 확대/축소 상태
-	const [zoomLevel, setZoomLevel] = useState(1);
-	const MAX_ZOOM = 5;
-	const MIN_ZOOM = 1;
+    return () => {
+      if (bufferRef.current) gl.deleteBuffer(bufferRef.current);
+      if (programRef.current) gl.deleteProgram(programRef.current);
+    };
+  }, [height]);
 
-	// 리사이즈 처리
-	useEffect(() => {
-		const canvas = canvasRef.current!;
-		const overlay = overlayRef.current!;
-		if (!canvas || !overlay) return;
+  // ====== 캔버스 리사이즈 + grid 렌더 ======
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const overlay = overlayRef.current;
+    if (!canvas || !overlay) return;
 
-		const ro = new ResizeObserver(() => {
-			requestAnimationFrame(() => {
-				resizeCanvasToDisplaySize(canvas, height);
-				const gl = glRef.current;
-				if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-				drawGrid();
-				renderGL();
-			});
-		});
-		ro.observe(canvas.parentElement!);
-		return () => ro.disconnect();
-	}, [height]);
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        resizeCanvasToDisplaySize(canvas, height);
+        glRef.current?.viewport(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        renderGL();
+      });
+    });
+    ro.observe(canvas.parentElement!);
+    return () => ro.disconnect();
+  }, [height]);
 
-	// WebGL 초기화
-	useEffect(() => {
-		const canvas = canvasRef.current!;
-		const gl = canvas.getContext("webgl", { antialias: false });
-		if (!gl) return console.error("WebGL 미지원");
-		glRef.current = gl;
+  // ====== 화면 초기화 ======
+  useEffect(() => {
+	  chartTypeRef.current = chartType;
+    viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
+    setZoomLevel(MIN_ZOOM);
+    renderGL();
+  }, [chartType, xBoxCount, yBoxCount]);
 
-		const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-		programRef.current = program;
-		gl.useProgram(program);
+  // ====== Grid 그리기 ======
+  const drawGrid = () => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const ctx = overlay.getContext("2d")!;
+    const parent = overlay.parentElement!;
+    const dpr = window.devicePixelRatio || 1;
 
-		const a_pos = gl.getAttribLocation(program, "a_pos");
-		const u_xMin = gl.getUniformLocation(program, "u_xMin");
-		const u_xMax = gl.getUniformLocation(program, "u_xMax");
-		const u_yMin = gl.getUniformLocation(program, "u_yMin");
-		const u_yMax = gl.getUniformLocation(program, "u_yMax");
-		const u_color = gl.getUniformLocation(program, "u_color");
+    overlay.width = parent.clientWidth * dpr;
+    overlay.height = parent.clientHeight * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
 
-		attribLocRef.current = a_pos;
-		uniformLocsRef.current = { u_xMin, u_xMax, u_yMin, u_yMax, u_color };
-		bufferRef.current = gl.createBuffer();
+    const w = parent.clientWidth;
+    const h = parent.clientHeight;
+    const vw = viewRef.current;
+    const cellW = w / (vw.xMax - vw.xMin);
+    const cellH = h / (vw.yMax - vw.yMin);
 
-		resizeCanvasToDisplaySize(canvas, height);
-		gl.viewport(0, 0, canvas.width, canvas.height);
-		gl.clearColor(0.98, 0.98, 0.98, 1.0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = "#ccc";
+    ctx.lineWidth = 1;
 
-		renderGL();
-		return () => {
-			gl.clear(gl.COLOR_BUFFER_BIT);
-		};
-	}, [height]);
+    // 세로선
+    for (let i = Math.floor(vw.xMin); i <= Math.ceil(vw.xMax); i++) {
+      const x = (i - vw.xMin) * cellW + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    // 가로선
+    for (let i = Math.floor(vw.yMin); i <= Math.ceil(vw.yMax); i++) {
+      const y = (i - vw.yMin) * cellH + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+  };
 
-	// 그리드 그리기
-	const drawGrid = () => {
-		const overlay = overlayRef.current;
-		if (!overlay) return;
-		const ctx = overlay.getContext("2d")!;
-		const parent = overlay.parentElement!;
-		const dpr = window.devicePixelRatio || 1;
+  // ====== WebGL 렌더링 ======
+  const renderGL = useCallback(() => {
+    const gl = glRef.current;
+    if (!gl || !programRef.current) return;
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-		overlay.width = parent.clientWidth * dpr;
-		overlay.height = parent.clientHeight * dpr;
-		ctx.setTransform(1, 0, 0, 1, 0, 0);
-		ctx.scale(dpr, dpr);
+    const { a_pos, a_color } = attribLocRef.current!;
+    const u = uniformLocsRef.current;
+    const vw = viewRef.current;
 
-		const w = parent.clientWidth;
-		const h = parent.clientHeight;
-		const vw = viewRef.current;
-		const cellW = w / (vw.xMax - vw.xMin);
-		const cellH = h / (vw.yMax - vw.yMin);
+    gl.uniform1f(u.u_xMin, vw.xMin);
+    gl.uniform1f(u.u_xMax, vw.xMax);
+    gl.uniform1f(u.u_yMin, vw.yMin);
+    gl.uniform1f(u.u_yMax, vw.yMax);
 
-		ctx.clearRect(0, 0, w, h);
-		ctx.strokeStyle = "#ccc";
-		ctx.lineWidth = 1;
+    const vertices: number[] = [];
+	  const type = chartTypeRef.current;
+    pointers.forEach((p) => {
+      const boxX = p.boxIndex % xBoxCount;
+      const boxY = Math.floor(p.boxIndex / xBoxCount);
 
-		// 세로 라인
-		for (let i = Math.floor(vw.xMin); i <= Math.ceil(vw.xMax); i++) {
-			const x = (i - vw.xMin) * cellW + 0.5;
-			ctx.beginPath();
-			ctx.moveTo(x, 0);
-			ctx.lineTo(x, h);
-			ctx.stroke();
-		}
-		// 가로 라인
-		for (let i = Math.floor(vw.yMin); i <= Math.ceil(vw.yMax); i++) {
-			const y = (i - vw.yMin) * cellH + 0.5;
-			ctx.beginPath();
-			ctx.moveTo(0, y);
-			ctx.lineTo(w, y);
-			ctx.stroke();
-		}
-	};
+      if (
+        boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
+        boxY < vw.yMin - 1 || boxY > vw.yMax + 1
+      ) return;
 
-	// WebGL 렌더링 (포인터) - 최적화: 화면에 보이는 것만
-	const renderGL = () => {
-		const gl = glRef.current;
-		if (!gl || !programRef.current) return;
-		gl.clear(gl.COLOR_BUFFER_BIT);
+      const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
+      const r = 0.0 * t + 0.0 * (1 - t);
+      const g = 0.8 * (1 - t) + 0.3 * t;
+      const b = 1.0 * (1 - t) + 0.6 * t;
 
-		const a_pos = attribLocRef.current!;
-		const u = uniformLocsRef.current;
-		const vw = viewRef.current;
+      if (type === "vertical") {
+        const xPos = boxX + p.x / 100;
+        vertices.push(xPos, boxY, r, g, b);
+        vertices.push(xPos, boxY + 1, r, g, b);
+      } else {
+        const yPos = boxY + p.y / 100;
+        vertices.push(boxX, yPos, r, g, b);
+        vertices.push(boxX + 1, yPos, r, g, b);
+      }
+    });
 
-		gl.uniform1f(u.u_xMin, vw.xMin);
-		gl.uniform1f(u.u_xMax, vw.xMax);
-		gl.uniform1f(u.u_yMin, vw.yMin);
-		gl.uniform1f(u.u_yMax, vw.yMax);
+    if (vertices.length > 0) {
+      const stride = 5 * 4;
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 
-		const vertices: number[] = [];
-		const colors: number[] = [];
+      gl.enableVertexAttribArray(a_pos);
+      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
 
-		// 화면에 보이는 포인터만 vertex에 추가 (LOD)
-		pointers.forEach((p) => {
-			const boxX = p.boxIndex % xBoxCount;
-			const boxY = Math.floor(p.boxIndex / xBoxCount);
+      gl.enableVertexAttribArray(a_color);
+      gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
 
-			// 화면 영역 체크 보이는 영역만 GL vertex 생성
-			if (
-				boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
-				boxY < vw.yMin - 1 || boxY > vw.yMax + 1
-			) return;
+      gl.drawArrays(gl.LINES, 0, vertices.length / 5);
+    }
 
-			if (chartType === "vertical") {
-				const xPos = boxX + p.x / 100;
-				vertices.push(xPos, boxY, xPos, boxY + 1);
-			} else {
-				const yPos = boxY + p.y / 100;
-				vertices.push(boxX, yPos, boxX + 1, yPos);
-			}
+    drawGrid();
+  }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
-			const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin)));
-			colors.push(t);
-		});
-
-		if (vertices.length > 0) {
-			// 매 프레임마다 새 버퍼 생성 없이 동일 buffer 재사용.
-			gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
-			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
-			gl.enableVertexAttribArray(a_pos);
-			gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, 0, 0);
-
-			for (let i = 0; i < vertices.length / 2; i += 2) {
-				const t = colors[i / 2];
-				const r = 0.0 * t + 0.0 * (1 - t);
-				const g = 0.8 * (1 - t) + 0.3 * t;
-				const b = 1.0 * (1 - t) + 0.6 * t;
-				gl.uniform4f(u.u_color, r, g, b, 1.0);
-				gl.drawArrays(gl.LINES, i, 2);
-			}
-		}
-
-		drawGrid(); // 오버레이 그리드
-	};
-
-	// 마우스 위치 계산
+  	// 마우스 위치 계산
 	const getMousePos = (ev: PointerEvent) => {
 		const canvas = canvasRef.current!;
 		const rect = canvas.getBoundingClientRect();
@@ -445,10 +446,11 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 
 				// 드래그 영역 내 포인터 데이터를 모아서 로그 출력
 				const selectedPointers: Pointer[] = [];
+				const type = chartTypeRef.current;
 				pointers.forEach(p => {
 					const boxX = p.boxIndex % xBoxCount;
 					const boxY = Math.floor(p.boxIndex / xBoxCount);
-					if (chartType === "vertical") {
+					if (type === "vertical") {
 						const xPos = boxX + p.x / 100;
 						if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
 							selectedPointers.push(p);
@@ -607,48 +609,48 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 		renderGL();
 	};
 
-	return (
-		<div style={{ width: "100%", position: "relative" }}>
-			<canvas
-				ref={canvasRef}
-				style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
-			/>
-			<canvas
-				ref={overlayRef}
-				style={{
-					position: "absolute",
-					top: 0,
-					left: 0,
-					width: "100%",
-					height: `${height}px`,
-					pointerEvents: "none",
-				}}
-			/>
-			{tooltip && (
-				<div
-					style={{
-						position: "fixed",
-						left: tooltip.x + 10,
-						top: tooltip.y + 10,
-						background: "rgba(0,0,0,0.7)",
-						color: "#fff",
-						padding: "2px 6px",
-						fontSize: 12,
-						borderRadius: 3,
-						pointerEvents: "none",
-						zIndex: 1000,
-					}}
-				>
-					{tooltip.text}
-				</div>
-			)}
-			<div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 4 }}>
-				<button onClick={handleZoomIn}>확대</button>
-				<button onClick={handleZoomOut} disabled={zoomLevel <= MIN_ZOOM}>축소</button>
-				<button onClick={handleReset}>Reset View</button>
-			</div>
-		</div>
-	);
+  return (
+    <div style={{ width: "100%", position: "relative" }}>
+      <canvas
+        ref={canvasRef}
+        style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
+      />
+      <canvas
+        ref={overlayRef}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: `${height}px`,
+          pointerEvents: "none",
+        }}
+      />
+      {tooltip && (
+        <div
+          style={{
+            position: "fixed",
+            left: tooltip.x + 10,
+            top: tooltip.y + 10,
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            padding: "2px 6px",
+            fontSize: 12,
+            borderRadius: 3,
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+      <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 4 }}>
+        <button onClick={() => { handleZoomIn() }}>확대</button>
+        <button onClick={() => { handleZoomOut() }}>축소</button>
+        <button onClick={() => { handleReset() }}>Reset View</button>
+      </div>
+    </div>
+  );
 };
 
 export default WebGLDetailChart;
