@@ -281,12 +281,327 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     drawGrid();
   }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
-  // ====== 나머지 마우스, 드래그, 툴팁, 확대/축소/리셋 로직은 기존 그대로 유지 ======
+  	const canvas = canvasRef.current!;
+		const rect = canvas.getBoundingClientRect();
+		return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+	};
 
-  // ...
-  // 이 부분은 주신 코드 그대로 유지 가능
-  // 드래그, 툴팁, 확대/축소, 리셋, 이벤트 등록
-  // ...
+	// 마우스 이벤트 최적화: requestAnimationFrame throttle
+	useEffect(() => {
+		const canvas = canvasRef.current!;
+		const overlay = overlayRef.current!;
+		if (!canvas || !overlay) return;
+
+		let rafId: number | null = null;
+
+		const drawSelectionRect = () => {
+			if (!overlay || !dragStartRef.current || !dragEndRef.current) return;
+			const ctx = overlay.getContext("2d")!;
+			drawGrid();
+
+			const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+			const s = {
+				x: clamp(dragStartRef.current.x, 0, canvas.clientWidth),
+				y: clamp(dragStartRef.current.y, 0, canvas.clientHeight),
+			};
+			const e = {
+				x: clamp(dragEndRef.current.x, 0, canvas.clientWidth),
+				y: clamp(dragEndRef.current.y, 0, canvas.clientHeight),
+			};
+
+			ctx.strokeStyle = "rgba(255,0,0,0.9)";
+			ctx.lineWidth = 2;
+			ctx.setLineDash([6, 4]);
+			ctx.strokeRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y));
+
+			ctx.fillStyle = "rgba(255,0,0,0.08)";
+			ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y));
+		};
+
+		const onPointerMove = (ev: PointerEvent) => {
+			const handle = () => {
+				const canvas = canvasRef.current!;
+				if (!canvas) return;
+
+				const rect = canvas.getBoundingClientRect();
+				const mouseX = ev.clientX - rect.left;
+				const mouseY = ev.clientY - rect.top;
+
+				const vw = viewRef.current;
+				const cellW = canvas.clientWidth / (vw.xMax - vw.xMin);
+				const cellH = canvas.clientHeight / (vw.yMax - vw.yMin);
+				const cellX = Math.floor(vw.xMin + mouseX / cellW);
+				const cellY = Math.floor(vw.yMin + mouseY / cellH);
+
+				// 툴팁 표시 범위: 캔버스 내부 AND view 범위 내
+				if (mouseX >= 0 && mouseY >= 0 && mouseX <= canvas.clientWidth && mouseY <= canvas.clientHeight &&
+					cellX >= 0 && cellX < xBoxCount && cellY >= 0 && cellY < yBoxCount) {
+
+					const last = lastTooltipRef.current;
+					if (!last || last.cellX !== cellX || last.cellY !== cellY) {
+						const boxIndex = cellY * xBoxCount + cellX;
+						setTooltip({ text: `박스(${boxIndex}) 셀(${cellX}, ${cellY})`, x: ev.clientX, y: ev.clientY });
+						lastTooltipRef.current = { cellX, cellY };
+					}
+				} else {
+					setTooltip(null);
+					lastTooltipRef.current = null;
+				}
+
+				// 드래그 / 패닝 기존 로직
+				if (isDraggingRef.current && dragStartRef.current) {
+					dragEndRef.current = { x: mouseX, y: mouseY };
+					drawSelectionRect();
+				}
+				if (isPanningRef.current && panStartRef.current) {
+					const dx = mouseX - panStartRef.current.x;
+					const dy = mouseY - panStartRef.current.y;
+					const vwWidth = viewStartRef.current.xMax - viewStartRef.current.xMin;
+					const vwHeight = viewStartRef.current.yMax - viewStartRef.current.yMin;
+					let newXMin = viewStartRef.current.xMin - dx / canvas.clientWidth * vwWidth;
+					let newXMax = viewStartRef.current.xMax - dx / canvas.clientWidth * vwWidth;
+					let newYMin = viewStartRef.current.yMin - dy / canvas.clientHeight * vwHeight;
+					let newYMax = viewStartRef.current.yMax - dy / canvas.clientHeight * vwHeight;
+
+					// 화면 밖 패닝 제한
+					if (newXMin < 0) { newXMin = 0; newXMax = vwWidth; }
+					if (newXMax > xBoxCount) { newXMax = xBoxCount; newXMin = xBoxCount - vwWidth; }
+					if (newYMin < 0) { newYMin = 0; newYMax = vwHeight; }
+					if (newYMax > yBoxCount) { newYMax = yBoxCount; newYMin = yBoxCount - vwHeight; }
+
+					viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+					renderGL();
+				}
+
+				rafId = null;
+			};
+
+			if (!rafId) rafId = requestAnimationFrame(handle);
+		};
+
+
+		const onPointerDown = (ev: PointerEvent) => {
+			const vw = viewRef.current;
+			const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
+			const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
+
+			// Shift 또는 우클릭 패닝
+			if ((ev.shiftKey || ev.button === 2) && (!fullX || !fullY)) {
+				isPanningRef.current = true;
+				panStartRef.current = getMousePos(ev);
+				viewStartRef.current = { ...viewRef.current };
+				canvas.style.cursor = "grab";
+				return;
+			}
+
+			if (ev.button !== 0) return;
+			isDraggingRef.current = true;
+			const pos = getMousePos(ev);
+			dragStartRef.current = pos;
+			dragEndRef.current = pos;
+			drawSelectionRect();
+		};
+
+		const onPointerUp = () => {
+			const canvas = canvasRef.current!;
+			const overlay = overlayRef.current!;
+			if (!canvas || !overlay) return;
+
+			if (isPanningRef.current) {
+				isPanningRef.current = false;
+				panStartRef.current = null;
+				viewStartRef.current = viewRef.current;
+				canvas.style.cursor = "default";
+			}
+
+			if (
+				isDraggingRef.current &&
+				dragStartRef.current &&
+				dragEndRef.current &&
+				(dragStartRef.current.x !== dragEndRef.current.x || dragStartRef.current.y !== dragEndRef.current.y)
+			) {
+				const s = dragStartRef.current;
+				const e = dragEndRef.current;
+				const canvasW = canvas.clientWidth;
+				const canvasH = canvas.clientHeight;
+				const vw = viewRef.current;
+
+				// 드래그 좌표를 캔버스 영역으로 클램핑
+				const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+				const x0 = clamp(s.x, 0, canvasW);
+				const x1 = clamp(e.x, 0, canvasW);
+				const y0 = clamp(s.y, 0, canvasH);
+				const y1 = clamp(e.y, 0, canvasH);
+
+				// 클램프된 드래그 영역을 world 좌표로 변환
+				const worldXMin = vw.xMin + Math.min(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+				const worldXMax = vw.xMin + Math.max(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+				const worldYMin = vw.yMin + Math.min(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+				const worldYMax = vw.yMin + Math.max(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+
+				// 드래그 영역 내 포인터 데이터를 모아서 로그 출력
+				const selectedPointers: Pointer[] = [];
+				pointers.forEach(p => {
+					const boxX = p.boxIndex % xBoxCount;
+					const boxY = Math.floor(p.boxIndex / xBoxCount);
+					if (chartType === "vertical") {
+						const xPos = boxX + p.x / 100;
+						if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
+							selectedPointers.push(p);
+						}
+					} else {
+						const yPos = boxY + p.y / 100;
+						if (boxX >= worldXMin && boxX <= worldXMax && yPos >= worldYMin && yPos <= worldYMax) {
+							selectedPointers.push(p);
+						}
+					}
+				});
+				console.log("드래그 영역 내 포인터 데이터:", selectedPointers);
+
+				// 드래그 영역으로 뷰 확대
+				viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
+
+				// 확대 후 zoomLevel 계산: 최소 뷰 기준으로 축소 버튼 활성화/비활성화
+				const newZoomX = xBoxCount / (worldXMax - worldXMin);
+				const newZoomY = yBoxCount / (worldYMax - worldYMin);
+				const newZoomLevel = Math.min(newZoomX, newZoomY);
+				setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
+			}
+
+			// 드래그 상태 초기화
+			isDraggingRef.current = false;
+			dragStartRef.current = null;
+			dragEndRef.current = null;
+
+			// 오버레이 초기화
+			const ctx = overlay.getContext("2d")!;
+			ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+			// 렌더링 갱신
+			renderGL();
+		};
+
+		// 이벤트 리스너 등록
+		canvas.addEventListener("pointerdown", onPointerDown);
+		document.addEventListener("pointermove", onPointerMove);
+		document.addEventListener("pointerup", onPointerUp);
+
+		return () => {
+			canvas.removeEventListener("pointerdown", onPointerDown);
+			document.removeEventListener("pointermove", onPointerMove);
+			document.removeEventListener("pointerup", onPointerUp);
+			if (rafId) cancelAnimationFrame(rafId);
+		};
+	}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
+
+	// 마우스 캔퍼스영역 체크
+	useEffect(() => {
+		const canvas = canvasRef.current!;
+		if (!canvas) return;
+
+		let isHover = false; // 마우스가 캔버스 위에 있는지 상태
+
+		const handleMouseEnter = () => {
+			isHover = true;
+		};
+
+		const handleMouseLeave = () => {
+			isHover = false;
+			setTooltip(null);
+			lastTooltipRef.current = null;
+			if (!isPanningRef.current) canvas.style.cursor = "default";
+		};
+
+		const handleKeyDown = (ev: KeyboardEvent) => {
+			const vw = viewRef.current;
+			const fullX = vw.xMin === 0 && vw.xMax === xBoxCount;
+			const fullY = vw.yMin === 0 && vw.yMax === yBoxCount;
+
+			if (isHover && ev.key === "Shift" && (!fullX || !fullY)) {
+				canvas.style.cursor = "grab";
+			}
+		};
+
+		const handleKeyUp = (ev: KeyboardEvent) => {
+			if (isHover && ev.key === "Shift" && !isPanningRef.current) {
+				canvas.style.cursor = "default";
+			}
+		};
+
+		canvas.addEventListener("mouseenter", handleMouseEnter);
+		canvas.addEventListener("mouseleave", handleMouseLeave);
+		document.addEventListener("keydown", handleKeyDown);
+		document.addEventListener("keyup", handleKeyUp);
+
+		return () => {
+			canvas.removeEventListener("mouseenter", handleMouseEnter);
+			canvas.removeEventListener("mouseleave", handleMouseLeave);
+			document.removeEventListener("keydown", handleKeyDown);
+			document.removeEventListener("keyup", handleKeyUp);
+		};
+	}, [xBoxCount, yBoxCount]);
+
+	// 확대 버튼 클릭
+	const handleZoomIn = () => {
+		const vw = viewRef.current;
+		const midX = (vw.xMin + vw.xMax) / 2;
+		const midY = (vw.yMin + vw.yMax) / 2;
+		const width = (vw.xMax - vw.xMin) / 2;
+		const height = (vw.yMax - vw.yMin) / 2;
+
+		let newXMin = midX - width / 2;
+		let newXMax = midX + width / 2;
+		let newYMin = midY - height / 2;
+		let newYMax = midY + height / 2;
+
+		viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+		setZoomLevel(prev => Math.min(MAX_ZOOM, prev * 2));
+		renderGL();
+	};
+
+	// 축소 버튼 클릭
+	const handleZoomOut = () => {
+		const vw = viewRef.current;
+		const fullWidth = xBoxCount;
+		const fullHeight = yBoxCount;
+
+		const midX = (vw.xMin + vw.xMax) / 2;
+		const midY = (vw.yMin + vw.yMax) / 2;
+
+		let width = (vw.xMax - vw.xMin) * 1.5;
+		let height = (vw.yMax - vw.yMin) * 1.5;
+
+		if (width >= fullWidth && height >= fullHeight) {
+			viewRef.current = { xMin: 0, xMax: fullWidth, yMin: 0, yMax: fullHeight };
+			setZoomLevel(MIN_ZOOM);
+			renderGL();
+			return;
+		}
+
+		if (width > fullWidth) width = fullWidth;
+		if (height > fullHeight) height = fullHeight;
+
+		const newXMin = Math.max(0, midX - width / 2);
+		const newXMax = Math.min(fullWidth, midX + width / 2);
+		const newYMin = Math.max(0, midY - height / 2);
+		const newYMax = Math.min(fullHeight, midY + height / 2);
+
+		viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+
+		const zoomX = fullWidth / (newXMax - newXMin);
+		const zoomY = fullHeight / (newYMax - newYMin);
+		const newZoomLevel = Math.min(zoomX, zoomY);
+		setZoomLevel(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoomLevel)));
+
+		renderGL();
+	};
+
+	// 화면 초기화
+	const handleReset = () => {
+		viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
+		setZoomLevel(MIN_ZOOM);
+		renderGL();
+	};
 
   return (
     <div style={{ width: "100%", position: "relative" }}>
