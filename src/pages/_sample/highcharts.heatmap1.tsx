@@ -281,7 +281,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     drawGrid();
   }, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
-  	const canvas = canvasRef.current!;
+  	// 마우스 위치 계산
+	const getMousePos = (ev: PointerEvent) => {
+		const canvas = canvasRef.current!;
 		const rect = canvas.getBoundingClientRect();
 		return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
 	};
