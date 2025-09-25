@@ -189,10 +189,10 @@ useEffect(() => {
     if (bufferRef.current) gl.deleteBuffer(bufferRef.current);
     if (programRef.current) gl.deleteProgram(programRef.current);
   };
-}, [height]);
+}, [height, renderGL]);
 
 	// 초기화감지
-	useEffect(() => {
+	const const renderGL = useCallback(() => { = useCallback(() => {
   viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
   setZoomLevel(MIN_ZOOM);
   renderGL(); // useCallback으로 최신 deps 반영
