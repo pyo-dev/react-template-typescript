@@ -117,6 +117,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
   const uniformLocsRef = useRef<any>(null);
   const bufferRef = useRef<WebGLBuffer | null>(null);
   const lastTooltipRef = useRef<{ cellX: number; cellY: number } | null>(null);
+	const chartTypeRef = useRef(chartType);
 
   // ====== state ======
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -177,6 +178,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 
   // ====== 화면 초기화 ======
   useEffect(() => {
+	  chartTypeRef.current = chartType;
     viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
     setZoomLevel(MIN_ZOOM);
     renderGL();
@@ -239,6 +241,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     gl.uniform1f(u.u_yMax, vw.yMax);
 
     const vertices: number[] = [];
+	  const type = chartTypeRef.current;
     pointers.forEach((p) => {
       const boxX = p.boxIndex % xBoxCount;
       const boxY = Math.floor(p.boxIndex / xBoxCount);
@@ -253,7 +256,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
       const g = 0.8 * (1 - t) + 0.3 * t;
       const b = 1.0 * (1 - t) + 0.6 * t;
 
-      if (chartType === "vertical") {
+      if (type === "vertical") {
         const xPos = boxX + p.x / 100;
         vertices.push(xPos, boxY, r, g, b);
         vertices.push(xPos, boxY + 1, r, g, b);
