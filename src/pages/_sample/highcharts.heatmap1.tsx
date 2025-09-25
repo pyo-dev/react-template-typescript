@@ -191,6 +191,13 @@ useEffect(() => {
   };
 }, [height]);
 
+	// 초기화감지
+	useEffect(() => {
+  viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount };
+  setZoomLevel(MIN_ZOOM);
+  renderGL(); // useCallback으로 최신 deps 반영
+}, [chartType, xBoxCount, yBoxCount, renderGL]);
+
 	// 그리드 그리기
 	const drawGrid = () => {
 		const overlay = overlayRef.current;
@@ -299,7 +306,7 @@ const renderGL = () => {
   }
 
   drawGrid(); // 오버레이 그리드
-};
+}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
 	// 마우스 위치 계산
 	const getMousePos = (ev: PointerEvent) => {
@@ -309,7 +316,7 @@ const renderGL = () => {
 	};
 
 	// 마우스 이벤트 최적화: requestAnimationFrame throttle
-	useEffect(() => {
+	const renderGL = useCallback(() => {
 		const canvas = canvasRef.current!;
 		const overlay = overlayRef.current!;
 		if (!canvas || !overlay) return;
