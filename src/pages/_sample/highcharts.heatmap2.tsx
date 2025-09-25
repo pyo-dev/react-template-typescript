@@ -645,9 +645,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
         </div>
       )}
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 4 }}>
-        <button onClick={() => { handleZoomIn }}>확대</button>
-        <button onClick={() => { handleZoomOut }}>축소</button>
-        <button onClick={() => { handleReset }}>Reset View</button>
+        <button onClick={() => { handleZoomIn() }}>확대</button>
+        <button onClick={() => { handleZoomOut() }}>축소</button>
+        <button onClick={() => { handleReset() }}>Reset View</button>
       </div>
     </div>
   );
