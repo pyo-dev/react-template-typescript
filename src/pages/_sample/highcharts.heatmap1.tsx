@@ -143,10 +143,10 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
     const a_color = gl.getAttribLocation(program, "a_color");
     attribLocRef.current = { a_pos, a_color };
     uniformLocsRef.current = {
-      u_xMin: gl.getUniformLocation(program, "u_xMin"),
-      u_xMax: gl.getUniformLocation(program, "u_xMax"),
-      u_yMin: gl.getUniformLocation(program, "u_yMin"),
-      u_yMax: gl.getUniformLocation(program, "u_yMax"),
+      u_xMin: gl.getUniformLocation(program, "u_xMin")!,
+      u_xMax: gl.getUniformLocation(program, "u_xMax")!,
+      u_yMin: gl.getUniformLocation(program, "u_yMin")!,
+      u_yMax: gl.getUniformLocation(program, "u_yMax")!,
     };
 
     bufferRef.current = gl.createBuffer();
