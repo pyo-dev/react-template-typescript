@@ -1,5 +1,6 @@
 // WebGLDetailChart.tsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { interpolateColor } from "./utils/color";
 
 // 포인터 데이터 타입
 type Pointer = { boxIndex: number; x: number; y: number; value: number };
@@ -261,12 +262,24 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 					); // 현재 cell에 해당하는 포인터 데이터
 					if (boxPointers.length === 0) continue; // 포인터 없으면 스킵
 
-					const avgValue = boxPointers.reduce((sum, p) => sum + p.value, 0) / boxPointers.length; // 평균값
-					const t = Math.max(0, Math.min(1, (avgValue - valueMin) / (valueMax - valueMin))); // 0~1로 정규화
+					// const avgValue = boxPointers.reduce((sum, p) => sum + p.value, 0) / boxPointers.length; // 평균값
+					// const t = Math.max(0, Math.min(1, (avgValue - valueMin) / (valueMax - valueMin))); // 0~1로 정규화
 
-					const r = 0.0 * t + 0.0 * (1 - t); // Red 값 (계산식)
-					const g = 0.8 * (1 - t) + 0.3 * t; // Green 값
-					const b = 1.0 * (1 - t) + 0.6 * t; // Blue 값
+					// const r = 0.0 * t + 0.0 * (1 - t); // Red 값 (계산식)
+					// const g = 0.8 * (1 - t) + 0.3 * t; // Green 값
+					// const b = 1.0 * (1 - t) + 0.6 * t; // Blue 값
+
+					const inColor = interpolateColor({
+						minValue: valueMin,
+						maxValue: valueMax,
+						value: boxPointers[0].value,
+						startColor: "#9EE8FF",
+						endColor: "#173375",
+					});
+
+					const r = inColor.r / 255;
+					const g = inColor.g / 255;
+					const b = inColor.b / 255;
 
 					// vertex 좌표와 색상 push (4개 vertex로 사각형)
 					vertices.push(
@@ -306,10 +319,22 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 					boxY < vw.yMin - 1 || boxY > vw.yMax + 1
 				) return;
 
-				const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin))); // 0~1 정규화
-				const r = 0.0 * t + 0.0 * (1 - t); // Red
-				const g = 0.8 * (1 - t) + 0.3 * t; // Green
-				const b = 1.0 * (1 - t) + 0.6 * t; // Blue
+				// const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin))); // 0~1 정규화
+				// const r = 0.0 * t + 0.0 * (1 - t); // Red
+				// const g = 0.8 * (1 - t) + 0.3 * t; // Green
+				// const b = 1.0 * (1 - t) + 0.6 * t; // Blue
+
+				const inColor = interpolateColor({
+					minValue: valueMin,
+					maxValue: valueMax,
+					value: p.value,
+					startColor: "#9EE8FF",
+					endColor: "#173375",
+				});
+
+				const r = inColor.r / 255;
+				const g = inColor.g / 255;
+				const b = inColor.b / 255;
 
 				// vertical chart일 때 좌표 변환
 				if (chartTypeRef.current === "vertical") {
