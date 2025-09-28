@@ -666,42 +666,38 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 	};
 
 	// ====== 축소 버튼 ======
-	const handleZoomOut = () => {
-		const vw = viewRef.current; // 현재 view
-		const fullWidth = xBoxCount; // 전체 X 박스
-		const fullHeight = yBoxCount; // 전체 Y 박스
+	// ====== 축소 버튼 ======
+const handleZoomOut = () => {
+  const vw = viewRef.current; // 현재 view
+  const fullWidth = xBoxCount; // 전체 X 박스
+  const fullHeight = yBoxCount; // 전체 Y 박스
 
-		const midX = (vw.xMin + vw.xMax) / 2; // X 중심
-		const midY = (vw.yMin + vw.yMax) / 2; // Y 중심
+  const midX = (vw.xMin + vw.xMax) / 2; // X 중심
+  const midY = (vw.yMin + vw.yMax) / 2; // Y 중심
 
-		let width = (vw.xMax - vw.xMin) * ZOOM_FACTOR; // 새로운 view 폭
-		let height = (vw.yMax - vw.yMin) * ZOOM_FACTOR; // 새로운 view 높이
+  let width = (vw.xMax - vw.xMin) * ZOOM_FACTOR; // 새로운 view 폭
+  let height = (vw.yMax - vw.yMin) * ZOOM_FACTOR; // 새로운 view 높이
 
-		// 전체 범위를 넘어가면 초기화
-		if (width >= fullWidth && height >= fullHeight) {
-			viewRef.current = { xMin: 0, xMax: fullWidth, yMin: 0, yMax: fullHeight };
-			setZoomLevel(MIN_ZOOM);
-			renderGL();
-			return;
-		}
+  // 전체 범위를 넘어가면 초기화
+  if (width >= fullWidth && height >= fullHeight) {
+    viewRef.current = { xMin: 0, xMax: fullWidth, yMin: 0, yMax: fullHeight };
+    setZoomLevel(MIN_ZOOM);
+    renderGL();
+    return;
+  }
 
-		if (width > fullWidth) width = fullWidth; // 폭 조정
-		if (height > fullHeight) height = fullHeight; // 높이 조정
+  if (width > fullWidth) width = fullWidth; // 폭 제한
+  if (height > fullHeight) height = fullHeight; // 높이 제한
 
-		const newXMin = Math.max(0, midX - width / 2);
-		const newXMax = Math.min(fullWidth, midX + width / 2);
-		const newYMin = Math.max(0, midY - height / 2);
-		const newYMax = Math.min(fullHeight, midY + height / 2);
+  const newXMin = Math.max(0, midX - width / 2); // 최소 X
+  const newXMax = Math.min(fullWidth, midX + width / 2); // 최대 X
+  const newYMin = Math.max(0, midY - height / 2); // 최소 Y
+  const newYMax = Math.min(fullHeight, midY + height / 2); // 최대 Y
 
-		viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
-
-		const zoomX = fullWidth / (newXMax - newXMin);
-		const zoomY = fullHeight / (newYMax - newYMin);
-		const newZoomLevel = Math.min(zoomX, zoomY);
-		setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
-
-		renderGL(); // 렌더링 갱신
-	};
+  viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax }; // view 업데이트
+  setZoomLevel(prev => Math.max(MIN_ZOOM, prev / 2)); // zoomLevel 감소
+  renderGL(); // 렌더링 갱신
+};
 
 	// ====== 화면 초기화 버튼 ======
 	const handleReset = () => {
