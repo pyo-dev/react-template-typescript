@@ -3,14 +3,14 @@
  * @param hex "#fff" 또는 "#ffffff"
  * @returns [r, g, b]
  */
-export function hexToRgb(hex: string): [number, number, number] {
+export const hexToRgb = (hex: string): [number, number, number] => {
   let cleanHex = hex.replace("#", "");
   if (cleanHex.length === 3) {
     cleanHex = cleanHex.split("").map(ch => ch + ch).join(""); // #abc → #aabbcc
   }
   const num = parseInt(cleanHex, 16);
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
-}
+};
 
 /**
  * RGB -> HEX 변환
@@ -19,15 +19,12 @@ export function hexToRgb(hex: string): [number, number, number] {
  * @param b 0-255
  * @returns "#rrggbb"
  */
-export function rgbToHex(r: number, g: number, b: number): string {
-  return (
-    "#" +
-    [r, g, b]
-      .map(v => v.toString(16).padStart(2, "0"))
-      .join("")
-      .toLowerCase()
-  );
-}
+export const rgbToHex = (r: number, g: number, b: number): string =>
+  "#" +
+  [r, g, b]
+    .map(v => v.toString(16).padStart(2, "0"))
+    .join("")
+    .toLowerCase();
 
 /**
  * 색상 보간 (startColor ~ endColor 사이)
@@ -36,9 +33,9 @@ export function rgbToHex(r: number, g: number, b: number): string {
  * @param value 현재 값
  * @param startColor 시작 색상 (red, #fff, #ffffff, rgb(255,0,0) 지원)
  * @param endColor 끝 색상
- * @returns rgb(r,g,b) 문자열
+ * @returns { r, g, b }
  */
-export function interpolateColor({
+export const interpolateColor = ({
   minValue,
   maxValue,
   value,
@@ -50,7 +47,7 @@ export function interpolateColor({
   value: number;
   startColor: string;
   endColor: string;
-}): { r: number; g: number; b: number } {
+}): { r: number; g: number; b: number } => {
   const parseColor = (color: string): [number, number, number] => {
     if (color.startsWith("#")) return hexToRgb(color);
 
@@ -77,4 +74,4 @@ export function interpolateColor({
   const b = Math.round(b1 * (1 - t) + b2 * t);
 
   return { r, g, b };
-}
+};
