@@ -35,16 +35,11 @@ export const rgbToHex = (r: number, g: number, b: number): string =>
  * @param endColor 끝 색상
  * @returns { r, g, b }
  */
-export const interpolateColor = ({
-  minValue,
-  maxValue,
-  value,
-  startColor,
-  endColor,
-}: {
-  minValue: number;
-  maxValue: number;
-  value: number;
+export const interpolateColor = (params: {
+  minValue?: number; // 옵션
+  maxValue?: number; // 옵션
+  value?: number;    // 옵션
+  percent?: number;  // 0 ~ 100
   startColor: string;
   endColor: string;
 }): { r: number; g: number; b: number } => {
@@ -65,9 +60,27 @@ export const interpolateColor = ({
     throw new Error("지원하지 않는 색상 포맷: " + color);
   };
 
-  const t = Math.min(1, Math.max(0, (value - minValue) / (maxValue - minValue)));
-  const [r1, g1, b1] = parseColor(startColor);
-  const [r2, g2, b2] = parseColor(endColor);
+  let t = 0;
+
+  if (params.percent !== undefined) {
+    if (params.percent < 0 || params.percent > 100) {
+      throw new Error("percent 값은 0 ~ 100 범위여야 합니다.");
+    }
+    t = params.percent / 100;
+  } else if (
+    params.minValue !== undefined &&
+    params.maxValue !== undefined &&
+    params.value !== undefined
+  ) {
+    t = (params.value - params.minValue) / (params.maxValue - params.minValue);
+  } else {
+    throw new Error("interpolateColor: percent 또는 (minValue, maxValue, value) 중 하나는 반드시 필요합니다.");
+  }
+
+  t = Math.min(1, Math.max(0, t));
+
+  const [r1, g1, b1] = parseColor(params.startColor);
+  const [r2, g2, b2] = parseColor(params.endColor);
 
   const r = Math.round(r1 * (1 - t) + r2 * t);
   const g = Math.round(g1 * (1 - t) + g2 * t);
