@@ -763,124 +763,126 @@ export default WebGLDetailChart;
 
 
 
-
-
 const renderGL = useCallback(() => {
-  const gl = glRef.current;
-  if (!gl || !programRef.current) return;
+	const gl = glRef.current;
+	if (!gl || !programRef.current) return;
 
-  gl.clear(gl.COLOR_BUFFER_BIT); // 화면 초기화
+	gl.clear(gl.COLOR_BUFFER_BIT);
 
-  const { a_pos, a_color } = attribLocRef.current!;
-  const u = uniformLocsRef.current;
-  const vw = viewRef.current;
+	const { a_pos, a_color } = attribLocRef.current!;
+	const u = uniformLocsRef.current;
+	const vw = viewRef.current;
 
-  // 현재 view 영역 uniform 전달
-  gl.uniform1f(u.u_xMin, vw.xMin);
-  gl.uniform1f(u.u_xMax, vw.xMax);
-  gl.uniform1f(u.u_yMin, vw.yMin);
-  gl.uniform1f(u.u_yMax, vw.yMax);
+	// 현재 view 영역을 uniform에 전달
+	gl.uniform1f(u.u_xMin, vw.xMin);
+	gl.uniform1f(u.u_xMax, vw.xMax);
+	gl.uniform1f(u.u_yMin, vw.yMin);
+	gl.uniform1f(u.u_yMax, vw.yMax);
 
-  // ===== GPU buffer 초기화 =====
-  gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([]), gl.DYNAMIC_DRAW); // 빈 배열로 초기화
+	const vertices: number[] = []; // 매 렌더마다 새로 생성
+	const currentPointers = pointersRef.current; // 최신 포인터 ref
+	const currentChartType = chartTypeRef.current; // 최신 차트 타입
 
-  const vertices: number[] = []; // 새 vertex 배열
+	const currentZoomX = xBoxCount / (vw.xMax - vw.xMin);
+	const currentZoomY = yBoxCount / (vw.yMax - vw.yMin);
+	const currentZoomLevel = Math.min(currentZoomX, currentZoomY);
 
-  // 현재 zoom level 계산
-  const currentZoomX = xBoxCount / (vw.xMax - vw.xMin);
-  const currentZoomY = yBoxCount / (vw.yMax - vw.yMin);
-  const currentZoomLevel = Math.min(currentZoomX, currentZoomY);
+	if (currentZoomLevel < BOX_COLOR_THRESHOLD && currentChartType === "vertical") {
+		// 박스 모드
+		for (let y = Math.floor(vw.yMin); y < Math.ceil(vw.yMax); y++) {
+			for (let x = Math.floor(vw.xMin); x < Math.ceil(vw.xMax); x++) {
+				const boxPointers = currentPointers.filter(
+					p => Math.floor(p.boxIndex % xBoxCount) === x && Math.floor(p.boxIndex / xBoxCount) === y
+				);
+				if (!boxPointers.length) continue;
 
-  if (currentZoomLevel < BOX_COLOR_THRESHOLD && chartTypeRef.current === "vertical") {
-    // ==== 박스 모드 ====
-    for (let y = Math.floor(vw.yMin); y < Math.ceil(vw.yMax); y++) {
-      for (let x = Math.floor(vw.xMin); x < Math.ceil(vw.xMax); x++) {
-        const boxPointers = pointers.filter(
-          p => Math.floor(p.boxIndex % xBoxCount) === x && Math.floor(p.boxIndex / xBoxCount) === y
-        );
-        if (boxPointers.length === 0) continue;
+				const inColor = interpolateColor({
+					minValue: valueMin,
+					maxValue: valueMax,
+					value: boxPointers[0].value,
+					startColor: "#9EE8FF",
+					endColor: "#173375",
+				});
 
-        const inColor = interpolateColor({
-          minValue: valueMin,
-          maxValue: valueMax,
-          value: boxPointers[0].value,
-          startColor: "#9EE8FF",
-          endColor: "#173375",
-        });
+				const r = inColor.r / 255;
+				const g = inColor.g / 255;
+				const b = inColor.b / 255;
 
-        const r = inColor.r / 255;
-        const g = inColor.g / 255;
-        const b = inColor.b / 255;
+				vertices.push(
+					x, y, r, g, b,
+					x + 1, y, r, g, b,
+					x + 1, y + 1, r, g, b,
+					x, y + 1, r, g, b,
+				);
+			}
+		}
 
-        vertices.push(
-          x, y, r, g, b,
-          x + 1, y, r, g, b,
-          x + 1, y + 1, r, g, b,
-          x, y + 1, r, g, b
-        );
-      }
-    }
+		if (vertices.length) {
+			const stride = 5 * 4;
+			gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 
-    if (vertices.length > 0) {
-      const stride = 5 * 4;
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+			gl.enableVertexAttribArray(a_pos);
+			gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
 
-      gl.enableVertexAttribArray(a_pos);
-      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
+			gl.enableVertexAttribArray(a_color);
+			gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
 
-      gl.enableVertexAttribArray(a_color);
-      gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
+			for (let i = 0; i < vertices.length / 5; i += 4) {
+				gl.drawArrays(gl.TRIANGLE_FAN, i, 4);
+			}
+		}
+	} else {
+		// 포인터 라인 모드
+		currentPointers.forEach(p => {
+			const boxX = p.boxIndex % xBoxCount;
+			const boxY = Math.floor(p.boxIndex / xBoxCount);
 
-      for (let i = 0; i < vertices.length / 5; i += 4) {
-        gl.drawArrays(gl.TRIANGLE_FAN, i, 4);
-      }
-    }
-  } else {
-    // ==== 포인터 라인 모드 ====
-    pointers.forEach(p => {
-      const boxX = p.boxIndex % xBoxCount;
-      const boxY = Math.floor(p.boxIndex / xBoxCount);
+			if (
+				boxX < vw.xMin - 1 || boxX > vw.xMax + 1 ||
+				boxY < vw.yMin - 1 || boxY > vw.yMax + 1
+			) return;
 
-      if (boxX < vw.xMin - 1 || boxX > vw.xMax + 1 || boxY < vw.yMin - 1 || boxY > vw.yMax + 1) return;
+			const inColor = interpolateColor({
+				minValue: valueMin,
+				maxValue: valueMax,
+				value: p.value,
+				startColor: "#9EE8FF",
+				endColor: "#173375",
+			});
 
-      const inColor = interpolateColor({
-        minValue: valueMin,
-        maxValue: valueMax,
-        value: p.value,
-        startColor: "#9EE8FF",
-        endColor: "#173375",
-      });
+			const r = inColor.r / 255;
+			const g = inColor.g / 255;
+			const b = inColor.b / 255;
 
-      const r = inColor.r / 255;
-      const g = inColor.g / 255;
-      const b = inColor.b / 255;
+			if (currentChartType === "vertical") {
+				const xPos = boxX + p.x / 100;
+				vertices.push(xPos, boxY, r, g, b);
+				vertices.push(xPos, boxY + 1, r, g, b);
+			} else {
+				const yPos = boxY + p.y / 100;
+				vertices.push(boxX, yPos, r, g, b);
+				vertices.push(boxX + 1, yPos, r, g, b);
+			}
+		});
 
-      if (chartTypeRef.current === "vertical") {
-        const xPos = boxX + p.x / 100;
-        vertices.push(xPos, boxY, r, g, b);
-        vertices.push(xPos, boxY + 1, r, g, b);
-      } else {
-        const yPos = boxY + p.y / 100;
-        vertices.push(boxX, yPos, r, g, b);
-        vertices.push(boxX + 1, yPos, r, g, b);
-      }
-    });
+		if (vertices.length) {
+			const stride = 5 * 4;
+			gl.bindBuffer(gl.ARRAY_BUFFER, bufferRef.current);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 
-    if (vertices.length > 0) {
-      const stride = 5 * 4;
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+			gl.enableVertexAttribArray(a_pos);
+			gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
 
-      gl.enableVertexAttribArray(a_pos);
-      gl.vertexAttribPointer(a_pos, 2, gl.FLOAT, false, stride, 0);
+			gl.enableVertexAttribArray(a_color);
+			gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
 
-      gl.enableVertexAttribArray(a_color);
-      gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, stride, 2 * 4);
+			gl.drawArrays(gl.LINES, 0, vertices.length / 5);
+		}
+	}
 
-      gl.drawArrays(gl.LINES, 0, vertices.length / 5);
-    }
-  }
+	drawGrid(); // 2D overlay grid
+}, [valueMin, valueMax, xBoxCount, yBoxCount]);
 
-  // ==== 2D grid 다시 그리기 ====
-  drawGrid();
-}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
+
+
