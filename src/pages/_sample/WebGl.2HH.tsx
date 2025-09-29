@@ -684,6 +684,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				// 휠 올리면 확대
 				handleZoomIn();
 			} else {
+				if(zoomLevel <= 1) return false;
 				// 휠 내리면 축소
 				handleZoomOut();
 			}
@@ -694,7 +695,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		return () => {
 			canvas.removeEventListener("wheel", handleWheel);
 		};
-	}, []);
+	}, [zoomLevel]);
 
 
 	// ====== 확대 버튼 ======
