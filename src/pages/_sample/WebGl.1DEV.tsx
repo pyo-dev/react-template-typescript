@@ -38,3 +38,40 @@ HeatMapPropsType {
   pointerSeries: HeatMapScatterTpye[][];
   selectEvent?: (data: HeatMapScatterTpye[][]) => void;
 }
+
+
+
+useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let wheelTimeout: NodeJS.Timeout | null = null;
+
+    const handleWheel = (ev: WheelEvent) => {
+        ev.preventDefault();
+
+        if (ev.deltaY < 0) {
+            handleZoomIn();
+        } else {
+            if (zoomLevel <= 1) return;
+            handleZoomOut();
+        }
+
+        // 휠 종료 감지 (디바운스)
+        if (wheelTimeout) clearTimeout(wheelTimeout);
+        wheelTimeout = setTimeout(() => {
+            console.log("✅ 휠 동작 끝!");
+            // 여기서 원하는 동작 실행 (예: 최종 렌더링, 서버 저장 등)
+        }, 200); // 200ms 동안 추가 이벤트 없으면 "끝"이라고 판단
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+        canvas.removeEventListener("wheel", handleWheel);
+        if (wheelTimeout) clearTimeout(wheelTimeout);
+    };
+}, [zoomLevel]);
+
+
+
