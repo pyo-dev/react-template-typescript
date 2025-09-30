@@ -388,7 +388,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			}
 		}
 
-		console.log(pointerSeries.length);
+		// console.log(pointerSeries.length);
 
 		drawGrid(); // 2D overlay grid 다시 그리기
 	}, [pointerSeries, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);

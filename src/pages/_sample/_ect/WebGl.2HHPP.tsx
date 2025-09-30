@@ -7,9 +7,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 // 관리할 쿼리 파라미터 이름과 기본값을 객체로 정의
 const QUERY_PARAMS_DEFAULT = {
 	type: "vertical",
-	pyo: "",
-	jung: "",
-	cc: "",
+	pyo: "11",
+	jung: "22",
+	cc: "33",
 	// 나중에 추가할 파라미터도 여기만 추가하면 됨
 };
 
@@ -44,21 +44,20 @@ const ChartPage = () => {
 	// useQuery, queryKey에 queryParams 넣으면 자동 refetch
 	const { data: resData } = useQuery({
 		queryKey: ["users", queryParams],
-		queryFn: () => fetchData(queryParams),
+		queryFn: () => {
+			console.log(queryParams);
+			return fetchData(queryParams);
+		},
 	});
 
 	// 쿼리 변경 함수
 	const handleChangeSearch = (newParams: Partial<typeof QUERY_PARAMS_DEFAULT>) => {
 		const updatedParams = { ...queryParams, ...newParams };
-		if (newParams.type) {
-			updatedParams.pyo = "";
-			updatedParams.jung = "";
-			updatedParams.cc = "";
-		}
 
 		setQueryParams(updatedParams);
 
 		const searchParams = new URLSearchParams();
+		searchParams.set('child', 'ChartPage')
 		Object.entries(updatedParams).forEach(([key, value]) => {
 			if (value) searchParams.set(key, value);
 		});
@@ -66,11 +65,43 @@ const ChartPage = () => {
 		navigate(`${loc.pathname}?${searchParams.toString()}`, { replace: true });
 	};
 
+	
+	// set data
+	const [queryType, setQueryType] = useState(queryParams.type)
+	const [queryPyo, setQueryPyo] = useState(queryParams.pyo)
+
+	const typeChange = (value: string) => {
+		setQueryType(value);
+		handleChangeSearch({ type: value })
+	}
+
+	const pyoChange = (value: string) => {
+		setQueryPyo(value);
+	}
+	const pyoEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === 'Enter') {
+			handleChangeSearch({ pyo: queryPyo })
+		}
+	}
+
 	return (
 		<div style={{ padding: "40px" }}>
-			<div style={{ marginBottom: 10 }}>
-				<button onClick={() => handleChangeSearch({ type: "vertical" })}>Vertical</button>
-				<button onClick={() => handleChangeSearch({ type: "horizontal" })}>Horizontal</button>
+			<div style={{ marginBottom: 10, display: 'flex', gap: '15px' }}>
+				<select
+					value={queryType}
+					onChange={(e) => typeChange(e.target.value)}
+				>
+					<option value="vertical">vertical</option>
+					<option value="horizontal">horizontal</option>
+				</select>
+
+				<input
+					type="text"
+					value={queryPyo}
+					onChange={(e) => pyoChange(e.target.value)}
+					onKeyDown={(e) => pyoEnter(e)}
+				/>
+
 
 				<button onClick={() => handleChangeSearch({ pyo: "11" })}>서치 파람1-1</button>
 				<button onClick={() => handleChangeSearch({ pyo: "12" })}>서치 파람1-2</button>

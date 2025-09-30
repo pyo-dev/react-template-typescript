@@ -1,18 +1,42 @@
 // WebGLDetailChart.tsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { interpolateColor } from "./utils/color";
 
-// 포인터 데이터 타입
-type Pointer = { boxIndex: number; x: number; y: number; value: number };
 
-// Props 타입
-interface WebGLDetailChartProps {
-	height: number;           // 캔버스 높이
-	xBoxCount: number;        // 가로 박스 개수
-	yBoxCount: number;        // 세로 박스 개수
-	pointers: Pointer[];      // 포인터 데이터
-	valueMin: number;         // 값 최소
-	valueMax: number;         // 값 최대
-	chartType?: "vertical" | "horizontal"; // 포인터 라인 방향
+interface HeatMapScatterTpye {
+	x_addr_in_mat: number;
+	y_addr_in_mat: number;
+	value: number;
+	box_index: number;
+	bnk_id?: number;
+	mat_id?: number;
+	chanel_id?: number;
+	pc_id?: number;
+	hex_id?: number;
+	x_addr?: number;
+	y_addr?: number;
+}
+
+interface HeatMapApiType {
+	success: boolean;
+	meassge: string;
+	value_range: {
+		min: number;
+		max: number;
+	}
+	colums: string[];
+	data: HeatMapScatterTpye[][];
+}
+
+interface HeatMapPropsType {
+	chartType?: string;
+	height?: number;
+	valueMin?: number;
+	valueMax?: number;
+	xBoxCount: number;
+	yBoxCount: number;
+	pointerSeries: HeatMapScatterTpye[][];
+	selectEvent?: (data: HeatMapScatterTpye[][]) => void;
 }
 
 // GLSL Vertex Shader
@@ -92,11 +116,11 @@ const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement, heightPx: number) 
 };
 
 // 메인 컴포넌트
-const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
-	height,
+const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
+	height = 700,
 	xBoxCount,
 	yBoxCount,
-	pointers,
+	pointerSeries,
 	valueMin,
 	valueMax,
 	chartType = "vertical",
@@ -256,17 +280,31 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 		if (currentZoomLevel < BOX_COLOR_THRESHOLD && chartTypeRef.current === "vertical") {
 			for (let y = Math.floor(vw.yMin); y < Math.ceil(vw.yMax); y++) {
 				for (let x = Math.floor(vw.xMin); x < Math.ceil(vw.xMax); x++) {
-					const boxPointers = pointers.filter(
-						p => Math.floor(p.boxIndex % xBoxCount) === x && Math.floor(p.boxIndex / xBoxCount) === y
+					const boxPointers = pointerSeries.filter(
+						(p: any) => Math.floor(p[3] % xBoxCount) === x && Math.floor(p[3] / xBoxCount) === y
 					); // 현재 cell에 해당하는 포인터 데이터
 					if (boxPointers.length === 0) continue; // 포인터 없으면 스킵
 
-					const avgValue = boxPointers.reduce((sum, p) => sum + p.value, 0) / boxPointers.length; // 평균값
-					const t = Math.max(0, Math.min(1, (avgValue - valueMin) / (valueMax - valueMin))); // 0~1로 정규화
+					// const avgValue = boxPointers.reduce((sum, p) => sum + p.value, 0) / boxPointers.length; // 평균값
+					// const t = Math.max(0, Math.min(1, (avgValue - valueMin) / (valueMax - valueMin))); // 0~1로 정규화
 
-					const r = 0.0 * t + 0.0 * (1 - t); // Red 값 (계산식)
-					const g = 0.8 * (1 - t) + 0.3 * t; // Green 값
-					const b = 1.0 * (1 - t) + 0.6 * t; // Blue 값
+					// const r = 0.0 * t + 0.0 * (1 - t); // Red 값 (계산식)
+					// const g = 0.8 * (1 - t) + 0.3 * t; // Green 값
+					// const b = 1.0 * (1 - t) + 0.6 * t; // Blue 값
+
+					const avgValue = boxPointers.reduce((sum, p: any) => sum + p[2], 0) / boxPointers.length; // 평균값
+
+					const inColor = interpolateColor({
+						minValue: valueMin,
+						maxValue: valueMax,
+						value: avgValue,
+						startColor: "#9EE8FF",
+						endColor: "#173375",
+					});
+
+					const r = inColor.r / 255;
+					const g = inColor.g / 255;
+					const b = inColor.b / 255;
 
 					// vertex 좌표와 색상 push (4개 vertex로 사각형)
 					vertices.push(
@@ -296,9 +334,9 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 			}
 		} else {
 			// ==== 포인터 라인 모드 ====
-			pointers.forEach(p => {
-				const boxX = p.boxIndex % xBoxCount; // 박스 X 좌표
-				const boxY = Math.floor(p.boxIndex / xBoxCount); // 박스 Y 좌표
+			pointerSeries.forEach((p: any) => {
+				const boxX = p[3] % xBoxCount; // 박스 X 좌표
+				const boxY = Math.floor(p[3] / xBoxCount); // 박스 Y 좌표
 
 				// view 영역 밖이면 스킵
 				if (
@@ -306,18 +344,30 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 					boxY < vw.yMin - 1 || boxY > vw.yMax + 1
 				) return;
 
-				const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin))); // 0~1 정규화
-				const r = 0.0 * t + 0.0 * (1 - t); // Red
-				const g = 0.8 * (1 - t) + 0.3 * t; // Green
-				const b = 1.0 * (1 - t) + 0.6 * t; // Blue
+				// const t = Math.max(0, Math.min(1, (p.value - valueMin) / (valueMax - valueMin))); // 0~1 정규화
+				// const r = 0.0 * t + 0.0 * (1 - t); // Red
+				// const g = 0.8 * (1 - t) + 0.3 * t; // Green
+				// const b = 1.0 * (1 - t) + 0.6 * t; // Blue
+
+				const inColor = interpolateColor({
+					minValue: valueMin,
+					maxValue: valueMax,
+					value: p[2],
+					startColor: "#9EE8FF",
+					endColor: "#173375",
+				});
+
+				const r = inColor.r / 255;
+				const g = inColor.g / 255;
+				const b = inColor.b / 255;
 
 				// vertical chart일 때 좌표 변환
 				if (chartTypeRef.current === "vertical") {
-					const xPos = boxX + p.x / 100; // x 위치 보정
+					const xPos = boxX + p[0] / 100; // x 위치 보정
 					vertices.push(xPos, boxY, r, g, b);
 					vertices.push(xPos, boxY + 1, r, g, b);
 				} else {
-					const yPos = boxY + p.y / 100; // horizontal chart 좌표
+					const yPos = boxY + p[1] / 100; // horizontal chart 좌표
 					vertices.push(boxX, yPos, r, g, b);
 					vertices.push(boxX + 1, yPos, r, g, b);
 				}
@@ -338,8 +388,10 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 			}
 		}
 
+		// console.log(pointerSeries.length);
+
 		drawGrid(); // 2D overlay grid 다시 그리기
-	}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
+	}, [pointerSeries, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
 
 	// 마우스 위치 계산
@@ -512,18 +564,18 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 				const worldYMax = vw.yMin + Math.max(y0, y1) / canvasH * (vw.yMax - vw.yMin);
 
 				// 드래그 영역 내 포인터 데이터 추출 (필터링)
-				const selectedPointers: Pointer[] = [];
+				const selectedPointers: HeatMapScatterTpye[][] = [];
 				const type = chartTypeRef.current;
-				pointers.forEach(p => {
-					const boxX = p.boxIndex % xBoxCount; // 박스 X
-					const boxY = Math.floor(p.boxIndex / xBoxCount); // 박스 Y
+				pointerSeries.forEach((p: any) => {
+					const boxX = p[3] % xBoxCount; // 박스 X
+					const boxY = Math.floor(p[3] / xBoxCount); // 박스 Y
 					if (type === "vertical") {
-						const xPos = boxX + p.x / 100; // 포인터 X 위치
+						const xPos = boxX + p[0] / 100; // 포인터 X 위치
 						if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
 							selectedPointers.push(p);
 						}
 					} else {
-						const yPos = boxY + p.y / 100; // 포인터 Y 위치
+						const yPos = boxY + p[1] / 100; // 포인터 Y 위치
 						if (boxX >= worldXMin && boxX <= worldXMax && yPos >= worldYMin && yPos <= worldYMax) {
 							selectedPointers.push(p);
 						}
@@ -564,7 +616,7 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 			document.removeEventListener("pointerup", onPointerUp);
 			if (rafId) cancelAnimationFrame(rafId);
 		};
-	}, [pointers, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
+	}, [pointerSeries, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
 	// ====== 마우스 캔버스 영역 체크 ======
 	useEffect(() => {
@@ -620,6 +672,30 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 			document.removeEventListener("keyup", handleKeyUp);
 		};
 	}, [xBoxCount, yBoxCount]); // xBoxCount, yBoxCount 변경 시 재실행
+
+	// ====== 마우스 휠로 확대/축소 ======
+	useEffect(() => {
+		const canvas = canvasRef.current;
+		if (!canvas) return;
+
+		const handleWheel = (ev: WheelEvent) => {
+			ev.preventDefault(); // 기본 스크롤 막기
+			if (ev.deltaY < 0) {
+				// 휠 올리면 확대
+				handleZoomIn();
+			} else {
+				if(zoomLevel <= 1) return false;
+				// 휠 내리면 축소
+				handleZoomOut();
+			}
+		};
+
+		canvas.addEventListener("wheel", handleWheel, { passive: false });
+
+		return () => {
+			canvas.removeEventListener("wheel", handleWheel);
+		};
+	}, [zoomLevel]);
 
 
 	// ====== 확대 버튼 ======
@@ -688,6 +764,12 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 
 	return (
 		<>
+
+			<div style={{ display: "flex", gap: 4 }}>
+				<button onClick={() => { handleZoomIn() }}>확대</button>
+				<button onClick={() => { handleZoomOut() }}>축소</button>
+				<button onClick={() => { handleReset() }}>Reset View</button>
+			</div>
 			<div>
 				{zoomLevel >= BOX_COLOR_THRESHOLD ? "포인터 라인 모드" : "박스 모드"} (zoom: {zoomLevel})
 			</div>
@@ -725,11 +807,6 @@ const WebGLDetailChart: React.FC<WebGLDetailChartProps> = ({
 						{tooltip.text}
 					</div>
 				)}
-				<div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 4 }}>
-					<button onClick={() => { handleZoomIn() }}>확대</button>
-					<button onClick={() => { handleZoomOut() }}>축소</button>
-					<button onClick={() => { handleReset() }}>Reset View</button>
-				</div>
 			</div>
 		</>
 	);
