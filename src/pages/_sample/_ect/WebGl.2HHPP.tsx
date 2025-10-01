@@ -43,12 +43,11 @@ const ChartPage = () => {
 
 	// useQuery, queryKey에 queryParams 넣으면 자동 refetch
 	const { data: resData } = useQuery({
-		queryKey: ["users", queryParams],
-		queryFn: () => {
-			console.log(queryParams);
-			return fetchData(queryParams);
-		},
-	});
+  queryKey: ["users", queryParams], // 객체 하나만 넣음
+  queryFn: () => fetchData(queryParams),
+  refetchOnMount: "always",
+  refetchOnWindowFocus: false,
+});
 
 	// 쿼리 변경 함수
 	const handleChangeSearch = (newParams: Partial<typeof QUERY_PARAMS_DEFAULT>) => {
