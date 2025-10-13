@@ -76,10 +76,4 @@ useEffect(() => {
 
 
 
-===== LICENSE BEGIN =====
-13187304-31102015
-00001!xtAMrFykMbWmUY57ZegHceEQ
-7XDdNXO"pYO8b4rMVIeSFXtyyhz9YW
-3XQFwSOOKMPWYGDiTSakSoiZsGMOXb
-===== LICENSE END =====
 
