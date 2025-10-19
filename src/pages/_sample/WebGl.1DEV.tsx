@@ -71,7 +71,9 @@ useEffect(() => {
         canvas.removeEventListener("wheel", handleWheel);
         if (wheelTimeout) clearTimeout(wheelTimeout);
     };
+
 }, [zoomLevel]);
+
 
 
 
