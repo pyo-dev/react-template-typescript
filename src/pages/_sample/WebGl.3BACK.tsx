@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { interpolateColor } from "./utils/color";
 
+import './chart.css'
 
 interface HeatMapScatterTpye {
 	x_addr_in_mat: number;
@@ -144,7 +145,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 	const chartTypeRef = useRef(chartType); // chart type 저장 (vertical/horizontal)
 
 	// ====== state ======
-	const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null); // 툴팁 상태
+	const [tooltip, setTooltip] = useState<{ contents: string; x: number; y: number } | null>(null); // 툴팁 상태
 	const [zoomLevel, setZoomLevel] = useState(1); // 현재 zoom level
 	const ZOOM_FACTOR = 2; // 확대/축소 배율
 	const MIN_ZOOM = 1; // 최소 zoom
@@ -401,6 +402,156 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		return { x: ev.clientX - rect.left, y: ev.clientY - rect.top }; // 캔버스 기준 마우스 좌표 반환
 	};
 
+
+
+	// 추가 작업
+	const xGroup = [
+		{
+			title: 'A',
+			children: [
+				{
+					title: 'a1',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'a11' },
+						{ title: 'a12' },
+						{ title: 'a13' },
+					]
+				},
+				{
+					title: 'a2',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'a21' },
+						{ title: 'a22' },
+						{ title: 'a23' },
+					]
+				}
+			]
+		},
+		{
+			title: 'B',
+			children: [
+				{
+					title: 'b1',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'b11' },
+						{ title: 'b12' },
+						{ title: 'b13' },
+					]
+				},
+				{
+					title: 'b2',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'b21' },
+						{ title: 'b22' },
+						{ title: 'b23' },
+					]
+				}
+			]
+		},
+		{
+			title: 'C',
+			children: [
+				{
+					title: 'c1',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'c11' },
+						{ title: 'c12' },
+						{ title: 'c13' },
+					]
+				},
+				{
+					title: 'c2',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'c21' },
+						{ title: 'c22' },
+						{ title: 'c23' },
+					]
+				}
+			]
+		},
+		{
+			title: 'D',
+			children: [
+				{
+					title: 'd1',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'd11' },
+						{ title: 'd12' },
+						{ title: 'd13' },
+					]
+				},
+				{
+					title: 'd2',
+					children: chartType == "vertical" ? [] : [
+						{ title: 'd21' },
+						{ title: 'd22' },
+						{ title: 'd23' },
+					]
+				}
+			]
+		}
+	]
+
+	const yGroup = [
+		{ title: 'Y1' },
+		{ title: 'Y2' },
+		{ title: 'Y3' },
+		{ title: 'Y4' },
+		{ title: 'Y5' },
+		{ title: 'Y6' },
+		{ title: 'Y7' },
+		{ title: 'Y8' },
+		{ title: 'Y9' },
+		{ title: 'Y10' },
+		{ title: 'Y11' },
+		{ title: 'Y12' },
+		{ title: 'Y13' },
+		{ title: 'Y14' },
+		{ title: 'Y15' },
+		{ title: 'Y16' }
+	]
+
+	// leaf 개수 계산
+	const countLeaves = (node: any): number => {
+		if (!node.children || node.children.length === 0) return 1;
+		return node.children.reduce((sum: number, child: any) => sum + countLeaves(child), 0);
+	};
+
+	// 각 leaf index에 그룹 경로 매핑
+	const mapLeafToGroupPath = (group: any[]) => {
+		const result: string[] = []; // index → 그룹 경로
+		let currentIndex = 0;
+
+		const traverse = (nodes: any[], path: string[]) => {
+			nodes.forEach((node) => {
+				const newPath = [...path, node.title];
+				if (!node.children || node.children.length === 0) {
+					result[currentIndex] = newPath.join(" > ");
+					currentIndex++;
+				} else {
+					traverse(node.children, newPath);
+				}
+			});
+		};
+
+		traverse(group, []);
+		return result;
+	};
+
+	const renderGroup = (group: any[]) => {
+		return (
+			<ul>
+				{group.map((item, idx) => (
+					<li key={idx}>
+						{item.title}
+						{item.children && renderGroup(item.children)}
+					</li>
+				))}
+			</ul>
+		);
+	};
+	//// 추가 작업
+
 	// 마우스 이벤트 최적화: requestAnimationFrame throttle
 	useEffect(() => {
 		const canvas = canvasRef.current!;
@@ -450,6 +601,15 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				const cellX = Math.floor(vw.xMin + mouseX / cellW); // 현재 cell X
 				const cellY = Math.floor(vw.yMin + mouseY / cellH); // 현재 cell Y
 
+				// 추가 작업
+				const xLeafPaths = mapLeafToGroupPath(xGroup);
+				const xLeafCount = xLeafPaths.length;
+				const xPath = xLeafPaths[Math.floor(cellX / (xBoxCount / xLeafCount))];
+				const yLeafPaths = mapLeafToGroupPath(yGroup);
+				const yLeafCount = yLeafPaths.length;
+				const yPath = yLeafPaths[Math.floor(cellY / (yBoxCount / yLeafCount))];
+				//// 추가 작업
+
 				// 툴팁 표시 범위 체크: 캔버스 내부 + view 영역
 				if (
 					mouseX >= 0 && mouseY >= 0 &&
@@ -458,7 +618,13 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				) {
 					const last = lastTooltipRef.current; // 이전 툴팁 기록
 					const boxIndex = cellY * xBoxCount + cellX; // 박스 인덱스 계산
-					setTooltip({ text: `박스(${boxIndex}) 셀(${cellX}, ${cellY})`, x: ev.clientX, y: ev.clientY }); // 툴팁 표시
+					const contents = `
+						<div>박스(${boxIndex}) 셀(${cellX}, ${cellY})</div>
+						<div>${xPath}</div>
+						<div>${yPath}</div>
+					`
+
+					setTooltip({ contents: contents, x: ev.clientX, y: ev.clientY }); // 툴팁 표시
 					lastTooltipRef.current = { cellX, cellY }; // 업데이트
 				} else {
 					setTooltip(null); // 범위 밖이면 숨김
@@ -684,7 +850,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				// 휠 올리면 확대
 				handleZoomIn();
 			} else {
-				if(zoomLevel <= 1) return false;
+				if (zoomLevel <= 1) return false;
 				// 휠 내리면 축소
 				handleZoomOut();
 			}
@@ -762,9 +928,10 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 	};
 
 
+
+
 	return (
 		<>
-
 			<div style={{ display: "flex", gap: 4 }}>
 				<button onClick={() => { handleZoomIn() }}>확대</button>
 				<button onClick={() => { handleZoomOut() }}>축소</button>
@@ -773,40 +940,48 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			<div>
 				{zoomLevel >= BOX_COLOR_THRESHOLD ? "포인터 라인 모드" : "박스 모드"} (zoom: {zoomLevel})
 			</div>
-			<div style={{ width: "100%", position: "relative" }}>
-				<canvas
-					ref={canvasRef}
-					style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
-				/>
-				<canvas
-					ref={overlayRef}
-					style={{
-						position: "absolute",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: `${height}px`,
-						pointerEvents: "none",
-					}}
-				/>
-				{tooltip && (
-					<div
-						style={{
-							position: "fixed",
-							left: tooltip.x + 10,
-							top: tooltip.y + 10,
-							background: "rgba(0,0,0,0.7)",
-							color: "#fff",
-							padding: "2px 6px",
-							fontSize: 12,
-							borderRadius: 3,
-							pointerEvents: "none",
-							zIndex: 1000,
-						}}
-					>
-						{tooltip.text}
+			<div className="webgl-chart-wrap">
+				<div></div>
+				<div className="group-wrap xgroup">{renderGroup(xGroup)}</div>
+				<div className="group-wrap ygroup">{renderGroup(yGroup)}</div>
+				<div className="chart-wrap">
+					<div style={{ width: "100%", position: "relative" }}>
+						<canvas
+							ref={canvasRef}
+							style={{ width: "100%", height: `${height}px`, display: "block", border: "1px solid #ddd" }}
+						/>
+						<canvas
+							ref={overlayRef}
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								width: "100%",
+								height: `${height}px`,
+								pointerEvents: "none",
+							}}
+						/>
+						{tooltip && (
+							<div
+								style={{
+									position: "fixed",
+									left: tooltip.x + 10,
+									top: tooltip.y + 10,
+									background: "rgba(0,0,0,0.7)",
+									color: "#fff",
+									padding: "2px 6px",
+									fontSize: 12,
+									borderRadius: 3,
+									pointerEvents: "none",
+									zIndex: 1000,
+									whiteSpace: 'nowrap'
+								}}
+								dangerouslySetInnerHTML={{ __html: tooltip.contents }}
+							>
+							</div>
+						)}
 					</div>
-				)}
+				</div>
 			</div>
 		</>
 	);
