@@ -133,6 +133,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 	const isDraggingRef = useRef(false); // 드래그 상태
 	const dragStartRef = useRef<{ x: number; y: number } | null>(null); // 드래그 시작 좌표
 	const dragEndRef = useRef<{ x: number; y: number } | null>(null); // 드래그 종료 좌표
+	// 추가 개발
+	const isDraggingLastRef = useRef<any>({}); // 드래그 마지막 상태
+	//// 추가 개발
 	const isPanningRef = useRef(false); // 패닝 상태
 	const panStartRef = useRef<{ x: number; y: number } | null>(null); // 패닝 시작 좌표
 	const viewStartRef = useRef(viewRef.current); // 패닝 시작 시 view 좌표 저장
@@ -196,8 +199,25 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				glRef.current?.viewport(0, 0, canvas.width, canvas.height); // WebGL viewport 업데이트
 				drawGrid(); // Grid 그리기
 				renderGL(); // WebGL 렌더링
+
+				// 추가 개발
+				if (isDraggingLastRef.current.dragStartRef) {
+					dragStartRef.current = {
+						x: isDraggingLastRef.current.dragStartRef.x * canvas.clientWidth,
+						y: isDraggingLastRef.current.dragStartRef.y * canvas.clientHeight
+					};
+					dragEndRef.current = {
+						x: isDraggingLastRef.current.dragEndRef.x * canvas.clientWidth,
+						y: isDraggingLastRef.current.dragEndRef.y * canvas.clientHeight
+					};
+
+					drawSelectionRect();
+				}
+				//// 추가 개발
 			});
 		});
+
+
 		ro.observe(canvas.parentElement!); // 부모 요소 크기 감시
 		return () => ro.disconnect();
 	}, [height]);
@@ -554,6 +574,35 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 	};
 
 	// 마우스 이벤트 최적화: requestAnimationFrame throttle
+	// 추가 개발
+	// 드래그 선택 영역 그리기
+	const drawSelectionRect = () => {
+		const canvas = canvasRef.current!;
+		const overlay = overlayRef.current!;
+		if (!overlay || !dragStartRef.current || !dragEndRef.current) return;
+		const ctx = overlay.getContext("2d")!;
+		drawGrid(); // 그리드 먼저 그리기
+
+		const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val)); // 값 clamp
+
+		const s = {
+			x: clamp(dragStartRef.current.x, 0, canvas.clientWidth), // 드래그 시작 X
+			y: clamp(dragStartRef.current.y, 0, canvas.clientHeight), // 드래그 시작 Y
+		};
+		const e = {
+			x: clamp(dragEndRef.current.x, 0, canvas.clientWidth), // 드래그 끝 X
+			y: clamp(dragEndRef.current.y, 0, canvas.clientHeight), // 드래그 끝 Y
+		};
+
+		ctx.strokeStyle = "rgba(255,0,0,0.9)"; // 빨간 테두리
+		ctx.lineWidth = 2; // 선 굵기
+		ctx.setLineDash([6, 4]); // 점선
+		ctx.strokeRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y)); // 사각형 테두리
+
+		ctx.fillStyle = "rgba(255,0,0,0.08)"; // 반투명 빨간
+		ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y)); // 사각형 채우기
+	};
+	//// 추가 개발
 	useEffect(() => {
 		const canvas = canvasRef.current!;
 		const overlay = overlayRef.current!;
@@ -561,31 +610,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 
 		let rafId: number | null = null; // RAF ID 저장
 
-		// 드래그 선택 영역 그리기
-		const drawSelectionRect = () => {
-			if (!overlay || !dragStartRef.current || !dragEndRef.current) return;
-			const ctx = overlay.getContext("2d")!;
-			drawGrid(); // 그리드 먼저 그리기
 
-			const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val)); // 값 clamp
-
-			const s = {
-				x: clamp(dragStartRef.current.x, 0, canvas.clientWidth), // 드래그 시작 X
-				y: clamp(dragStartRef.current.y, 0, canvas.clientHeight), // 드래그 시작 Y
-			};
-			const e = {
-				x: clamp(dragEndRef.current.x, 0, canvas.clientWidth), // 드래그 끝 X
-				y: clamp(dragEndRef.current.y, 0, canvas.clientHeight), // 드래그 끝 Y
-			};
-
-			ctx.strokeStyle = "rgba(255,0,0,0.9)"; // 빨간 테두리
-			ctx.lineWidth = 2; // 선 굵기
-			ctx.setLineDash([6, 4]); // 점선
-			ctx.strokeRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y)); // 사각형 테두리
-
-			ctx.fillStyle = "rgba(255,0,0,0.08)"; // 반투명 빨간
-			ctx.fillRect(Math.min(s.x, e.x), Math.min(s.y, e.y), Math.abs(e.x - s.x), Math.abs(e.y - s.y)); // 사각형 채우기
-		};
 
 		// 마우스 이동 이벤트
 		const onPointerMove = (ev: PointerEvent) => {
@@ -686,10 +711,13 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			dragStartRef.current = pos; // 저장
 			dragEndRef.current = pos; // 초기 끝 좌표 동일
 			drawSelectionRect(); // 선택 사각형 그리기
+			// 추가 개발
+			isDraggingLastRef.current = {}
+			//// 추가 개발
 		};
 
 		// 마우스 클릭 해제 이벤트
-		// 추가 기능
+
 		const onPointerUp = (ev: PointerEvent) => {
 			const canvas = canvasRef.current!;
 			const overlay = overlayRef.current!;
@@ -741,6 +769,18 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 						const ctx = overlay.getContext("2d")!;
 						ctx.clearRect(0, 0, overlay.width, overlay.height);
 						drawSelectionRect();
+						// 추가 개발
+						isDraggingLastRef.current = {
+							dragStartRef: {
+								x: dragStartRef.current.x / canvas.clientWidth,
+								y: dragStartRef.current.y / canvas.clientHeight
+							},
+							dragEndRef: {
+								x: dragEndRef.current.x / canvas.clientWidth,
+								y: dragEndRef.current.y / canvas.clientHeight
+							}
+						}
+						//// 추가 개발
 					}
 				}
 			}
@@ -750,7 +790,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			dragStartRef.current = null;
 			dragEndRef.current = null;
 		};
-		//// 추가 기능
+
 
 
 
@@ -822,7 +862,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		};
 	}, [xBoxCount, yBoxCount]); // xBoxCount, yBoxCount 변경 시 재실행
 
-	// 추가 기능
+
 	const logVisiblePointers = (area?: { xMin: number; xMax: number; yMin: number; yMax: number }) => {
 		const vw = viewRef.current;
 		const visible: HeatMapScatterTpye[][] = [];
@@ -849,7 +889,7 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		});
 		console.log("현재 선택 영역 포인터 데이터:", visible);
 	};
-	//// 추가 기능
+
 
 	// ====== 마우스 휠로 확대/축소 ======
 	useEffect(() => {
@@ -858,9 +898,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 
 		const handleWheel = (ev: WheelEvent) => {
 
-			// 추가 기능
+
 			if (!ev.shiftKey) return;
-			//// 추가 기능
+
 
 			ev.preventDefault(); // 기본 스크롤 막기
 			if (ev.deltaY < 0) {
@@ -872,9 +912,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				handleZoomOut();
 			}
 
-			// 추가 기능
+
 			logVisiblePointers();
-			//// 추가 기능
+
 		};
 
 		canvas.addEventListener("wheel", handleWheel, { passive: false });
@@ -902,9 +942,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		setZoomLevel(prev => prev * 2); // zoomLevel 증가
 		renderGL(); // 렌더링 갱신
 
-		// 추가 기능
+
 		logVisiblePointers();
-		//// 추가 기능
+
 	};
 
 	// ====== 축소 버튼 ======
@@ -924,9 +964,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			viewRef.current = { xMin: 0, xMax: fullWidth, yMin: 0, yMax: fullHeight };
 			setZoomLevel(MIN_ZOOM);
 			renderGL();
-			// 추가 기능
+
 			logVisiblePointers();
-			//// 추가 기능
+
 			return;
 		}
 
@@ -946,9 +986,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
 
 		renderGL(); // 렌더링 갱신
-		// 추가 기능
+
 		logVisiblePointers();
-		//// 추가 기능
+
 	};
 
 	// ====== 화면 초기화 버튼 ======
@@ -956,9 +996,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount }; // 전체 view
 		setZoomLevel(MIN_ZOOM); // zoom 초기화
 		renderGL(); // 렌더링 갱신
-		// 추가 기능
+
 		logVisiblePointers();
-		//// 추가 기능
+
 	};
 
 
