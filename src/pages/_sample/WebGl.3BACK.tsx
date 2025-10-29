@@ -253,7 +253,6 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 	};
 
 	// ====== WebGL 렌더링 ======
-	// ====== WebGL 렌더링 ======
 	const renderGL = useCallback(() => {
 		const gl = glRef.current; // WebGL 컨텍스트 가져오기
 		if (!gl || !programRef.current) return;
@@ -392,6 +391,12 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		// console.log(pointerSeries.length);
 
 		drawGrid(); // 2D overlay grid 다시 그리기
+
+
+
+
+
+
 	}, [pointerSeries, xBoxCount, yBoxCount, valueMin, valueMax, chartType]);
 
 
@@ -402,9 +407,6 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		return { x: ev.clientX - rect.left, y: ev.clientY - rect.top }; // 캔버스 기준 마우스 좌표 반환
 	};
 
-
-
-	// 추가 작업
 	const xGroup = [
 		{
 			title: 'A',
@@ -550,7 +552,6 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			</ul>
 		);
 	};
-	//// 추가 작업
 
 	// 마우스 이벤트 최적화: requestAnimationFrame throttle
 	useEffect(() => {
@@ -601,14 +602,12 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				const cellX = Math.floor(vw.xMin + mouseX / cellW); // 현재 cell X
 				const cellY = Math.floor(vw.yMin + mouseY / cellH); // 현재 cell Y
 
-				// 추가 작업
 				const xLeafPaths = mapLeafToGroupPath(xGroup);
 				const xLeafCount = xLeafPaths.length;
 				const xPath = xLeafPaths[Math.floor(cellX / (xBoxCount / xLeafCount))];
 				const yLeafPaths = mapLeafToGroupPath(yGroup);
 				const yLeafCount = yLeafPaths.length;
 				const yPath = yLeafPaths[Math.floor(cellY / (yBoxCount / yLeafCount))];
-				//// 추가 작업
 
 				// 툴팁 표시 범위 체크: 캔버스 내부 + view 영역
 				if (
@@ -690,86 +689,70 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		};
 
 		// 마우스 클릭 해제 이벤트
-		const onPointerUp = () => {
+		// 추가 기능
+		const onPointerUp = (ev: PointerEvent) => {
 			const canvas = canvasRef.current!;
 			const overlay = overlayRef.current!;
 			if (!canvas || !overlay) return;
 
-			// 패닝 종료 처리
+			// 패닝 종료
 			if (isPanningRef.current) {
-				isPanningRef.current = false; // 상태 해제
-				panStartRef.current = null; // 초기화
-				viewStartRef.current = viewRef.current; // view 저장
-				canvas.style.cursor = "default"; // 커서 원래대로
+				isPanningRef.current = false;
+				panStartRef.current = null;
+				viewStartRef.current = viewRef.current;
+				canvas.style.cursor = "default";
 			}
 
-			// 드래그 완료 시 view 확대
-			if (
-				isDraggingRef.current &&
-				dragStartRef.current &&
-				dragEndRef.current &&
-				(dragStartRef.current.x !== dragEndRef.current.x || dragStartRef.current.y !== dragEndRef.current.y)
-			) {
-				const s = dragStartRef.current; // 시작 좌표
-				const e = dragEndRef.current; // 끝 좌표
-				const canvasW = canvas.clientWidth; // 캔버스 폭
-				const canvasH = canvas.clientHeight; // 캔버스 높이
-				const vw = viewRef.current; // 현재 view
+			if (isDraggingRef.current && dragStartRef.current && dragEndRef.current) {
+				const s = dragStartRef.current;
+				const e = dragEndRef.current;
 
-				// 캔버스 영역으로 좌표 클램핑
-				const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
-				const x0 = clamp(s.x, 0, canvasW);
-				const x1 = clamp(e.x, 0, canvasW);
-				const y0 = clamp(s.y, 0, canvasH);
-				const y1 = clamp(e.y, 0, canvasH);
+				// 드래그 영역이 0이 아닌 경우
+				if (s.x !== e.x || s.y !== e.y) {
+					const canvasW = canvas.clientWidth;
+					const canvasH = canvas.clientHeight;
+					const vw = viewRef.current;
 
-				// 드래그 영역을 world 좌표로 변환
-				const worldXMin = vw.xMin + Math.min(x0, x1) / canvasW * (vw.xMax - vw.xMin);
-				const worldXMax = vw.xMin + Math.max(x0, x1) / canvasW * (vw.xMax - vw.xMin);
-				const worldYMin = vw.yMin + Math.min(y0, y1) / canvasH * (vw.yMax - vw.yMin);
-				const worldYMax = vw.yMin + Math.max(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+					const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+					const x0 = clamp(s.x, 0, canvasW);
+					const x1 = clamp(e.x, 0, canvasW);
+					const y0 = clamp(s.y, 0, canvasH);
+					const y1 = clamp(e.y, 0, canvasH);
 
-				// 드래그 영역 내 포인터 데이터 추출 (필터링)
-				const selectedPointers: HeatMapScatterTpye[][] = [];
-				const type = chartTypeRef.current;
-				pointerSeries.forEach((p: any) => {
-					const boxX = p[3] % xBoxCount; // 박스 X
-					const boxY = Math.floor(p[3] / xBoxCount); // 박스 Y
-					if (type === "vertical") {
-						const xPos = boxX + p[0] / 100; // 포인터 X 위치
-						if (xPos >= worldXMin && xPos <= worldXMax && boxY >= worldYMin && boxY <= worldYMax) {
-							selectedPointers.push(p);
-						}
+					const worldXMin = vw.xMin + Math.min(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+					const worldXMax = vw.xMin + Math.max(x0, x1) / canvasW * (vw.xMax - vw.xMin);
+					const worldYMin = vw.yMin + Math.min(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+					const worldYMax = vw.yMin + Math.max(y0, y1) / canvasH * (vw.yMax - vw.yMin);
+
+					if (ev.ctrlKey) {
+						// Ctrl+드래그 → 기존대로 확대
+						viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
+						const newZoomX = xBoxCount / (worldXMax - worldXMin);
+						const newZoomY = yBoxCount / (worldYMax - worldYMin);
+						const newZoomLevel = Math.min(newZoomX, newZoomY);
+						setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
+						logVisiblePointers(); // 전체 view 기준 로그
+						renderGL();
 					} else {
-						const yPos = boxY + p[1] / 100; // 포인터 Y 위치
-						if (boxX >= worldXMin && boxX <= worldXMax && yPos >= worldYMin && yPos <= worldYMax) {
-							selectedPointers.push(p);
-						}
+						// 일반 드래그 → logVisiblePointers 사용 + 선택 영역 필터링
+						logVisiblePointers({ xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax });
+
+						// overlay 초기화 후 마지막 사각형 유지
+						const ctx = overlay.getContext("2d")!;
+						ctx.clearRect(0, 0, overlay.width, overlay.height);
+						drawSelectionRect();
 					}
-				});
-				console.log("드래그 영역 내 포인터 데이터:", selectedPointers); // 로그 출력
-
-				// 선택 영역으로 view 확대
-				viewRef.current = { xMin: worldXMin, xMax: worldXMax, yMin: worldYMin, yMax: worldYMax };
-
-				// 확대 후 zoomLevel 계산
-				const newZoomX = xBoxCount / (worldXMax - worldXMin);
-				const newZoomY = yBoxCount / (worldYMax - worldYMin);
-				const newZoomLevel = Math.min(newZoomX, newZoomY);
-				setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
+				}
 			}
 
 			// 드래그 상태 초기화
 			isDraggingRef.current = false;
 			dragStartRef.current = null;
 			dragEndRef.current = null;
-
-			// 오버레이 초기화
-			const ctx = overlay.getContext("2d")!;
-			ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-			renderGL(); // 렌더링 갱신
 		};
+		//// 추가 기능
+
+
 
 		// 이벤트 리스너 등록
 		canvas.addEventListener("pointerdown", onPointerDown);
@@ -839,12 +822,46 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		};
 	}, [xBoxCount, yBoxCount]); // xBoxCount, yBoxCount 변경 시 재실행
 
+	// 추가 기능
+	const logVisiblePointers = (area?: { xMin: number; xMax: number; yMin: number; yMax: number }) => {
+		const vw = viewRef.current;
+		const visible: HeatMapScatterTpye[][] = [];
+		const xMin = area?.xMin ?? vw.xMin;
+		const xMax = area?.xMax ?? vw.xMax;
+		const yMin = area?.yMin ?? vw.yMin;
+		const yMax = area?.yMax ?? vw.yMax;
+
+		pointerSeries.forEach((p: any) => {
+			const boxX = p[3] % xBoxCount;
+			const boxY = Math.floor(p[3] / xBoxCount);
+
+			if (chartTypeRef.current === "vertical") {
+				const xPos = boxX + p[0] / 100;
+				if (xPos >= xMin && xPos <= xMax && boxY >= yMin && boxY <= yMax) {
+					visible.push(p);
+				}
+			} else {
+				const yPos = boxY + p[1] / 100;
+				if (boxX >= xMin && boxX <= xMax && yPos >= yMin && yPos <= yMax) {
+					visible.push(p);
+				}
+			}
+		});
+		console.log("현재 선택 영역 포인터 데이터:", visible);
+	};
+	//// 추가 기능
+
 	// ====== 마우스 휠로 확대/축소 ======
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		if (!canvas) return;
 
 		const handleWheel = (ev: WheelEvent) => {
+
+			// 추가 기능
+			if (!ev.shiftKey) return;
+			//// 추가 기능
+
 			ev.preventDefault(); // 기본 스크롤 막기
 			if (ev.deltaY < 0) {
 				// 휠 올리면 확대
@@ -854,6 +871,10 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 				// 휠 내리면 축소
 				handleZoomOut();
 			}
+
+			// 추가 기능
+			logVisiblePointers();
+			//// 추가 기능
 		};
 
 		canvas.addEventListener("wheel", handleWheel, { passive: false });
@@ -880,6 +901,10 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		viewRef.current = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax }; // view 업데이트
 		setZoomLevel(prev => prev * 2); // zoomLevel 증가
 		renderGL(); // 렌더링 갱신
+
+		// 추가 기능
+		logVisiblePointers();
+		//// 추가 기능
 	};
 
 	// ====== 축소 버튼 ======
@@ -899,6 +924,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 			viewRef.current = { xMin: 0, xMax: fullWidth, yMin: 0, yMax: fullHeight };
 			setZoomLevel(MIN_ZOOM);
 			renderGL();
+			// 추가 기능
+			logVisiblePointers();
+			//// 추가 기능
 			return;
 		}
 
@@ -918,6 +946,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		setZoomLevel(Math.max(MIN_ZOOM, newZoomLevel));
 
 		renderGL(); // 렌더링 갱신
+		// 추가 기능
+		logVisiblePointers();
+		//// 추가 기능
 	};
 
 	// ====== 화면 초기화 버튼 ======
@@ -925,6 +956,9 @@ const WebGLDetailChart: React.FC<HeatMapPropsType> = ({
 		viewRef.current = { xMin: 0, xMax: xBoxCount, yMin: 0, yMax: yBoxCount }; // 전체 view
 		setZoomLevel(MIN_ZOOM); // zoom 초기화
 		renderGL(); // 렌더링 갱신
+		// 추가 기능
+		logVisiblePointers();
+		//// 추가 기능
 	};
 
 
