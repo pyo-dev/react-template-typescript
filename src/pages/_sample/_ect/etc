@@ -279,3 +279,32 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
 };
 
 export default VirtualizedTable;
+
+
+import React, { useMemo } from "react";
+import VirtualizedTable, { RowData } from "./VirtualizedTable";
+
+const ROW_COUNT = 1000;   // 테스트용 행 수
+const COLUMN_COUNT = 50;   // 테스트용 컬럼 수
+
+const ParentTestTable: React.FC = () => {
+  // 임시 데이터 생성
+  const data: RowData[] = useMemo(() => {
+    return Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
+      const row: RowData = {};
+      for (let col = 0; col < COLUMN_COUNT; col++) {
+        row[`col${col}`] = `R${rowIndex}-C${col}`;
+      }
+      return row;
+    });
+  }, []);
+
+  return (
+    <div style={{ padding: 16 }}>
+      <h2>테스트 가상화 테이블</h2>
+      <VirtualizedTable data={data} />
+    </div>
+  );
+};
+
+export default ParentTestTable;
