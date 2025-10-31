@@ -137,3 +137,43 @@ const VirtualizedTableWithHeader: React.FC = () => {
 };
 
 export default VirtualizedTableWithHeader;
+
+
+
+
+.table-container {
+  width: 1200px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+}
+
+.table-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8f8f8;
+  border-bottom: 2px solid #ccc;
+}
+
+.header-cell {
+  padding: 8px;
+  border-right: 1px solid #ddd;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table-body {
+  background: #fff;
+}
+
+.table-row {
+  border-bottom: 1px solid #eee;
+}
+
+.table-cell {
+  padding: 6px;
+  border-right: 1px solid #f0f0f0;
+  text-align: center;
+  white-space: nowrap;
+}
