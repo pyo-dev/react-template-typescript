@@ -4,56 +4,66 @@ import {
   getCoreRowModel,
   flexRender,
   createColumnHelper,
+  ColumnDef,
+  HeaderGroup,
+  Row,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTableWithHeader.css";
 
+// 상수 정의
 const ROW_COUNT = 10000;
 const COLUMN_COUNT = 400;
+const COLUMN_WIDTH = 120;
+const ROW_HEIGHT = 35;
 
-// 🔹 데이터 생성
-const data = useMemo(
-  () =>
-    Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
-      const row = {};
-      for (let col = 0; col < COLUMN_COUNT; col++) {
-        row[`col${col}`] = `R${rowIndex}-C${col}`;
-      }
-      return row;
-    }),
-  []
-);
+// 데이터 타입 정의
+type RowData = Record<string, string>;
 
-// 🔹 컬럼 정의
-const columnHelper = createColumnHelper();
-const columns = useMemo(
-  () =>
-    Array.from({ length: COLUMN_COUNT }, (_, i) =>
-      columnHelper.accessor(`col${i}`, {
-        header: `Col ${i}`,
-        cell: (info) => info.getValue(),
-      })
-    ),
-  []
-);
+const VirtualizedTableWithHeader: React.FC = () => {
+  // 더미 데이터 생성
+  const data = useMemo<RowData[]>(
+    () =>
+      Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
+        const row: RowData = {};
+        for (let col = 0; col < COLUMN_COUNT; col++) {
+          row[`col${col}`] = `R${rowIndex}-C${col}`;
+        }
+        return row;
+      }),
+    []
+  );
 
-const VirtualizedTableWithHeader = () => {
-  const table = useReactTable({
+  // 컬럼 정의
+  const columnHelper = createColumnHelper<RowData>();
+  const columns = useMemo<ColumnDef<RowData>[]>(
+    () =>
+      Array.from({ length: COLUMN_COUNT }, (_, i) =>
+        columnHelper.accessor(`col${i}`, {
+          header: () => `Col ${i}`,
+          cell: (info) => info.getValue(),
+        })
+      ),
+    []
+  );
+
+  // 테이블 생성
+  const table = useReactTable<RowData>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const parentRef = useRef(null);
+  // 스크롤 컨테이너 ref
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
+  // 가상 스크롤러 설정
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 35,
+    estimateSize: () => ROW_HEIGHT,
     overscan: 10,
   });
-
-  const columnWidth = 120;
 
   return (
     <div className="table-container">
@@ -62,14 +72,17 @@ const VirtualizedTableWithHeader = () => {
         className="table-header"
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${columns.length}, ${columnWidth}px)`,
+          gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
         }}
       >
-        {table.getHeaderGroups().map((headerGroup) => (
+        {table.getHeaderGroups().map((headerGroup: HeaderGroup<RowData>) => (
           <React.Fragment key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
               <div className="header-cell" key={header.id}>
-                {flexRender(header.column.columnDef.header, header.getContext())}
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext()
+                )}
               </div>
             ))}
           </React.Fragment>
@@ -89,7 +102,8 @@ const VirtualizedTableWithHeader = () => {
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = table.getRowModel().rows[virtualRow.index];
+            const row: Row<RowData> =
+              table.getRowModel().rows[virtualRow.index];
             return (
               <div
                 key={row.id}
@@ -100,12 +114,15 @@ const VirtualizedTableWithHeader = () => {
                   left: 0,
                   transform: `translateY(${virtualRow.start}px)`,
                   display: "grid",
-                  gridTemplateColumns: `repeat(${columns.length}, ${columnWidth}px)`,
+                  gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
                 }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <div className="table-cell" key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
                   </div>
                 ))}
               </div>
@@ -118,6 +135,10 @@ const VirtualizedTableWithHeader = () => {
 };
 
 export default VirtualizedTableWithHeader;
+
+
+
+
 
 
 .table-container {
