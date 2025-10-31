@@ -18,6 +18,10 @@ const COLUMN_COUNT = 400;
 const COLUMN_WIDTH = 120;
 const ROW_HEIGHT = 35;
 
+// 고정 컬럼 개수
+const fixedStartCount = 1; // 맨 앞 컬럼 수 (체크박스 포함)
+const fixedEndCount = 2;   // 맨 뒤 컬럼 수
+
 export type RowData = Record<string, any>;
 
 const VirtualizedTableWithHeader: React.FC = () => {
@@ -41,13 +45,47 @@ const VirtualizedTableWithHeader: React.FC = () => {
   // -------------------------------
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
 
   // -------------------------------
   // 컬럼 정의
   // -------------------------------
   const columns = useMemo<ColumnDef<RowData, any>[]>(
-    () =>
-      Array.from({ length: COLUMN_COUNT }, (_, i) => ({
+    () => [
+      // 🔹 체크박스 컬럼 (맨 앞)
+      {
+        id: "select",
+        header: ({ table }) => (
+          <input
+            type="checkbox"
+            checked={table.getIsAllRowsSelected()}
+            onChange={() => {
+              const newSelected: Record<string, boolean> = {};
+              if (!table.getIsAllRowsSelected()) {
+                table.getRowModel().rows.forEach((row) => {
+                  newSelected[row.id] = true;
+                });
+              }
+              setSelectedRowIds(newSelected);
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={!!selectedRowIds[row.id]}
+            onChange={() => {
+              setSelectedRowIds((prev) => ({
+                ...prev,
+                [row.id]: !prev[row.id],
+              }));
+            }}
+          />
+        ),
+        size: 40,
+      },
+      // 🔹 데이터 컬럼
+      ...Array.from({ length: COLUMN_COUNT }, (_, i) => ({
         accessorKey: `col${i}`,
         header: () => `Col ${i}`,
         cell: (info) => info.getValue() as string,
@@ -56,7 +94,8 @@ const VirtualizedTableWithHeader: React.FC = () => {
           return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
         },
       })),
-    []
+    ],
+    [selectedRowIds]
   );
 
   // -------------------------------
@@ -77,7 +116,6 @@ const VirtualizedTableWithHeader: React.FC = () => {
   // Virtualizer
   // -------------------------------
   const parentRef = useRef<HTMLDivElement | null>(null);
-
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -86,71 +124,116 @@ const VirtualizedTableWithHeader: React.FC = () => {
   });
 
   // -------------------------------
+  // 데이터 추출
+  // -------------------------------
+  const exportSelected = () => {
+    const selectedData = table.getRowModel().rows
+      .filter((row) => selectedRowIds[row.id])
+      .map((row) => row.original);
+    console.log(selectedData);
+    alert(`선택된 행 수: ${selectedData.length} (콘솔 확인)`);
+  };
+
+  // -------------------------------
+  // 셀/헤더 sticky 계산
+  // -------------------------------
+  const getStickyStyle = (index: number) => {
+    // 맨 앞 N개
+    if (index < fixedStartCount) {
+      return { position: "sticky", left: index * COLUMN_WIDTH, zIndex: 4, background: "#f0f0f0" };
+    }
+    // 맨 뒤 N개
+    if (index >= COLUMN_COUNT - fixedEndCount) {
+      const rightIndex = COLUMN_COUNT - index - 1;
+      return { position: "sticky", right: rightIndex * COLUMN_WIDTH, zIndex: 4, background: "#f0f0f0" };
+    }
+    return {};
+  };
+
+  // -------------------------------
   // 렌더링
   // -------------------------------
   return (
     <div style={{ width: "100%" }}>
+      <button onClick={exportSelected} style={{ marginBottom: 8, padding: "6px 12px" }}>
+        데이터 추출
+      </button>
+
       <div
         ref={parentRef}
         className="table-scroll-container"
         style={{ height: "600px", width: "100%", overflow: "auto", position: "relative" }}
       >
-        <div style={{ width: `${COLUMN_COUNT * COLUMN_WIDTH}px` }}>
+        <div style={{ width: `${COLUMN_COUNT * COLUMN_WIDTH + 40}px` }}>
           {/* 헤더 + 컬럼 필터 */}
           <div
             className="table-header"
             style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+              gridTemplateColumns: `40px repeat(${COLUMN_COUNT}, ${COLUMN_WIDTH}px)`,
               position: "sticky",
               top: 0,
               zIndex: 3,
             }}
           >
-            {table.getHeaderGroups().map((headerGroup) => (
-              <React.Fragment key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const sorted = header.column.getIsSorted();
-                  const columnId = header.column.id;
+            {table.getHeaderGroups().map((headerGroup) =>
+              headerGroup.headers.map((header, colIndex) => {
+                const sorted = header.column.getIsSorted();
+                const columnId = header.column.id;
 
-                  return (
-                    <div className="header-cell" key={header.id}>
-                      {/* 정렬 */}
-                      <div
-                        style={{ cursor: "pointer" }}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
-                      </div>
+                const [localFilter, setLocalFilter] = React.useState(
+                  columnFilters.find((f) => f.id === columnId)?.value ?? ""
+                );
 
-                      {/* 컬럼별 필터 */}
-                      <input
-                        type="text"
-                        value={
-                          columnFilters.find((f) => f.id === columnId)?.value ?? ""
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setColumnFilters((old) => {
-                            const newFilters = old.filter((f) => f.id !== columnId);
-                            if (value) newFilters.push({ id: columnId, value });
-                            return newFilters;
-                          });
-                        }}
-                        placeholder="Filter..."
-                        style={{
-                          width: "100%",
-                          marginTop: 2,
-                          padding: "2px 4px",
-                          fontSize: 10,
-                        }}
-                      />
+                const stickyStyle = getStickyStyle(colIndex);
+
+                return (
+                  <div className="header-cell" key={header.id} style={stickyStyle}>
+                    <div
+                      style={{ cursor: "pointer" }}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
                     </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
+
+                    {/* 체크박스 컬럼 제외 필터 */}
+                    {header.id !== "select" && (
+                      <div style={{ display: "flex", marginTop: 2 }}>
+                        <input
+                          type="text"
+                          value={localFilter}
+                          onChange={(e) => setLocalFilter(e.target.value)}
+                          placeholder="Filter..."
+                          style={{ width: "70%", padding: "2px 4px", fontSize: 10 }}
+                        />
+                        <button
+                          style={{ marginLeft: 2 }}
+                          onClick={() => {
+                            setColumnFilters((old) => {
+                              const newFilters = old.filter((f) => f.id !== columnId);
+                              if (localFilter) newFilters.push({ id: columnId, value: localFilter });
+                              return newFilters;
+                            });
+                          }}
+                        >
+                          🔍
+                        </button>
+                        <button
+                          style={{ marginLeft: 2 }}
+                          onClick={() => {
+                            setLocalFilter("");
+                            setColumnFilters((old) => old.filter((f) => f.id !== columnId));
+                          }}
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
 
           {/* 본문 */}
@@ -167,11 +250,15 @@ const VirtualizedTableWithHeader: React.FC = () => {
                     left: 0,
                     transform: `translateY(${virtualRow.start}px)`,
                     display: "grid",
-                    gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+                    gridTemplateColumns: `40px repeat(${COLUMN_COUNT}, ${COLUMN_WIDTH}px)`,
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <div className="table-cell" key={cell.id}>
+                  {row.getVisibleCells().map((cell, colIndex) => (
+                    <div
+                      className="table-cell"
+                      key={cell.id}
+                      style={getStickyStyle(colIndex)}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}
@@ -186,3 +273,39 @@ const VirtualizedTableWithHeader: React.FC = () => {
 };
 
 export default VirtualizedTableWithHeader;
+
+
+.table-scroll-container {
+  border: 1px solid #ccc;
+  font-size: 12px;
+  background: #fff;
+}
+
+.table-header {
+  background: #f8f8f8;
+  border-bottom: 2px solid #ccc;
+}
+
+.header-cell {
+  padding: 4px 8px;
+  border-right: 1px solid #ddd;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.header-cell input {
+  border: 1px solid #ccc;
+  border-radius: 2px;
+}
+
+.table-row {
+  border-bottom: 1px solid #eee;
+}
+
+.table-cell {
+  padding: 6px;
+  border-right: 1px solid #f0f0f0;
+  text-align: center;
+  white-space: nowrap;
+}
