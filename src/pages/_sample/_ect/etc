@@ -7,6 +7,8 @@ import {
   flexRender,
   ColumnDef,
   Row,
+  SortingState,
+  ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTableWithHeader.css";
@@ -19,6 +21,9 @@ const ROW_HEIGHT = 35;
 export type RowData = Record<string, any>;
 
 const VirtualizedTableWithHeader: React.FC = () => {
+  // -------------------------------
+  // 데이터
+  // -------------------------------
   const data = useMemo<RowData[]>(
     () =>
       Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
@@ -31,9 +36,15 @@ const VirtualizedTableWithHeader: React.FC = () => {
     []
   );
 
-  const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  // -------------------------------
+  // 상태
+  // -------------------------------
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
+  // -------------------------------
+  // 컬럼 정의
+  // -------------------------------
   const columns = useMemo<ColumnDef<RowData, any>[]>(
     () =>
       Array.from({ length: COLUMN_COUNT }, (_, i) => ({
@@ -42,12 +53,15 @@ const VirtualizedTableWithHeader: React.FC = () => {
         cell: (info) => info.getValue() as string,
         filterFn: (row, columnId, filterValue) => {
           const value = row.getValue(columnId);
-          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+          return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
         },
       })),
     []
   );
 
+  // -------------------------------
+  // React Table
+  // -------------------------------
   const table = useReactTable<RowData>({
     data,
     columns,
@@ -59,7 +73,11 @@ const VirtualizedTableWithHeader: React.FC = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  // -------------------------------
+  // Virtualizer
+  // -------------------------------
   const parentRef = useRef<HTMLDivElement | null>(null);
+
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -67,6 +85,9 @@ const VirtualizedTableWithHeader: React.FC = () => {
     overscan: 10,
   });
 
+  // -------------------------------
+  // 렌더링
+  // -------------------------------
   return (
     <div style={{ width: "100%" }}>
       <div
@@ -94,6 +115,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
 
                   return (
                     <div className="header-cell" key={header.id}>
+                      {/* 정렬 */}
                       <div
                         style={{ cursor: "pointer" }}
                         onClick={header.column.getToggleSortingHandler()}
@@ -102,16 +124,20 @@ const VirtualizedTableWithHeader: React.FC = () => {
                         {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
                       </div>
 
-                      {/* 🔹 컬럼별 필터 */}
+                      {/* 컬럼별 필터 */}
                       <input
                         type="text"
-                        value={columnFilters[columnId] ?? ""}
-                        onChange={(e) =>
-                          setColumnFilters({
-                            ...columnFilters,
-                            [columnId]: e.target.value,
-                          })
+                        value={
+                          columnFilters.find((f) => f.id === columnId)?.value ?? ""
                         }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setColumnFilters((old) => {
+                            const newFilters = old.filter((f) => f.id !== columnId);
+                            if (value) newFilters.push({ id: columnId, value });
+                            return newFilters;
+                          });
+                        }}
                         placeholder="Filter..."
                         style={{
                           width: "100%",
@@ -160,39 +186,3 @@ const VirtualizedTableWithHeader: React.FC = () => {
 };
 
 export default VirtualizedTableWithHeader;
-
-
-.table-scroll-container {
-  border: 1px solid #ccc;
-  font-size: 12px;
-  background: #fff;
-}
-
-.table-header {
-  background: #f8f8f8;
-  border-bottom: 2px solid #ccc;
-}
-
-.header-cell {
-  padding: 4px 8px;
-  border-right: 1px solid #ddd;
-  font-weight: bold;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.header-cell input {
-  border: 1px solid #ccc;
-  border-radius: 2px;
-}
-
-.table-row {
-  border-bottom: 1px solid #eee;
-}
-
-.table-cell {
-  padding: 6px;
-  border-right: 1px solid #f0f0f0;
-  text-align: center;
-  white-space: nowrap;
-}
