@@ -3,9 +3,7 @@ import {
   useReactTable,
   getCoreRowModel,
   flexRender,
-  createColumnHelper,
   ColumnDef,
-  HeaderGroup,
   Row,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -22,14 +20,13 @@ const ROW_HEIGHT = 35;
 // ---------------------------
 // 타입
 // ---------------------------
-// Record<string, string>을 명시적으로 선언
-export type RowData = Record<string, string>;
+export type RowData = Record<string, any>;
 
 // ---------------------------
 // 컴포넌트
 // ---------------------------
 const VirtualizedTableWithHeader: React.FC = () => {
-  // 더미 데이터 생성
+  // 더미 데이터
   const data = useMemo<RowData[]>(
     () =>
       Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
@@ -42,30 +39,27 @@ const VirtualizedTableWithHeader: React.FC = () => {
     []
   );
 
-  // 컬럼 정의
-  const columnHelper = createColumnHelper<RowData>();
-  const columns = useMemo<ColumnDef<RowData, string>[]>(
+  // 컬럼 정의 (단순화 버전 — 타입 깊이 방지)
+  const columns = useMemo<ColumnDef<RowData, any>[]>(
     () =>
-      Array.from({ length: COLUMN_COUNT }, (_, i) =>
-        columnHelper.accessor(`col${i}` as keyof RowData, {
-          header: () => `Col ${i}`,
-          cell: (info) => info.getValue() as string,
-        })
-      ),
-    [columnHelper]
+      Array.from({ length: COLUMN_COUNT }, (_, i) => ({
+        accessorKey: `col${i}`,
+        header: () => `Col ${i}`,
+        cell: (info) => info.getValue() as string,
+      })),
+    []
   );
 
-  // TanStack Table 인스턴스 생성
+  // TanStack Table 인스턴스
   const table = useReactTable<RowData>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  // 스크롤 Ref
   const parentRef = useRef<HTMLDivElement | null>(null);
 
-  // 행 가상화 설정
+  // 행 가상화
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -83,7 +77,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
           gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
         }}
       >
-        {table.getHeaderGroups().map((headerGroup: HeaderGroup<RowData>) => (
+        {table.getHeaderGroups().map((headerGroup) => (
           <React.Fragment key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
               <div className="header-cell" key={header.id}>
