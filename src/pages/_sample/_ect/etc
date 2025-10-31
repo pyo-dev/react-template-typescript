@@ -1,41 +1,158 @@
-<!DOCTYPE html>
-<html lang="en">
+import React, { useMemo, useRef } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import "./VirtualizedTableWithHeader.css";
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Document</title>
-	<style>
-		span{
-			background-color: red;
-			color: #fff;
-		}
-	</style>
-</head>
+const ROW_COUNT = 10000;
+const COLUMN_COUNT = 400;
 
-<body>
-	<div>
-		<input type="text" onkeyup="handleChange(event)">
-		<div id="data"></div>
-	</div>
-	<script>
-		let testText = '1122331122';
-		const targetDiv = document.getElementById('data')
+// 🔹 데이터 생성
+const data = useMemo(
+  () =>
+    Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
+      const row = {};
+      for (let col = 0; col < COLUMN_COUNT; col++) {
+        row[`col${col}`] = `R${rowIndex}-C${col}`;
+      }
+      return row;
+    }),
+  []
+);
 
-		targetDiv.innerHTML = testText;
-		const handleChange = (event) => {
-			const inputValue = event.target.value;
+// 🔹 컬럼 정의
+const columnHelper = createColumnHelper();
+const columns = useMemo(
+  () =>
+    Array.from({ length: COLUMN_COUNT }, (_, i) =>
+      columnHelper.accessor(`col${i}`, {
+        header: `Col ${i}`,
+        cell: (info) => info.getValue(),
+      })
+    ),
+  []
+);
 
-			// RegExp에서 특수문자 이스케이프 처리
-			function escapeRegExp(string) {
-				return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			}
+const VirtualizedTableWithHeader = () => {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
-			let regex = new RegExp(escapeRegExp(inputValue), 'g');
-			let highlightedText = testText.replace(regex, `<span>${inputValue}</span>`);
-			targetDiv.innerHTML = highlightedText;
-		}
-	</script>
-</body>
+  const parentRef = useRef(null);
 
-</html>
+  const rowVirtualizer = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 35,
+    overscan: 10,
+  });
+
+  const columnWidth = 120;
+
+  return (
+    <div className="table-container">
+      {/* 고정 헤더 */}
+      <div
+        className="table-header"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${columns.length}, ${columnWidth}px)`,
+        }}
+      >
+        {table.getHeaderGroups().map((headerGroup) => (
+          <React.Fragment key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <div className="header-cell" key={header.id}>
+                {flexRender(header.column.columnDef.header, header.getContext())}
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* 스크롤 가능한 본문 */}
+      <div
+        ref={parentRef}
+        className="table-body"
+        style={{ height: "600px", overflow: "auto", position: "relative" }}
+      >
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            position: "relative",
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = table.getRowModel().rows[virtualRow.index];
+            return (
+              <div
+                key={row.id}
+                className="table-row"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  transform: `translateY(${virtualRow.start}px)`,
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${columns.length}, ${columnWidth}px)`,
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <div className="table-cell" key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VirtualizedTableWithHeader;
+
+
+.table-container {
+  width: 1200px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+}
+
+.table-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f5f5f5;
+  border-bottom: 2px solid #ccc;
+}
+
+.header-cell {
+  padding: 8px;
+  border-right: 1px solid #ddd;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table-body {
+  background: #fff;
+}
+
+.table-row {
+  border-bottom: 1px solid #eee;
+}
+
+.table-cell {
+  padding: 6px;
+  border-right: 1px solid #f0f0f0;
+  text-align: center;
+  white-space: nowrap;
+}
