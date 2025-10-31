@@ -11,15 +11,23 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTableWithHeader.css";
 
-// 상수 정의
+// ---------------------------
+// 상수
+// ---------------------------
 const ROW_COUNT = 10000;
 const COLUMN_COUNT = 400;
 const COLUMN_WIDTH = 120;
 const ROW_HEIGHT = 35;
 
-// 데이터 타입 정의
-type RowData = Record<string, string>;
+// ---------------------------
+// 타입
+// ---------------------------
+// Record<string, string>을 명시적으로 선언
+export type RowData = Record<string, string>;
 
+// ---------------------------
+// 컴포넌트
+// ---------------------------
 const VirtualizedTableWithHeader: React.FC = () => {
   // 더미 데이터 생성
   const data = useMemo<RowData[]>(
@@ -36,28 +44,28 @@ const VirtualizedTableWithHeader: React.FC = () => {
 
   // 컬럼 정의
   const columnHelper = createColumnHelper<RowData>();
-  const columns = useMemo<ColumnDef<RowData>[]>(
+  const columns = useMemo<ColumnDef<RowData, string>[]>(
     () =>
       Array.from({ length: COLUMN_COUNT }, (_, i) =>
-        columnHelper.accessor(`col${i}`, {
+        columnHelper.accessor(`col${i}` as keyof RowData, {
           header: () => `Col ${i}`,
-          cell: (info) => info.getValue(),
+          cell: (info) => info.getValue() as string,
         })
       ),
-    []
+    [columnHelper]
   );
 
-  // 테이블 생성
+  // TanStack Table 인스턴스 생성
   const table = useReactTable<RowData>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  // 스크롤 컨테이너 ref
+  // 스크롤 Ref
   const parentRef = useRef<HTMLDivElement | null>(null);
 
-  // 가상 스크롤러 설정
+  // 행 가상화 설정
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -67,7 +75,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
 
   return (
     <div className="table-container">
-      {/* 고정 헤더 */}
+      {/* 🔹 고정 헤더 */}
       <div
         className="table-header"
         style={{
@@ -89,7 +97,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
         ))}
       </div>
 
-      {/* 스크롤 가능한 본문 */}
+      {/* 🔹 스크롤 가능한 본문 */}
       <div
         ref={parentRef}
         className="table-body"
@@ -135,45 +143,3 @@ const VirtualizedTableWithHeader: React.FC = () => {
 };
 
 export default VirtualizedTableWithHeader;
-
-
-
-
-
-
-.table-container {
-  width: 1200px;
-  border: 1px solid #ccc;
-  font-size: 12px;
-}
-
-.table-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f5f5f5;
-  border-bottom: 2px solid #ccc;
-}
-
-.header-cell {
-  padding: 8px;
-  border-right: 1px solid #ddd;
-  font-weight: bold;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.table-body {
-  background: #fff;
-}
-
-.table-row {
-  border-bottom: 1px solid #eee;
-}
-
-.table-cell {
-  padding: 6px;
-  border-right: 1px solid #f0f0f0;
-  text-align: center;
-  white-space: nowrap;
-}
