@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,34 +11,36 @@ import {
   ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import "./VirtualizedTableWithHeader.css";
+import { useQuery } from "@tanstack/react-query";
+import "./VirtualizedTable.css";
 
-const ROW_COUNT = 10000;
-const COLUMN_COUNT = 400;
 const COLUMN_WIDTH = 120;
 const ROW_HEIGHT = 35;
 
 // 고정 컬럼 개수
-const fixedStartCount = 1; // 맨 앞 컬럼 수 (체크박스 포함)
-const fixedEndCount = 2;   // 맨 뒤 컬럼 수
+const fixedStartCount = 1; // 맨 앞 N개 (체크박스 포함)
+const fixedEndCount = 2;   // 맨 뒤 N개
 
 export type RowData = Record<string, any>;
 
-const VirtualizedTableWithHeader: React.FC = () => {
+// ------------------------
+// 데이터 fetch 예시 (React Query)
+// ------------------------
+const fetchData = async (): Promise<RowData[]> => {
+  // 예시: 실제 API 요청
+  const res = await fetch("/api/data");
+  if (!res.ok) throw new Error("Failed to fetch data");
+  return res.json();
+};
+
+const VirtualizedTable: React.FC = () => {
   // -------------------------------
-  // 데이터
+  // React Query 데이터
   // -------------------------------
-  const data = useMemo<RowData[]>(
-    () =>
-      Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
-        const row: RowData = {};
-        for (let col = 0; col < COLUMN_COUNT; col++) {
-          row[`col${col}`] = `R${rowIndex}-C${col}`;
-        }
-        return row;
-      }),
-    []
-  );
+  const { data: tableData = [], isLoading } = useQuery<RowData[]>(["tableData"], fetchData);
+
+  const rowCount = tableData.length;
+  const columnCount = tableData[0] ? Object.keys(tableData[0]).length : 0;
 
   // -------------------------------
   // 상태
@@ -50,59 +52,44 @@ const VirtualizedTableWithHeader: React.FC = () => {
   // -------------------------------
   // 컬럼 정의
   // -------------------------------
-  const columns = useMemo<ColumnDef<RowData, any>[]>(
-    () => [
-      // 🔹 체크박스 컬럼 (맨 앞)
+  const columns: ColumnDef<RowData, any>[] = useMemo(() => {
+    if (!tableData[0]) return [];
+
+    const dataColumns: ColumnDef<RowData, any>[] = Object.keys(tableData[0]).map((key, i) => ({
+      accessorKey: key,
+      header: () => key,
+      cell: (info) => info.getValue() as string,
+      filterFn: (row, columnId, filterValue) => {
+        const value = row.getValue(columnId);
+        return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
+      },
+    }));
+
+    return [
+      // 체크박스 컬럼
       {
         id: "select",
-        header: ({ table }) => (
-          <input
-            type="checkbox"
-            checked={table.getIsAllRowsSelected()}
-            onChange={() => {
-              const newSelected: Record<string, boolean> = {};
-              if (!table.getIsAllRowsSelected()) {
-                table.getRowModel().rows.forEach((row) => {
-                  newSelected[row.id] = true;
-                });
-              }
-              setSelectedRowIds(newSelected);
-            }}
-          />
-        ),
+        header: () => <HeaderCheckbox />,
         cell: ({ row }) => (
           <input
             type="checkbox"
             checked={!!selectedRowIds[row.id]}
             onChange={() => {
-              setSelectedRowIds((prev) => ({
-                ...prev,
-                [row.id]: !prev[row.id],
-              }));
+              setSelectedRowIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }));
             }}
           />
         ),
         size: 40,
       },
-      // 🔹 데이터 컬럼
-      ...Array.from({ length: COLUMN_COUNT }, (_, i) => ({
-        accessorKey: `col${i}`,
-        header: () => `Col ${i}`,
-        cell: (info) => info.getValue() as string,
-        filterFn: (row, columnId, filterValue) => {
-          const value = row.getValue(columnId);
-          return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
-        },
-      })),
-    ],
-    [selectedRowIds]
-  );
+      ...dataColumns,
+    ];
+  }, [tableData, selectedRowIds]);
 
   // -------------------------------
   // React Table
   // -------------------------------
   const table = useReactTable<RowData>({
-    data,
+    data: tableData,
     columns,
     state: { sorting, columnFilters },
     onSortingChange: setSorting,
@@ -120,7 +107,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 10,
+    overscan: 40,
   });
 
   // -------------------------------
@@ -135,20 +122,54 @@ const VirtualizedTableWithHeader: React.FC = () => {
   };
 
   // -------------------------------
-  // 셀/헤더 sticky 계산
+  // 헤더 체크박스
+  // -------------------------------
+  const HeaderCheckbox: React.FC = () => {
+    const ref = useRef<HTMLInputElement>(null);
+
+    const allSelected =
+      table.getRowModel().rows.length > 0 &&
+      table.getRowModel().rows.every((row) => selectedRowIds[row.id]);
+    const someSelected =
+      table.getRowModel().rows.some((row) => selectedRowIds[row.id]) && !allSelected;
+
+    useEffect(() => {
+      if (ref.current) ref.current.indeterminate = someSelected;
+    }, [someSelected]);
+
+    return (
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={allSelected}
+        onChange={() => {
+          const newSelected: Record<string, boolean> = {};
+          if (!allSelected) {
+            table.getRowModel().rows.forEach((row) => {
+              newSelected[row.id] = true;
+            });
+          }
+          setSelectedRowIds(newSelected);
+        }}
+      />
+    );
+  };
+
+  // -------------------------------
+  // sticky 스타일 계산
   // -------------------------------
   const getStickyStyle = (index: number) => {
-    // 맨 앞 N개
     if (index < fixedStartCount) {
       return { position: "sticky", left: index * COLUMN_WIDTH, zIndex: 4, background: "#f0f0f0" };
     }
-    // 맨 뒤 N개
-    if (index >= COLUMN_COUNT - fixedEndCount) {
-      const rightIndex = COLUMN_COUNT - index - 1;
+    if (index >= columns.length - fixedEndCount) {
+      const rightIndex = columns.length - index - 1;
       return { position: "sticky", right: rightIndex * COLUMN_WIDTH, zIndex: 4, background: "#f0f0f0" };
     }
     return {};
   };
+
+  if (isLoading) return <div>Loading...</div>;
 
   // -------------------------------
   // 렌더링
@@ -164,13 +185,13 @@ const VirtualizedTableWithHeader: React.FC = () => {
         className="table-scroll-container"
         style={{ height: "600px", width: "100%", overflow: "auto", position: "relative" }}
       >
-        <div style={{ width: `${COLUMN_COUNT * COLUMN_WIDTH + 40}px` }}>
+        <div style={{ width: `${columns.length * COLUMN_WIDTH}px` }}>
           {/* 헤더 + 컬럼 필터 */}
           <div
             className="table-header"
             style={{
               display: "grid",
-              gridTemplateColumns: `40px repeat(${COLUMN_COUNT}, ${COLUMN_WIDTH}px)`,
+              gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
               position: "sticky",
               top: 0,
               zIndex: 3,
@@ -181,7 +202,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
                 const sorted = header.column.getIsSorted();
                 const columnId = header.column.id;
 
-                const [localFilter, setLocalFilter] = React.useState(
+                const [localFilter, setLocalFilter] = useState(
                   columnFilters.find((f) => f.id === columnId)?.value ?? ""
                 );
 
@@ -197,7 +218,6 @@ const VirtualizedTableWithHeader: React.FC = () => {
                       {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
                     </div>
 
-                    {/* 체크박스 컬럼 제외 필터 */}
                     {header.id !== "select" && (
                       <div style={{ display: "flex", marginTop: 2 }}>
                         <input
@@ -250,7 +270,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
                     left: 0,
                     transform: `translateY(${virtualRow.start}px)`,
                     display: "grid",
-                    gridTemplateColumns: `40px repeat(${COLUMN_COUNT}, ${COLUMN_WIDTH}px)`,
+                    gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
                   }}
                 >
                   {row.getVisibleCells().map((cell, colIndex) => (
@@ -272,8 +292,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
   );
 };
 
-export default VirtualizedTableWithHeader;
-
+export default VirtualizedTable;
 
 
 .table-scroll-container {
@@ -302,6 +321,7 @@ export default VirtualizedTableWithHeader;
 
 .table-row {
   border-bottom: 1px solid #eee;
+  will-change: transform;
 }
 
 .table-cell {
