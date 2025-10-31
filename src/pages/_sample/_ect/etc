@@ -1,7 +1,9 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
   flexRender,
   ColumnDef,
   Row,
@@ -29,12 +31,19 @@ const VirtualizedTableWithHeader: React.FC = () => {
     []
   );
 
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+
   const columns = useMemo<ColumnDef<RowData, any>[]>(
     () =>
       Array.from({ length: COLUMN_COUNT }, (_, i) => ({
         accessorKey: `col${i}`,
         header: () => `Col ${i}`,
         cell: (info) => info.getValue() as string,
+        filterFn: (row, columnId, filterValue) => {
+          const value = row.getValue(columnId);
+          return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        },
       })),
     []
   );
@@ -42,11 +51,15 @@ const VirtualizedTableWithHeader: React.FC = () => {
   const table = useReactTable<RowData>({
     data,
     columns,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const parentRef = useRef<HTMLDivElement | null>(null);
-
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -55,80 +68,91 @@ const VirtualizedTableWithHeader: React.FC = () => {
   });
 
   return (
-    <div
-      ref={parentRef}
-      className="table-scroll-container"
-      style={{
-        height: "600px",
-        width: "100%",
-        overflow: "auto",
-        position: "relative",
-      }}
-    >
+    <div style={{ width: "100%" }}>
       <div
-        style={{
-          width: `${COLUMN_COUNT * COLUMN_WIDTH}px`,
-        }}
+        ref={parentRef}
+        className="table-scroll-container"
+        style={{ height: "600px", width: "100%", overflow: "auto", position: "relative" }}
       >
-        {/* 🔹 헤더 */}
-        <div
-          className="table-header"
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
-            position: "sticky",
-            top: 0,
-            zIndex: 2,
-          }}
-        >
-          {table.getHeaderGroups().map((headerGroup) => (
-            <React.Fragment key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <div className="header-cell" key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </div>
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
+        <div style={{ width: `${COLUMN_COUNT * COLUMN_WIDTH}px` }}>
+          {/* 헤더 + 컬럼 필터 */}
+          <div
+            className="table-header"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+              position: "sticky",
+              top: 0,
+              zIndex: 3,
+            }}
+          >
+            {table.getHeaderGroups().map((headerGroup) => (
+              <React.Fragment key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const sorted = header.column.getIsSorted();
+                  const columnId = header.column.id;
 
-        {/* 🔹 가상화된 본문 */}
-        <div
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            position: "relative",
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row: Row<RowData> =
-              table.getRowModel().rows[virtualRow.index];
-            return (
-              <div
-                key={row.id}
-                className="table-row"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  transform: `translateY(${virtualRow.start}px)`,
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <div className="table-cell" key={cell.id}>
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
+                  return (
+                    <div className="header-cell" key={header.id}>
+                      <div
+                        style={{ cursor: "pointer" }}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
+                      </div>
+
+                      {/* 🔹 컬럼별 필터 */}
+                      <input
+                        type="text"
+                        value={columnFilters[columnId] ?? ""}
+                        onChange={(e) =>
+                          setColumnFilters({
+                            ...columnFilters,
+                            [columnId]: e.target.value,
+                          })
+                        }
+                        placeholder="Filter..."
+                        style={{
+                          width: "100%",
+                          marginTop: 2,
+                          padding: "2px 4px",
+                          fontSize: 10,
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* 본문 */}
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row: Row<RowData> = table.getRowModel().rows[virtualRow.index];
+              return (
+                <div
+                  key={row.id}
+                  className="table-row"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+                  }}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <div className="table-cell" key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -136,6 +160,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
 };
 
 export default VirtualizedTableWithHeader;
+
 
 .table-scroll-container {
   border: 1px solid #ccc;
@@ -149,11 +174,16 @@ export default VirtualizedTableWithHeader;
 }
 
 .header-cell {
-  padding: 8px;
+  padding: 4px 8px;
   border-right: 1px solid #ddd;
   font-weight: bold;
   text-align: center;
   white-space: nowrap;
+}
+
+.header-cell input {
+  border: 1px solid #ccc;
+  border-radius: 2px;
 }
 
 .table-row {
