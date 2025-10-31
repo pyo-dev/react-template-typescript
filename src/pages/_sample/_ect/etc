@@ -11,7 +11,6 @@ import {
   ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useQuery } from "@tanstack/react-query";
 import "./VirtualizedTable.css";
 
 const COLUMN_WIDTH = 120;
@@ -23,22 +22,11 @@ const fixedEndCount = 2;   // 맨 뒤 N개
 
 export type RowData = Record<string, any>;
 
-// ------------------------
-// 데이터 fetch 예시 (React Query)
-// ------------------------
-const fetchData = async (): Promise<RowData[]> => {
-  // 예시: 실제 API 요청
-  const res = await fetch("/api/data");
-  if (!res.ok) throw new Error("Failed to fetch data");
-  return res.json();
-};
+interface VirtualizedTableProps {
+  data: RowData[];
+}
 
-const VirtualizedTable: React.FC = () => {
-  // -------------------------------
-  // React Query 데이터
-  // -------------------------------
-  const { data: tableData = [], isLoading } = useQuery<RowData[]>(["tableData"], fetchData);
-
+const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) => {
   const rowCount = tableData.length;
   const columnCount = tableData[0] ? Object.keys(tableData[0]).length : 0;
 
@@ -55,7 +43,7 @@ const VirtualizedTable: React.FC = () => {
   const columns: ColumnDef<RowData, any>[] = useMemo(() => {
     if (!tableData[0]) return [];
 
-    const dataColumns: ColumnDef<RowData, any>[] = Object.keys(tableData[0]).map((key, i) => ({
+    const dataColumns: ColumnDef<RowData, any>[] = Object.keys(tableData[0]).map((key) => ({
       accessorKey: key,
       header: () => key,
       cell: (info) => info.getValue() as string,
@@ -169,8 +157,6 @@ const VirtualizedTable: React.FC = () => {
     return {};
   };
 
-  if (isLoading) return <div>Loading...</div>;
-
   // -------------------------------
   // 렌더링
   // -------------------------------
@@ -279,7 +265,7 @@ const VirtualizedTable: React.FC = () => {
                       key={cell.id}
                       style={getStickyStyle(colIndex)}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(cell.column.column{flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}
                 </div>
@@ -293,40 +279,3 @@ const VirtualizedTable: React.FC = () => {
 };
 
 export default VirtualizedTable;
-
-
-.table-scroll-container {
-  border: 1px solid #ccc;
-  font-size: 12px;
-  background: #fff;
-}
-
-.table-header {
-  background: #f8f8f8;
-  border-bottom: 2px solid #ccc;
-}
-
-.header-cell {
-  padding: 4px 8px;
-  border-right: 1px solid #ddd;
-  font-weight: bold;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.header-cell input {
-  border: 1px solid #ccc;
-  border-radius: 2px;
-}
-
-.table-row {
-  border-bottom: 1px solid #eee;
-  will-change: transform;
-}
-
-.table-cell {
-  padding: 6px;
-  border-right: 1px solid #f0f0f0;
-  text-align: center;
-  white-space: nowrap;
-}
