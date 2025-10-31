@@ -9,24 +9,14 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTableWithHeader.css";
 
-// ---------------------------
-// 상수
-// ---------------------------
 const ROW_COUNT = 10000;
 const COLUMN_COUNT = 400;
 const COLUMN_WIDTH = 120;
 const ROW_HEIGHT = 35;
 
-// ---------------------------
-// 타입
-// ---------------------------
 export type RowData = Record<string, any>;
 
-// ---------------------------
-// 컴포넌트
-// ---------------------------
 const VirtualizedTableWithHeader: React.FC = () => {
-  // 더미 데이터
   const data = useMemo<RowData[]>(
     () =>
       Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
@@ -39,7 +29,6 @@ const VirtualizedTableWithHeader: React.FC = () => {
     []
   );
 
-  // 컬럼 정의 (단순화 버전 — 타입 깊이 방지)
   const columns = useMemo<ColumnDef<RowData, any>[]>(
     () =>
       Array.from({ length: COLUMN_COUNT }, (_, i) => ({
@@ -50,7 +39,6 @@ const VirtualizedTableWithHeader: React.FC = () => {
     []
   );
 
-  // TanStack Table 인스턴스
   const table = useReactTable<RowData>({
     data,
     columns,
@@ -59,7 +47,6 @@ const VirtualizedTableWithHeader: React.FC = () => {
 
   const parentRef = useRef<HTMLDivElement | null>(null);
 
-  // 행 가상화
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
@@ -68,35 +55,47 @@ const VirtualizedTableWithHeader: React.FC = () => {
   });
 
   return (
-    <div className="table-container">
-      {/* 🔹 고정 헤더 */}
+    <div
+      ref={parentRef}
+      className="table-scroll-container"
+      style={{
+        height: "600px",
+        width: "100%",
+        overflow: "auto",
+        position: "relative",
+      }}
+    >
       <div
-        className="table-header"
         style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+          width: `${COLUMN_COUNT * COLUMN_WIDTH}px`,
         }}
       >
-        {table.getHeaderGroups().map((headerGroup) => (
-          <React.Fragment key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <div className="header-cell" key={header.id}>
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext()
-                )}
-              </div>
-            ))}
-          </React.Fragment>
-        ))}
-      </div>
+        {/* 🔹 헤더 */}
+        <div
+          className="table-header"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columns.length}, ${COLUMN_WIDTH}px)`,
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+          }}
+        >
+          {table.getHeaderGroups().map((headerGroup) => (
+            <React.Fragment key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <div className="header-cell" key={header.id}>
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
 
-      {/* 🔹 스크롤 가능한 본문 */}
-      <div
-        ref={parentRef}
-        className="table-body"
-        style={{ height: "600px", overflow: "auto", position: "relative" }}
-      >
+        {/* 🔹 가상화된 본문 */}
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -138,19 +137,13 @@ const VirtualizedTableWithHeader: React.FC = () => {
 
 export default VirtualizedTableWithHeader;
 
-
-
-
-.table-container {
-  width: 1200px;
+.table-scroll-container {
   border: 1px solid #ccc;
   font-size: 12px;
+  background: #fff;
 }
 
 .table-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   background: #f8f8f8;
   border-bottom: 2px solid #ccc;
 }
@@ -161,10 +154,6 @@ export default VirtualizedTableWithHeader;
   font-weight: bold;
   text-align: center;
   white-space: nowrap;
-}
-
-.table-body {
-  background: #fff;
 }
 
 .table-row {
