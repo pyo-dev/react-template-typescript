@@ -275,6 +275,7 @@ const VirtualizedTableWithHeader: React.FC = () => {
 export default VirtualizedTableWithHeader;
 
 
+
 .table-scroll-container {
   border: 1px solid #ccc;
   font-size: 12px;
