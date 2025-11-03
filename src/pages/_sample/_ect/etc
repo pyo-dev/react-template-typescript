@@ -9,12 +9,13 @@ interface VirtualTableProps {
 export default function VirtualTable({ data }: VirtualTableProps) {
   const parentRef = React.useRef<HTMLDivElement>(null)
 
-  // 데이터가 있으면 컬럼 자동 생성
+  // 컬럼 자동 생성
   const columns = React.useMemo(() => {
     if (!data || data.length === 0) return []
     return Object.keys(data[0]).map(key => ({
       accessorKey: key,
       header: key,
+      cell: (info: any) => String(info.getValue()),
     }))
   }, [data])
 
@@ -34,33 +35,66 @@ export default function VirtualTable({ data }: VirtualTableProps) {
   return (
     <div
       ref={parentRef}
-      className="h-[600px] overflow-auto border border-gray-300"
+      style={{
+        height: '600px',
+        overflow: 'auto',
+        border: '1px solid #ccc',
+        position: 'relative',
+        fontFamily: 'sans-serif',
+      }}
     >
-      <div
-        style={{
-          height: `${rowVirtualizer.getTotalSize()}px`,
-          position: 'relative',
-        }}
-      >
+      <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+        {/* 헤더 */}
+        <div
+          style={{
+            display: 'flex',
+            position: 'sticky',
+            top: 0,
+            background: '#f0f0f0',
+            borderBottom: '1px solid #ccc',
+            zIndex: 1,
+          }}
+        >
+          {columns.map(col => (
+            <div
+              key={col.accessorKey}
+              style={{
+                flex: 1,
+                padding: '8px',
+                fontWeight: 'bold',
+                borderRight: '1px solid #ddd',
+              }}
+            >
+              {col.header}
+            </div>
+          ))}
+        </div>
+
+        {/* 데이터 행 */}
         {rowVirtualizer.getVirtualItems().map(virtualRow => {
           const row = table.getRowModel().rows[virtualRow.index]
           if (!row) return null
           return (
             <div
               key={row.id}
-              className="flex border-b border-gray-200"
               style={{
+                display: 'flex',
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
                 transform: `translateY(${virtualRow.start}px)`,
+                borderBottom: '1px solid #eee',
               }}
             >
               {row.getVisibleCells().map(cell => (
                 <div
                   key={cell.id}
-                  className="flex-1 p-2 border-r border-gray-100"
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    borderRight: '1px solid #eee',
+                  }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </div>
