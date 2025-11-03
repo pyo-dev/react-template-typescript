@@ -1,39 +1,98 @@
 import React from 'react'
-import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+} from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 interface VirtualTableProps {
-  data: any[]
+  columns: string[]
+  rows: any[][]
+  freezeLeft?: number   // 왼쪽 고정 컬럼 개수
+  freezeRight?: number  // 오른쪽 고정 컬럼 개수
 }
 
-export default function VirtualTable({ data }: VirtualTableProps) {
+export default function VirtualTable({
+  columns,
+  rows,
+  freezeLeft = 1,
+  freezeRight = 0,
+}: VirtualTableProps) {
   const parentRef = React.useRef<HTMLDivElement>(null)
+  const [sorting, setSorting] = React.useState<any[]>([])
+  const [columnFilters, setColumnFilters] = React.useState<any[]>([])
+  const [selectedRows, setSelectedRows] = React.useState<Set<number>>(new Set())
 
-  // 컬럼 순서: 첫 번째 데이터 객체의 키 순서 그대로 + 나머지 키 뒤로
-  const columns = React.useMemo(() => {
-    if (!data || data.length === 0) return []
+  const data = React.useMemo(() => {
+    return rows.map(row => {
+      const obj: Record<string, any> = {}
+      columns.forEach((col, i) => {
+        obj[col] = row[i] ?? ''
+      })
+      return obj
+    })
+  }, [columns, rows])
 
-    const firstKeys = Object.keys(data[0]) // 첫 번째 아이템 순서
-    const allKeysSet = new Set<string>()
-    data.forEach(row => Object.keys(row).forEach(k => allKeysSet.add(k)))
+  const multiFilterFn = React.useCallback((row: any, columnId: string, filterValue: string) => {
+    if (!filterValue) return true
+    const values = filterValue
+      .split(',')
+      .map(v => v.trim().toLowerCase())
+      .filter(Boolean)
+    const cellValue = String(row.getValue(columnId) ?? '').toLowerCase()
+    return values.some(v => cellValue.includes(v))
+  }, [])
 
-    // 첫 번째 객체 키 순서를 유지하고, 나머지는 뒤에 붙임
-    const finalKeys = [
-      ...firstKeys,
-      ...Array.from(allKeysSet).filter(k => !firstKeys.includes(k)),
+  const columnDefs = React.useMemo(() => {
+    const defs: any[] = [
+      {
+        id: 'select',
+        header: () => (
+          <input
+            type="checkbox"
+            onChange={e => {
+              if (e.target.checked) setSelectedRows(new Set(data.map((_, i) => i)))
+              else setSelectedRows(new Set())
+            }}
+            checked={selectedRows.size === data.length && data.length > 0}
+          />
+        ),
+        cell: (info: any) => (
+          <input
+            type="checkbox"
+            checked={selectedRows.has(info.row.index)}
+            onChange={e => {
+              const newSet = new Set(selectedRows)
+              if (e.target.checked) newSet.add(info.row.index)
+              else newSet.delete(info.row.index)
+              setSelectedRows(newSet)
+            }}
+          />
+        ),
+        size: 40,
+      },
+      ...columns.map(col => ({
+        accessorKey: col,
+        header: col,
+        filterFn: multiFilterFn,
+        cell: (info: any) => String(info.getValue() ?? ''),
+      })),
     ]
-
-    return finalKeys.map(key => ({
-      accessorKey: key,
-      header: key,
-      cell: (info: any) => info.getValue() ?? "", // 값이 없으면 빈 문자열
-    }))
-  }, [data])
+    return defs
+  }, [columns, data, selectedRows, multiFilterFn])
 
   const table = useReactTable({
     data,
-    columns,
+    columns: columnDefs,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
   })
 
   const rowVirtualizer = useVirtualizer({
@@ -43,76 +102,176 @@ export default function VirtualTable({ data }: VirtualTableProps) {
     overscan: 10,
   })
 
-  return (
-    <div
-      ref={parentRef}
-      style={{
-        height: '600px',
-        overflow: 'auto',
-        border: '1px solid #ccc',
-        position: 'relative',
-        fontFamily: 'sans-serif',
-      }}
-    >
-      <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-        {/* 헤더 */}
-        <div
-          style={{
-            display: 'flex',
-            position: 'sticky',
-            top: 0,
-            background: '#f0f0f0',
-            borderBottom: '1px solid #ccc',
-            zIndex: 1,
-          }}
-        >
-          {columns.map(col => (
-            <div
-              key={col.accessorKey}
-              style={{
-                flex: 1,
-                padding: '8px',
-                fontWeight: 'bold',
-                borderRight: '1px solid #ddd',
-              }}
-            >
-              {col.header}
-            </div>
-          ))}
-        </div>
+  const handlePrintSelected = () => {
+    const selectedData = Array.from(selectedRows).map(i => data[i])
+    console.log('✅ 선택된 데이터:', selectedData)
+    alert(`${selectedData.length}건 선택됨 (콘솔 확인)`)
+  }
 
-        {/* 데이터 행 */}
-        {rowVirtualizer.getVirtualItems().map(virtualRow => {
-          const row = table.getRowModel().rows[virtualRow.index]
-          if (!row) return null
-          return (
-            <div
-              key={row.id}
-              style={{
-                display: 'flex',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
-                borderBottom: '1px solid #eee',
-              }}
-            >
-              {row.getVisibleCells().map(cell => (
+  // 🔹 좌우 고정 계산
+  const leftStickyCols = freezeLeft
+  const rightStickyCols = freezeRight
+  const totalCols = columnDefs.length
+
+  const getStickyStyle = (colIndex: number): React.CSSProperties => {
+    if (colIndex < leftStickyCols) {
+      const offset = colIndex * 120 // 가로폭 계산
+      return {
+        position: 'sticky',
+        left: `${offset}px`,
+        zIndex: 2,
+        background: '#fff',
+      }
+    }
+    if (colIndex >= totalCols - rightStickyCols) {
+      const rightOffset = (totalCols - 1 - colIndex) * 120
+      return {
+        position: 'sticky',
+        right: `${rightOffset}px`,
+        zIndex: 2,
+        background: '#fff',
+      }
+    }
+    return {}
+  }
+
+  return (
+    <div>
+      <button
+        onClick={handlePrintSelected}
+        style={{
+          marginBottom: '8px',
+          padding: '6px 12px',
+          background: '#007bff',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        선택 데이터 출력
+      </button>
+
+      <div
+        ref={parentRef}
+        style={{
+          height: '600px',
+          overflow: 'auto',
+          border: '1px solid #ccc',
+          position: 'relative',
+          fontFamily: 'sans-serif',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+          {/* 헤더 */}
+          <div
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
+              background: '#f0f0f0',
+              borderBottom: '1px solid #ccc',
+            }}
+          >
+            <div style={{ display: 'flex' }}>
+              {table.getHeaderGroups().map(headerGroup =>
+                headerGroup.headers.map((header, i) => (
+                  <div
+                    key={header.id}
+                    style={{
+                      minWidth: header.column.columnDef.id === 'select' ? 40 : 120,
+                      padding: '6px 8px',
+                      fontWeight: 'bold',
+                      borderRight: '1px solid #ddd',
+                      cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      ...getStickyStyle(i),
+                    }}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {{
+                      asc: ' 🔼',
+                      desc: ' 🔽',
+                    }[header.column.getIsSorted() as string] ?? ''}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 필터 입력 */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #ccc' }}>
+              {table.getHeaderGroups()[0].headers.map((header, i) => (
                 <div
-                  key={cell.id}
+                  key={header.id}
                   style={{
-                    flex: 1,
-                    padding: '8px',
+                    minWidth: header.column.columnDef.id === 'select' ? 40 : 120,
                     borderRight: '1px solid #eee',
+                    padding: '4px 6px',
+                    background: '#fafafa',
+                    ...getStickyStyle(i),
+                    zIndex: 2,
                   }}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {header.column.getCanFilter() &&
+                  header.column.columnDef.id !== 'select' ? (
+                    <input
+                      type="text"
+                      value={(header.column.getFilterValue() as string) ?? ''}
+                      onChange={e => header.column.setFilterValue(e.target.value)}
+                      placeholder="쉼표로 여러값"
+                      style={{
+                        width: '100%',
+                        border: '1px solid #ccc',
+                        borderRadius: '3px',
+                        padding: '2px 4px',
+                        fontSize: '12px',
+                      }}
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>
-          )
-        })}
+          </div>
+
+          {/* 데이터 행 */}
+          {rowVirtualizer.getVirtualItems().map(virtualRow => {
+            const row = table.getRowModel().rows[virtualRow.index]
+            if (!row) return null
+            return (
+              <div
+                key={row.id}
+                style={{
+                  display: 'flex',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 'fit-content',
+                  transform: `translateY(${virtualRow.start}px)`,
+                  borderBottom: '1px solid #eee',
+                  background: selectedRows.has(row.index) ? '#e6f3ff' : 'transparent',
+                }}
+              >
+                {row.getVisibleCells().map((cell, i) => (
+                  <div
+                    key={cell.id}
+                    style={{
+                      minWidth: cell.column.columnDef.id === 'select' ? 40 : 120,
+                      padding: '8px',
+                      borderRight: '1px solid #eee',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      ...getStickyStyle(i),
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
