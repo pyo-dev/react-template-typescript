@@ -13,8 +13,8 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTable.css";
 
-const COLUMN_WIDTH = 120; // 일반 컬럼 폭
-const CHECKBOX_COLUMN_WIDTH = 40; // 체크박스 컬럼 폭
+const COLUMN_WIDTH = 120;
+const CHECKBOX_COLUMN_WIDTH = 40;
 const ROW_HEIGHT = 35;
 
 const fixedStartCount = 1;
@@ -24,12 +24,20 @@ export type RowData = Record<string, any>;
 
 interface VirtualizedTableProps {
   data: RowData[];
+  onSelectChange?: (selectedData: RowData[]) => void; // ✅ 추가
 }
 
-const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) => {
+const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, onSelectChange }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+
+  // ✅ 부모로 선택된 데이터 전달
+  useEffect(() => {
+    if (!onSelectChange) return;
+    const selectedData = tableData.filter((_, idx) => selectedRowIds[idx]);
+    onSelectChange(selectedData);
+  }, [selectedRowIds, tableData, onSelectChange]);
 
   const columns: ColumnDef<RowData, any>[] = useMemo(() => {
     if (!tableData[0]) return [];
@@ -81,15 +89,6 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
     overscan: 40,
   });
 
-  const exportSelected = () => {
-    const selectedData = table.getRowModel().rows
-      .filter((row) => selectedRowIds[row.id])
-      .map((row) => row.original);
-    console.log(selectedData);
-    alert(`선택된 행 수: ${selectedData.length} (콘솔 확인)`);
-  };
-
-  // ✅ 체크박스 전체 선택
   const HeaderCheckbox: React.FC = () => {
     const ref = useRef<HTMLInputElement>(null);
 
@@ -121,13 +120,11 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
     );
   };
 
-  // ✅ 컬럼별 width 계산
   const getColumnWidth = (index: number) => {
     if (index === 0) return CHECKBOX_COLUMN_WIDTH;
     return COLUMN_WIDTH;
   };
 
-  // ✅ sticky 계산을 width 기반으로
   const getStickyStyle = (index: number) => {
     if (index < fixedStartCount) {
       const leftOffset = Array.from({ length: index })
@@ -157,10 +154,6 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
 
   return (
     <div style={{ width: "100%" }}>
-      <button onClick={exportSelected} style={{ marginBottom: 8, padding: "6px 12px" }}>
-        데이터 추출
-      </button>
-
       <div
         ref={parentRef}
         className="table-scroll-container"
@@ -171,7 +164,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
             width: `${columns.reduce((sum, _, i) => sum + getColumnWidth(i), 0)}px`,
           }}
         >
-          {/* ✅ 헤더 */}
+          {/* 헤더 */}
           <div
             className="table-header"
             style={{
@@ -239,7 +232,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
             )}
           </div>
 
-          {/* ✅ 본문 */}
+          {/* 본문 */}
           <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row: Row<RowData> = table.getRowModel().rows[virtualRow.index];
@@ -278,13 +271,16 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData }) 
 export default VirtualizedTable;
 
 
-import React, { useMemo } from "react";
+
+import React, { useMemo, useState } from "react";
 import VirtualizedTable, { RowData } from "./VirtualizedTable";
 
 const ROW_COUNT = 1000;
 const COLUMN_COUNT = 50;
 
 const ParentTestTable: React.FC = () => {
+  const [selectedData, setSelectedData] = useState<RowData[]>([]); // ✅ 선택된 데이터 상태
+
   const data: RowData[] = useMemo(() => {
     return Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
       const row: RowData = {};
@@ -295,10 +291,20 @@ const ParentTestTable: React.FC = () => {
     });
   }, []);
 
+  // ✅ 부모 버튼 클릭 시
+  const handleExport = () => {
+    console.log("선택된 데이터:", selectedData);
+    alert(`선택된 행 수: ${selectedData.length}`);
+  };
+
   return (
     <div style={{ padding: 16 }}>
       <h2>테스트 가상화 테이블</h2>
-      <VirtualizedTable data={data} />
+      <button onClick={handleExport} style={{ marginBottom: 8, padding: "6px 12px" }}>
+        부모에서 선택 데이터 확인
+      </button>
+
+      <VirtualizedTable data={data} onSelectChange={setSelectedData} />
     </div>
   );
 };
