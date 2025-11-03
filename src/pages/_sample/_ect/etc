@@ -9,13 +9,24 @@ interface VirtualTableProps {
 export default function VirtualTable({ data }: VirtualTableProps) {
   const parentRef = React.useRef<HTMLDivElement>(null)
 
-  // 컬럼 자동 생성
+  // 컬럼 순서: 첫 번째 데이터 객체의 키 순서 그대로 + 나머지 키 뒤로
   const columns = React.useMemo(() => {
     if (!data || data.length === 0) return []
-    return Object.keys(data[0]).map(key => ({
+
+    const firstKeys = Object.keys(data[0]) // 첫 번째 아이템 순서
+    const allKeysSet = new Set<string>()
+    data.forEach(row => Object.keys(row).forEach(k => allKeysSet.add(k)))
+
+    // 첫 번째 객체 키 순서를 유지하고, 나머지는 뒤에 붙임
+    const finalKeys = [
+      ...firstKeys,
+      ...Array.from(allKeysSet).filter(k => !firstKeys.includes(k)),
+    ]
+
+    return finalKeys.map(key => ({
       accessorKey: key,
       header: key,
-      cell: (info: any) => String(info.getValue()),
+      cell: (info: any) => info.getValue() ?? "", // 값이 없으면 빈 문자열
     }))
   }, [data])
 
