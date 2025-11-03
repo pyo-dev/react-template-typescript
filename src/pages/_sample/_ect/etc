@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,7 +24,7 @@ export type RowData = Record<string, any>;
 
 interface VirtualizedTableProps {
   data: RowData[];
-  onSelectChange?: (selectedData: RowData[]) => void; // ✅ 추가
+  onSelectChange?: (selectedData: RowData[]) => void;
 }
 
 const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, onSelectChange }) => {
@@ -32,13 +32,53 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
 
-  // ✅ 부모로 선택된 데이터 전달
+  // ✅ 선택된 행 부모로 전달
   useEffect(() => {
-    if (!onSelectChange) return;
-    const selectedData = tableData.filter((_, idx) => selectedRowIds[idx]);
-    onSelectChange(selectedData);
+    if (onSelectChange) {
+      const selectedData = tableData.filter((_, idx) => selectedRowIds[idx]);
+      onSelectChange(selectedData);
+    }
   }, [selectedRowIds, tableData, onSelectChange]);
 
+  const table = useReactTable<RowData>({
+    data: tableData,
+    columns: [], // placeholder (아래 useMemo에서 교체됨)
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  // ✅ HeaderCheckbox는 useCallback으로 고정
+  const HeaderCheckbox = useCallback(() => {
+    const ref = useRef<HTMLInputElement>(null);
+
+    const allSelected =
+      table.getRowModel().rows.length > 0 &&
+      table.getRowModel().rows.every((row) => selectedRowIds[row.id]);
+    const someSelected =
+      table.getRowModel().rows.some((row) => selectedRowIds[row.id]) && !allSelected;
+
+    useEffect(() => {
+      if (ref.current) ref.current.indeterminate = someSelected;
+    }, [someSelected]);
+
+    const toggleAll = () => {
+      const newSelected: Record<string, boolean> = {};
+      if (!allSelected) {
+        table.getRowModel().rows.forEach((row) => {
+          newSelected[row.id] = true;
+        });
+      }
+      setSelectedRowIds(newSelected);
+    };
+
+    return <input ref={ref} type="checkbox" checked={allSelected} onChange={toggleAll} />;
+  }, [table, selectedRowIds]);
+
+  // ✅ columns는 useMemo로 고정
   const columns: ColumnDef<RowData, any>[] = useMemo(() => {
     if (!tableData[0]) return [];
 
@@ -55,31 +95,25 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
     return [
       {
         id: "select",
-        header: () => <HeaderCheckbox />,
+        header: HeaderCheckbox,
         cell: ({ row }) => (
           <input
             type="checkbox"
             checked={!!selectedRowIds[row.id]}
-            onChange={() => {
-              setSelectedRowIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }));
-            }}
+            onChange={() =>
+              setSelectedRowIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
+            }
           />
         ),
       },
       ...dataColumns,
     ];
-  }, [tableData, selectedRowIds]);
+  }, [tableData, selectedRowIds, HeaderCheckbox]);
 
-  const table = useReactTable<RowData>({
-    data: tableData,
-    columns,
-    state: { sorting, columnFilters },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  // ✅ columns 변경 시 table에 적용
+  useEffect(() => {
+    table.setOptions((prev) => ({ ...prev, columns }));
+  }, [columns, table]);
 
   const parentRef = useRef<HTMLDivElement | null>(null);
   const rowVirtualizer = useVirtualizer({
@@ -89,65 +123,21 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
     overscan: 40,
   });
 
-  const HeaderCheckbox: React.FC = () => {
-    const ref = useRef<HTMLInputElement>(null);
-
-    const allSelected =
-      table.getRowModel().rows.length > 0 &&
-      table.getRowModel().rows.every((row) => selectedRowIds[row.id]);
-    const someSelected =
-      table.getRowModel().rows.some((row) => selectedRowIds[row.id]) && !allSelected;
-
-    useEffect(() => {
-      if (ref.current) ref.current.indeterminate = someSelected;
-    }, [someSelected]);
-
-    return (
-      <input
-        ref={ref}
-        type="checkbox"
-        checked={allSelected}
-        onChange={() => {
-          const newSelected: Record<string, boolean> = {};
-          if (!allSelected) {
-            table.getRowModel().rows.forEach((row) => {
-              newSelected[row.id] = true;
-            });
-          }
-          setSelectedRowIds(newSelected);
-        }}
-      />
-    );
-  };
-
-  const getColumnWidth = (index: number) => {
-    if (index === 0) return CHECKBOX_COLUMN_WIDTH;
-    return COLUMN_WIDTH;
-  };
+  const getColumnWidth = (index: number) => (index === 0 ? CHECKBOX_COLUMN_WIDTH : COLUMN_WIDTH);
 
   const getStickyStyle = (index: number) => {
     if (index < fixedStartCount) {
       const leftOffset = Array.from({ length: index })
         .map((_, i) => getColumnWidth(i))
         .reduce((a, b) => a + b, 0);
-      return {
-        position: "sticky",
-        left: leftOffset,
-        zIndex: 4,
-        background: "#f0f0f0",
-      };
+      return { position: "sticky", left: leftOffset, zIndex: 4, background: "#f0f0f0" };
     }
 
     if (index >= columns.length - fixedEndCount) {
       const rightOffset = Array.from({ length: columns.length - index - 1 })
         .map((_, i) => getColumnWidth(columns.length - i - 1))
         .reduce((a, b) => a + b, 0);
-      return {
-        position: "sticky",
-        right: rightOffset,
-        zIndex: 4,
-        background: "#f0f0f0",
-      };
+      return { position: "sticky", right: rightOffset, zIndex: 4, background: "#f0f0f0" };
     }
     return {};
   };
@@ -179,9 +169,6 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
               headerGroup.headers.map((header, colIndex) => {
                 const sorted = header.column.getIsSorted();
                 const columnId = header.column.id;
-                const [localFilter, setLocalFilter] = useState(
-                  columnFilters.find((f) => f.id === columnId)?.value ?? ""
-                );
                 const stickyStyle = getStickyStyle(colIndex);
 
                 return (
@@ -193,39 +180,6 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
                       {flexRender(header.column.columnDef.header, header.getContext())}
                       {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
                     </div>
-
-                    {header.id !== "select" && (
-                      <div style={{ display: "flex", marginTop: 2 }}>
-                        <input
-                          type="text"
-                          value={localFilter}
-                          onChange={(e) => setLocalFilter(e.target.value)}
-                          placeholder="Filter..."
-                          style={{ width: "70%", padding: "2px 4px", fontSize: 10 }}
-                        />
-                        <button
-                          style={{ marginLeft: 2 }}
-                          onClick={() => {
-                            setColumnFilters((old) => {
-                              const newFilters = old.filter((f) => f.id !== columnId);
-                              if (localFilter) newFilters.push({ id: columnId, value: localFilter });
-                              return newFilters;
-                            });
-                          }}
-                        >
-                          🔍
-                        </button>
-                        <button
-                          style={{ marginLeft: 2 }}
-                          onClick={() => {
-                            setLocalFilter("");
-                            setColumnFilters((old) => old.filter((f) => f.id !== columnId));
-                          }}
-                        >
-                          ❌
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -250,11 +204,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
                   }}
                 >
                   {row.getVisibleCells().map((cell, colIndex) => (
-                    <div
-                      className="table-cell"
-                      key={cell.id}
-                      style={getStickyStyle(colIndex)}
-                    >
+                    <div className="table-cell" key={cell.id} style={getStickyStyle(colIndex)}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}
@@ -271,16 +221,16 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, on
 export default VirtualizedTable;
 
 
-
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import VirtualizedTable, { RowData } from "./VirtualizedTable";
 
 const ROW_COUNT = 1000;
 const COLUMN_COUNT = 50;
 
 const ParentTestTable: React.FC = () => {
-  const [selectedData, setSelectedData] = useState<RowData[]>([]); // ✅ 선택된 데이터 상태
+  const [selectedData, setSelectedData] = useState<RowData[]>([]);
 
+  // ✅ 더미 데이터 생성 (useMemo로 고정)
   const data: RowData[] = useMemo(() => {
     return Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
       const row: RowData = {};
@@ -291,11 +241,16 @@ const ParentTestTable: React.FC = () => {
     });
   }, []);
 
-  // ✅ 부모 버튼 클릭 시
-  const handleExport = () => {
+  // ✅ 선택 데이터 변경 핸들러 (useCallback으로 렌더링 최소화)
+  const handleSelectChange = useCallback((selected: RowData[]) => {
+    setSelectedData(selected);
+  }, []);
+
+  // ✅ 부모 버튼 클릭 시 선택 데이터 확인
+  const handleExport = useCallback(() => {
     console.log("선택된 데이터:", selectedData);
     alert(`선택된 행 수: ${selectedData.length}`);
-  };
+  }, [selectedData]);
 
   return (
     <div style={{ padding: 16 }}>
@@ -304,7 +259,7 @@ const ParentTestTable: React.FC = () => {
         부모에서 선택 데이터 확인
       </button>
 
-      <VirtualizedTable data={data} onSelectChange={setSelectedData} />
+      <VirtualizedTable data={data} onSelectChange={handleSelectChange} />
     </div>
   );
 };
