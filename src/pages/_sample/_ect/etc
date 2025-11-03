@@ -11,8 +11,8 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 interface VirtualTableProps {
   columns: string[]
   rows: any[][]
-  freezeLeft?: number   // 왼쪽 고정 컬럼 개수
-  freezeRight?: number  // 오른쪽 고정 컬럼 개수
+  freezeLeft?: number
+  freezeRight?: number
 }
 
 export default function VirtualTable({
@@ -21,31 +21,35 @@ export default function VirtualTable({
   freezeLeft = 1,
   freezeRight = 0,
 }: VirtualTableProps) {
+  const HEADER_HEIGHT = 70 // 헤더 + 필터 영역 높이 합
   const parentRef = React.useRef<HTMLDivElement>(null)
   const [sorting, setSorting] = React.useState<any[]>([])
   const [columnFilters, setColumnFilters] = React.useState<any[]>([])
   const [selectedRows, setSelectedRows] = React.useState<Set<number>>(new Set())
+  const [tempFilters, setTempFilters] = React.useState<Record<string, string>>({})
 
+  // 🔹 데이터 변환 및 문자열 안전 처리
   const data = React.useMemo(() => {
     return rows.map(row => {
-      const obj: Record<string, any> = {}
+      const obj: Record<string, string> = {}
       columns.forEach((col, i) => {
-        obj[col] = row[i] ?? ''
+        obj[col] = row[i] != null ? String(row[i]) : ''
       })
       return obj
     })
   }, [columns, rows])
 
-  const multiFilterFn = React.useCallback((row: any, columnId: string, filterValue: string) => {
-    if (!filterValue) return true
-    const values = filterValue
-      .split(',')
-      .map(v => v.trim().toLowerCase())
-      .filter(Boolean)
-    const cellValue = String(row.getValue(columnId) ?? '').toLowerCase()
-    return values.some(v => cellValue.includes(v))
-  }, [])
+  // 🔹 단일 컬럼 필터 함수 (콤마 필요 없음, 컬럼 간 AND)
+  const columnFilterFn = React.useCallback(
+    (row: any, columnId: string, filterValue: string) => {
+      if (!filterValue) return true
+      const cellValue = String(row.getValue(columnId) ?? '').toLowerCase()
+      return cellValue.includes(filterValue.toLowerCase())
+    },
+    []
+  )
 
+  // 🔹 컬럼 정의
   const columnDefs = React.useMemo(() => {
     const defs: any[] = [
       {
@@ -77,13 +81,17 @@ export default function VirtualTable({
       ...columns.map(col => ({
         accessorKey: col,
         header: col,
-        filterFn: multiFilterFn,
-        cell: (info: any) => String(info.getValue() ?? ''),
+        filterFn: columnFilterFn,
+        cell: (info: any) => {
+          const value = info.row.original[col]
+          return value != null ? String(value) : ''
+        },
       })),
     ]
     return defs
-  }, [columns, data, selectedRows, multiFilterFn])
+  }, [columns, data, selectedRows, columnFilterFn])
 
+  // 🔹 React Table 초기화
   const table = useReactTable({
     data,
     columns: columnDefs,
@@ -95,18 +103,13 @@ export default function VirtualTable({
     getFilteredRowModel: getFilteredRowModel(),
   })
 
+  // 🔹 가상 스크롤
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 35,
     overscan: 10,
   })
-
-  const handlePrintSelected = () => {
-    const selectedData = Array.from(selectedRows).map(i => data[i])
-    console.log('✅ 선택된 데이터:', selectedData)
-    alert(`${selectedData.length}건 선택됨 (콘솔 확인)`)
-  }
 
   // 🔹 좌우 고정 계산
   const leftStickyCols = freezeLeft
@@ -115,24 +118,20 @@ export default function VirtualTable({
 
   const getStickyStyle = (colIndex: number): React.CSSProperties => {
     if (colIndex < leftStickyCols) {
-      const offset = colIndex * 120 // 가로폭 계산
-      return {
-        position: 'sticky',
-        left: `${offset}px`,
-        zIndex: 2,
-        background: '#fff',
-      }
+      const offset = colIndex * 120
+      return { position: 'sticky', left: `${offset}px`, zIndex: 2, background: '#fff' }
     }
     if (colIndex >= totalCols - rightStickyCols) {
       const rightOffset = (totalCols - 1 - colIndex) * 120
-      return {
-        position: 'sticky',
-        right: `${rightOffset}px`,
-        zIndex: 2,
-        background: '#fff',
-      }
+      return { position: 'sticky', right: `${rightOffset}px`, zIndex: 2, background: '#fff' }
     }
     return {}
+  }
+
+  const handlePrintSelected = () => {
+    const selectedData = Array.from(selectedRows).map(i => data[i])
+    console.log('✅ 선택된 데이터:', selectedData)
+    alert(`${selectedData.length}건 선택됨 (콘솔 확인)`)
   }
 
   return (
@@ -163,7 +162,7 @@ export default function VirtualTable({
           whiteSpace: 'nowrap',
         }}
       >
-        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+        <div style={{ height: `${rowVirtualizer.getTotalSize() + HEADER_HEIGHT}px`, position: 'relative' }}>
           {/* 헤더 */}
           <div
             style={{
@@ -172,8 +171,10 @@ export default function VirtualTable({
               zIndex: 3,
               background: '#f0f0f0',
               borderBottom: '1px solid #ccc',
+              height: `${HEADER_HEIGHT}px`,
             }}
           >
+            {/* 헤더 컬럼 */}
             <div style={{ display: 'flex' }}>
               {table.getHeaderGroups().map(headerGroup =>
                 headerGroup.headers.map((header, i) => (
@@ -191,16 +192,17 @@ export default function VirtualTable({
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
-                    {{
-                      asc: ' 🔼',
-                      desc: ' 🔽',
-                    }[header.column.getIsSorted() as string] ?? ''}
+                    {header.column.getIsSorted() === 'asc'
+                      ? ' 🔼'
+                      : header.column.getIsSorted() === 'desc'
+                      ? ' 🔽'
+                      : ''}
                   </div>
                 ))
               )}
             </div>
 
-            {/* 필터 입력 */}
+            {/* 필터 입력 + 버튼 */}
             <div style={{ display: 'flex', borderBottom: '1px solid #ccc' }}>
               {table.getHeaderGroups()[0].headers.map((header, i) => (
                 <div
@@ -216,19 +218,53 @@ export default function VirtualTable({
                 >
                   {header.column.getCanFilter() &&
                   header.column.columnDef.id !== 'select' ? (
-                    <input
-                      type="text"
-                      value={(header.column.getFilterValue() as string) ?? ''}
-                      onChange={e => header.column.setFilterValue(e.target.value)}
-                      placeholder="쉼표로 여러값"
-                      style={{
-                        width: '100%',
-                        border: '1px solid #ccc',
-                        borderRadius: '3px',
-                        padding: '2px 4px',
-                        fontSize: '12px',
-                      }}
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={tempFilters[header.column.id] ?? ''}
+                        onChange={e =>
+                          setTempFilters(prev => ({
+                            ...prev,
+                            [header.column.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="검색"
+                        style={{
+                          width: '100%',
+                          border: '1px solid #ccc',
+                          borderRadius: '3px',
+                          padding: '2px 4px',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <div style={{ display: 'flex', marginTop: '2px', gap: '2px' }}>
+                        <button
+                          onClick={() =>
+                            header.column.setFilterValue(tempFilters[header.column.id] ?? '')
+                          }
+                          style={{
+                            padding: '2px 4px',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          검색
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTempFilters(prev => ({ ...prev, [header.column.id]: '' }))
+                            header.column.setFilterValue('')
+                          }}
+                          style={{
+                            padding: '2px 4px',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          리셋
+                        </button>
+                      </div>
+                    </>
                   ) : null}
                 </div>
               ))}
@@ -248,7 +284,7 @@ export default function VirtualTable({
                   top: 0,
                   left: 0,
                   width: 'fit-content',
-                  transform: `translateY(${virtualRow.start}px)`,
+                  transform: `translateY(${virtualRow.start + HEADER_HEIGHT}px)`,
                   borderBottom: '1px solid #eee',
                   background: selectedRows.has(row.index) ? '#e6f3ff' : 'transparent',
                 }}
