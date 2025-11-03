@@ -1,14 +1,14 @@
-import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
-  ColumnDef,
-  Row,
-  SortingState,
-  ColumnFiltersState,
+useReactTable,
+getCoreRowModel,
+getSortedRowModel,
+getFilteredRowModel,
+flexRender,
+ColumnDef,
+Row,
+SortingState,
+ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import "./VirtualizedTable.css";
@@ -23,245 +23,293 @@ const fixedEndCount = 2;
 export type RowData = Record<string, any>;
 
 interface VirtualizedTableProps {
-  data: RowData[];
-  onSelectChange?: (selectedData: RowData[]) => void;
+data: RowData[];
+onSelectChange?: (selectedData: RowData[]) => void; // ✅ 추가
 }
 
 const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data: tableData, onSelectChange }) => {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
+const [sorting, setSorting] = useState<SortingState>([]);
+const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>({});
 
-  // ✅ 선택된 행 부모로 전달
-  useEffect(() => {
-    if (onSelectChange) {
-      const selectedData = tableData.filter((_, idx) => selectedRowIds[idx]);
-      onSelectChange(selectedData);
-    }
-  }, [selectedRowIds, tableData, onSelectChange]);
+// ✅ 부모로 선택된 데이터 전달
+useEffect(() => {
+if (!onSelectChange) return;
+const selectedData = tableData.filter((_, idx) => selectedRowIds[idx]);
+onSelectChange(selectedData);
+}, [selectedRowIds, tableData, onSelectChange]);
 
-  const table = useReactTable<RowData>({
-    data: tableData,
-    columns: [], // placeholder (아래 useMemo에서 교체됨)
-    state: { sorting, columnFilters },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+const columns: ColumnDef<RowData, any>[] = useMemo(() => {
+if (!tableData[0]) return [];
 
-  // ✅ HeaderCheckbox는 useCallback으로 고정
-  const HeaderCheckbox = useCallback(() => {
-    const ref = useRef<HTMLInputElement>(null);
+const dataColumns: ColumnDef<RowData, any>[] = Object.keys(tableData[0]).map((key) => ({  
+  accessorKey: key,  
+  header: () => key,  
+  cell: (info) => info.getValue() as string,  
+  filterFn: (row, columnId, filterValue) => {  
+    const value = row.getValue(columnId);  
+    return String(value).toLowerCase().includes(String(filterValue).toLowerCase());  
+  },  
+}));  
 
-    const allSelected =
-      table.getRowModel().rows.length > 0 &&
-      table.getRowModel().rows.every((row) => selectedRowIds[row.id]);
-    const someSelected =
-      table.getRowModel().rows.some((row) => selectedRowIds[row.id]) && !allSelected;
+return [  
+  {  
+    id: "select",  
+    header: () => <HeaderCheckbox />,  
+    cell: ({ row }) => (  
+      <input  
+        type="checkbox"  
+        checked={!!selectedRowIds[row.id]}  
+        onChange={() => {  
+          setSelectedRowIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }));  
+        }}  
+      />  
+    ),  
+  },  
+  ...dataColumns,  
+];
 
-    useEffect(() => {
-      if (ref.current) ref.current.indeterminate = someSelected;
-    }, [someSelected]);
+}, [tableData, selectedRowIds]);
 
-    const toggleAll = () => {
-      const newSelected: Record<string, boolean> = {};
-      if (!allSelected) {
-        table.getRowModel().rows.forEach((row) => {
-          newSelected[row.id] = true;
-        });
-      }
-      setSelectedRowIds(newSelected);
-    };
+const table = useReactTable<RowData>({
+data: tableData,
+columns,
+state: { sorting, columnFilters },
+onSortingChange: setSorting,
+onColumnFiltersChange: setColumnFilters,
+getCoreRowModel: getCoreRowModel(),
+getSortedRowModel: getSortedRowModel(),
+getFilteredRowModel: getFilteredRowModel(),
+});
 
-    return <input ref={ref} type="checkbox" checked={allSelected} onChange={toggleAll} />;
-  }, [table, selectedRowIds]);
+const parentRef = useRef<HTMLDivElement | null>(null);
+const rowVirtualizer = useVirtualizer({
+count: table.getRowModel().rows.length,
+getScrollElement: () => parentRef.current,
+estimateSize: () => ROW_HEIGHT,
+overscan: 40,
+});
 
-  // ✅ columns는 useMemo로 고정
-  const columns: ColumnDef<RowData, any>[] = useMemo(() => {
-    if (!tableData[0]) return [];
+const HeaderCheckbox: React.FC = () => {
+const ref = useRef<HTMLInputElement>(null);
 
-    const dataColumns: ColumnDef<RowData, any>[] = Object.keys(tableData[0]).map((key) => ({
-      accessorKey: key,
-      header: () => key,
-      cell: (info) => info.getValue() as string,
-      filterFn: (row, columnId, filterValue) => {
-        const value = row.getValue(columnId);
-        return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
-      },
-    }));
+const allSelected =  
+  table.getRowModel().rows.length > 0 &&  
+  table.getRowModel().rows.every((row) => selectedRowIds[row.id]);  
+const someSelected =  
+  table.getRowModel().rows.some((row) => selectedRowIds[row.id]) && !allSelected;  
 
-    return [
-      {
-        id: "select",
-        header: HeaderCheckbox,
-        cell: ({ row }) => (
-          <input
-            type="checkbox"
-            checked={!!selectedRowIds[row.id]}
-            onChange={() =>
-              setSelectedRowIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
-            }
-          />
-        ),
-      },
-      ...dataColumns,
-    ];
-  }, [tableData, selectedRowIds, HeaderCheckbox]);
+useEffect(() => {  
+  if (ref.current) ref.current.indeterminate = someSelected;  
+}, [someSelected]);  
 
-  // ✅ columns 변경 시 table에 적용
-  useEffect(() => {
-    table.setOptions((prev) => ({ ...prev, columns }));
-  }, [columns, table]);
+return (  
+  <input  
+    ref={ref}  
+    type="checkbox"  
+    checked={allSelected}  
+    onChange={() => {  
+      const newSelected: Record<string, boolean> = {};  
+      if (!allSelected) {  
+        table.getRowModel().rows.forEach((row) => {  
+          newSelected[row.id] = true;  
+        });  
+      }  
+      setSelectedRowIds(newSelected);  
+    }}  
+  />  
+);
 
-  const parentRef = useRef<HTMLDivElement | null>(null);
-  const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 40,
-  });
+};
 
-  const getColumnWidth = (index: number) => (index === 0 ? CHECKBOX_COLUMN_WIDTH : COLUMN_WIDTH);
+const getColumnWidth = (index: number) => {
+if (index === 0) return CHECKBOX_COLUMN_WIDTH;
+return COLUMN_WIDTH;
+};
 
-  const getStickyStyle = (index: number) => {
-    if (index < fixedStartCount) {
-      const leftOffset = Array.from({ length: index })
-        .map((_, i) => getColumnWidth(i))
-        .reduce((a, b) => a + b, 0);
-      return { position: "sticky", left: leftOffset, zIndex: 4, background: "#f0f0f0" };
-    }
+const getStickyStyle = (index: number) => {
+if (index < fixedStartCount) {
+const leftOffset = Array.from({ length: index })
+.map((_, i) => getColumnWidth(i))
+.reduce((a, b) => a + b, 0);
+return {
+position: "sticky",
+left: leftOffset,
+zIndex: 4,
+background: "#f0f0f0",
+};
+}
 
-    if (index >= columns.length - fixedEndCount) {
-      const rightOffset = Array.from({ length: columns.length - index - 1 })
-        .map((_, i) => getColumnWidth(columns.length - i - 1))
-        .reduce((a, b) => a + b, 0);
-      return { position: "sticky", right: rightOffset, zIndex: 4, background: "#f0f0f0" };
-    }
-    return {};
-  };
+if (index >= columns.length - fixedEndCount) {  
+  const rightOffset = Array.from({ length: columns.length - index - 1 })  
+    .map((_, i) => getColumnWidth(columns.length - i - 1))  
+    .reduce((a, b) => a + b, 0);  
+  return {  
+    position: "sticky",  
+    right: rightOffset,  
+    zIndex: 4,  
+    background: "#f0f0f0",  
+  };  
+}  
+return {};
 
-  return (
-    <div style={{ width: "100%" }}>
-      <div
-        ref={parentRef}
-        className="table-scroll-container"
-        style={{ height: "600px", width: "100%", overflow: "auto", position: "relative" }}
-      >
-        <div
-          style={{
-            width: `${columns.reduce((sum, _, i) => sum + getColumnWidth(i), 0)}px`,
-          }}
-        >
-          {/* 헤더 */}
-          <div
-            className="table-header"
-            style={{
-              display: "grid",
-              gridTemplateColumns: columns.map((_, i) => `${getColumnWidth(i)}px`).join(" "),
-              position: "sticky",
-              top: 0,
-              zIndex: 3,
-            }}
-          >
-            {table.getHeaderGroups().map((headerGroup) =>
-              headerGroup.headers.map((header, colIndex) => {
-                const sorted = header.column.getIsSorted();
-                const columnId = header.column.id;
-                const stickyStyle = getStickyStyle(colIndex);
+};
 
-                return (
-                  <div className="header-cell" key={header.id} style={stickyStyle}>
-                    <div
-                      style={{ cursor: "pointer" }}
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+return (
+<div style={{ width: "100%" }}>
+<div
+ref={parentRef}
+className="table-scroll-container"
+style={{ height: "600px", width: "100%", overflow: "auto", position: "relative" }}
+>
+<div
+style={{
+width: ${columns.reduce((sum, _, i) => sum + getColumnWidth(i), 0)}px,
+}}
+>
+{/* 헤더 */}
+<div
+className="table-header"
+style={{
+display: "grid",
+gridTemplateColumns: columns.map((_, i) => ${getColumnWidth(i)}px).join(" "),
+position: "sticky",
+top: 0,
+zIndex: 3,
+}}
+>
+{table.getHeaderGroups().map((headerGroup) =>
+headerGroup.headers.map((header, colIndex) => {
+const sorted = header.column.getIsSorted();
+const columnId = header.column.id;
+const [localFilter, setLocalFilter] = useState(
+columnFilters.find((f) => f.id === columnId)?.value ?? ""
+);
+const stickyStyle = getStickyStyle(colIndex);
 
-          {/* 본문 */}
-          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row: Row<RowData> = table.getRowModel().rows[virtualRow.index];
-              return (
-                <div
-                  key={row.id}
-                  className="table-row"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    display: "grid",
-                    gridTemplateColumns: columns.map((_, i) => `${getColumnWidth(i)}px`).join(" "),
-                  }}
-                >
-                  {row.getVisibleCells().map((cell, colIndex) => (
-                    <div className="table-cell" key={cell.id} style={getStickyStyle(colIndex)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+return (  
+              <div className="header-cell" key={header.id} style={stickyStyle}>  
+                <div  
+                  style={{ cursor: "pointer" }}  
+                  onClick={header.column.getToggleSortingHandler()}  
+                >  
+                  {flexRender(header.column.columnDef.header, header.getContext())}  
+                  {sorted ? (sorted === "asc" ? " 🔼" : " 🔽") : ""}  
+                </div>  
+
+                {header.id !== "select" && (  
+                  <div style={{ display: "flex", marginTop: 2 }}>  
+                    <input  
+                      type="text"  
+                      value={localFilter}  
+                      onChange={(e) => setLocalFilter(e.target.value)}  
+                      placeholder="Filter..."  
+                      style={{ width: "70%", padding: "2px 4px", fontSize: 10 }}  
+                    />  
+                    <button  
+                      style={{ marginLeft: 2 }}  
+                      onClick={() => {  
+                        setColumnFilters((old) => {  
+                          const newFilters = old.filter((f) => f.id !== columnId);  
+                          if (localFilter) newFilters.push({ id: columnId, value: localFilter });  
+                          return newFilters;  
+                        });  
+                      }}  
+                    >  
+                      🔍  
+                    </button>  
+                    <button  
+                      style={{ marginLeft: 2 }}  
+                      onClick={() => {  
+                        setLocalFilter("");  
+                        setColumnFilters((old) => old.filter((f) => f.id !== columnId));  
+                      }}  
+                    >  
+                      ❌  
+                    </button>  
+                  </div>  
+                )}  
+              </div>  
+            );  
+          })  
+        )}  
+      </div>  
+
+      {/* 본문 */}  
+      <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>  
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {  
+          const row: Row<RowData> = table.getRowModel().rows[virtualRow.index];  
+          return (  
+            <div  
+              key={row.id}  
+              className="table-row"  
+              style={{  
+                position: "absolute",  
+                top: 0,  
+                left: 0,  
+                transform: `translateY(${virtualRow.start}px)`,  
+                display: "grid",  
+                gridTemplateColumns: columns.map((_, i) => `${getColumnWidth(i)}px`).join(" "),  
+              }}  
+            >  
+              {row.getVisibleCells().map((cell, colIndex) => (  
+                <div  
+                  className="table-cell"  
+                  key={cell.id}  
+                  style={getStickyStyle(colIndex)}  
+                >  
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}  
+                </div>  
+              ))}  
+            </div>  
+          );  
+        })}  
+      </div>  
+    </div>  
+  </div>  
+</div>
+
+);
 };
 
 export default VirtualizedTable;
 
-
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import VirtualizedTable, { RowData } from "./VirtualizedTable";
 
 const ROW_COUNT = 1000;
 const COLUMN_COUNT = 50;
 
 const ParentTestTable: React.FC = () => {
-  const [selectedData, setSelectedData] = useState<RowData[]>([]);
+const [selectedData, setSelectedData] = useState<RowData[]>([]); // ✅ 선택된 데이터 상태
 
-  // ✅ 더미 데이터 생성 (useMemo로 고정)
-  const data: RowData[] = useMemo(() => {
-    return Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
-      const row: RowData = {};
-      for (let col = 0; col < COLUMN_COUNT; col++) {
-        row[`col${col}`] = `R${rowIndex}-C${col}`;
-      }
-      return row;
-    });
-  }, []);
+const data: RowData[] = useMemo(() => {
+return Array.from({ length: ROW_COUNT }, (_, rowIndex) => {
+const row: RowData = {};
+for (let col = 0; col < COLUMN_COUNT; col++) {
+row[col${col}] = R${rowIndex}-C${col};
+}
+return row;
+});
+}, []);
 
-  // ✅ 선택 데이터 변경 핸들러 (useCallback으로 렌더링 최소화)
-  const handleSelectChange = useCallback((selected: RowData[]) => {
-    setSelectedData(selected);
-  }, []);
+// ✅ 부모 버튼 클릭 시
+const handleExport = () => {
+console.log("선택된 데이터:", selectedData);
+alert(선택된 행 수: ${selectedData.length});
+};
 
-  // ✅ 부모 버튼 클릭 시 선택 데이터 확인
-  const handleExport = useCallback(() => {
-    console.log("선택된 데이터:", selectedData);
-    alert(`선택된 행 수: ${selectedData.length}`);
-  }, [selectedData]);
+return (
+<div style={{ padding: 16 }}>
+<h2>테스트 가상화 테이블</h2>
+<button onClick={handleExport} style={{ marginBottom: 8, padding: "6px 12px" }}>
+부모에서 선택 데이터 확인
+</button>
 
-  return (
-    <div style={{ padding: 16 }}>
-      <h2>테스트 가상화 테이블</h2>
-      <button onClick={handleExport} style={{ marginBottom: 8, padding: "6px 12px" }}>
-        부모에서 선택 데이터 확인
-      </button>
+<VirtualizedTable data={data} onSelectChange={setSelectedData} />  
+</div>
 
-      <VirtualizedTable data={data} onSelectChange={handleSelectChange} />
-    </div>
-  );
+);
 };
 
 export default ParentTestTable;
