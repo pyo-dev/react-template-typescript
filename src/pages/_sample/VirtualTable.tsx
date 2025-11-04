@@ -35,13 +35,14 @@ const VirtualTable = forwardRef(({
   const data = useMemo(() => rows, [rows]);
 
   const columnFilterFn = useCallback(
-    (row: any, columnId: string, filterValue: string) => {
-      if (!filterValue) return true;
-      const cellValue = String(row.getValue(columnId) ?? '').toLowerCase();
-      return cellValue.includes(filterValue.toLowerCase());
-    },
-    []
-  );
+  (row: any, columnId: string, filterValue: string) => {
+    if (!filterValue) return true;
+    const rawValue = row?.getValue?.(columnId);
+    const cellValue = rawValue != null ? String(rawValue).toLowerCase() : '';
+    return cellValue.includes(filterValue.toLowerCase());
+  },
+  []
+);
 
   const columnDefs = useMemo(() => {
     const defs: any[] = [
