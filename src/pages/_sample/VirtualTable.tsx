@@ -40,7 +40,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
       freezeRight = 2,
       columnsWidth = 200,
       checkboxColumnsWidth = 40,
-      headerHeight = 70,
+      headerHeight = 80,
       rowHeight = 35,
     },
     ref
@@ -55,6 +55,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
     const rows = tableData.data;
     const data = useMemo(() => rows, [rows]);
 
+    /** ✅ 컬럼별 필터 함수 */
     const columnFilterFn = useCallback(
       (row: any, columnId: string, filterValue: string) => {
         if (!filterValue) return true;
@@ -66,6 +67,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
       []
     );
 
+    /** ✅ Table 설정 */
     const table = useReactTable({
       data,
       columns: useMemo(
@@ -122,6 +124,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
       getFilteredRowModel: getFilteredRowModel(),
     });
 
+    /** ✅ Virtual Scroll */
     const rowVirtualizer = useVirtualizer({
       count: table.getRowModel().rows.length,
       getScrollElement: () => parentRef.current,
@@ -129,25 +132,31 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
       overscan: 10,
     });
 
-    /** 🔹 입력 값 임시 저장만 (필터 즉시 반영 X) */
+    /** ✅ 인풋 임시 값 변경 */
     const handleFilterInput = useCallback((columnId: string, value: string) => {
       setTempFilters((prev) => ({ ...prev, [columnId]: value }));
     }, []);
 
-    /** 🔹 검색 버튼 클릭 시 실제 필터 반영 */
-    const handleSearch = useCallback(() => {
-      Object.entries(tempFilters).forEach(([key, value]) => {
-        const column = table.getColumn(key);
-        if (column) column.setFilterValue(value || undefined);
-      });
-    }, [table, tempFilters]);
+    /** ✅ 개별 컬럼 검색 */
+    const handleColumnSearch = useCallback(
+      (columnId: string) => {
+        const column = table.getColumn(columnId);
+        if (column) column.setFilterValue(tempFilters[columnId] || undefined);
+      },
+      [table, tempFilters]
+    );
 
-    /** 🔹 리셋 버튼 클릭 시 초기화 */
-    const handleReset = useCallback(() => {
-      setTempFilters({});
-      table.resetColumnFilters();
-    }, [table]);
+    /** ✅ 개별 컬럼 리셋 */
+    const handleColumnReset = useCallback(
+      (columnId: string) => {
+        setTempFilters((prev) => ({ ...prev, [columnId]: "" }));
+        const column = table.getColumn(columnId);
+        if (column) column.setFilterValue(undefined);
+      },
+      [table]
+    );
 
+    /** ✅ 고정 컬럼 스타일 계산 */
     const getStickyStyle = (colIndex: number): React.CSSProperties => {
       const totalCols = table.getAllColumns().length;
       if (colIndex < freezeLeft) {
@@ -173,7 +182,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
       return {};
     };
 
-    /** 🔹 부모에서 호출 가능한 함수 */
+    /** ✅ 부모에서 접근할 함수 */
     const handlePrintSelected = () => {
       const filteredRows = table.getFilteredRowModel().rows;
       const selectedData = filteredRows
@@ -206,7 +215,7 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
             position: "relative",
           }}
         >
-          {/* 헤더 영역 */}
+          {/* ✅ 헤더 */}
           <div
             style={{
               position: "sticky",
@@ -252,11 +261,11 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
               )}
             </div>
 
-            {/* 필터 입력 + 버튼 */}
+            {/* ✅ 필터 + 개별 버튼 */}
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-start",
                 borderBottom: "1px solid #ccc",
                 background: "#fafafa",
               }}
@@ -276,57 +285,80 @@ const VirtualTable = forwardRef<VirtualTableHandle, VirtualTableProps>(
                 >
                   {header.column.getCanFilter() &&
                     header.column.columnDef.id !== "select" && (
-                      <input
-                        type="text"
-                        value={tempFilters[header.column.id] ?? ""}
-                        onChange={(e) =>
-                          handleFilterInput(header.column.id, e.target.value)
-                        }
-                        placeholder="검색어 입력"
+                      <div
                         style={{
-                          width: "100%",
-                          border: "1px solid #ccc",
-                          borderRadius: "3px",
-                          padding: "2px 4px",
-                          fontSize: "12px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
                         }}
-                      />
+                      >
+                        <input
+                          type="text"
+                          value={tempFilters[header.column.id] ?? ""}
+                          onChange={(e) =>
+                            handleFilterInput(
+                              header.column.id,
+                              e.target.value
+                            )
+                          }
+                          placeholder="검색어 입력"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #ccc",
+                            borderRadius: "3px",
+                            padding: "2px 4px",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "3px",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <button
+                            onClick={() =>
+                              handleColumnSearch(header.column.id)
+                            }
+                            style={{
+                              flex: 1,
+                              padding: "2px 4px",
+                              fontSize: "10px",
+                              cursor: "pointer",
+                              background: "#007bff",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: "2px",
+                            }}
+                          >
+                            검색
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleColumnReset(header.column.id)
+                            }
+                            style={{
+                              flex: 1,
+                              padding: "2px 4px",
+                              fontSize: "10px",
+                              cursor: "pointer",
+                              background: "#ccc",
+                              border: "none",
+                              borderRadius: "2px",
+                            }}
+                          >
+                            리셋
+                          </button>
+                        </div>
+                      </div>
                     )}
                 </div>
               ))}
-
-              {/* 검색/리셋 버튼 */}
-              <div style={{ padding: "0 10px", display: "flex", gap: "6px" }}>
-                <button
-                  onClick={handleSearch}
-                  style={{
-                    padding: "4px 8px",
-                    border: "1px solid #999",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    background: "#007bff",
-                    color: "#fff",
-                  }}
-                >
-                  검색
-                </button>
-                <button
-                  onClick={handleReset}
-                  style={{
-                    padding: "4px 8px",
-                    border: "1px solid #999",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    background: "#ccc",
-                  }}
-                >
-                  리셋
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* 데이터 행 */}
+          {/* ✅ 데이터 행 */}
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = table.getRowModel().rows[virtualRow.index];
             if (!row) return null;
