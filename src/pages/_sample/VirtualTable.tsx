@@ -130,14 +130,16 @@ setTempFilters((prev) => ({ ...prev, [header.column.id]: value }))
 
   // 부모에서 호출 가능한 함수
   const handlePrintSelected = () => {
-    const filteredRows = table.getFilteredRowModel().rows;
-    const selectedData = filteredRows.filter(r => selectedRows.has(r.index)).map(r => r.original);
-    console.log('✅ 선택된 데이터:', selectedData);
-  };
+  const filteredRows = table.getFilteredRowModel().rows;
+  const selectedData = filteredRows
+    .filter(r => selectedRows.has(r.index))
+    .map(r => r.original);
+  return selectedData; // ✅ 콘솔 대신 return
+};
 
-  useImperativeHandle(ref, () => ({
-    handlePrintSelected,
-  }));
+useImperativeHandle(ref, () => ({
+  handlePrintSelected,
+}));
 
   return (
     <div
@@ -407,8 +409,12 @@ const Chart = () => {
 	}
 	const tableRef = useRef<any>(null);
 	const handleButtonClick = () => {
-		tableRef.current?.handlePrintSelected();
-	}
+  const selectedData = tableRef.current?.handlePrintSelected(); // ✅ 데이터 받기
+  console.log("✅ 부모에서 받은 선택 데이터:", selectedData);
+  
+  // 여기서 state로 관리 가능
+  // setSelectedData(selectedData);
+};
     return (
         <>
             <div style={{marginBottom: '30px'}}>
