@@ -70,12 +70,10 @@ const VirtualTable = forwardRef(({
           <input
             type="checkbox"
             checked={selectedRows.has(info.row.index)}
-            onChange={e => {
-              const newSet = new Set(selectedRows);
-              if (e.target.checked) newSet.add(info.row.index);
-              else newSet.delete(info.row.index);
-              setSelectedRows(newSet);
-            }}
+            onChange={(e) => {
+const value = e.target.value
+setTempFilters((prev) => ({ ...prev, [header.column.id]: value }))
+} }
           />
         ),
         size: checkboxColumnsWidth,
