@@ -5,6 +5,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  ChangeEvent,
 } from "react";
 import {
   useReactTable,
@@ -12,18 +13,26 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   flexRender,
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
+interface VirtualTableProps {
+  tableData: {
+    columns: string[];
+    data: Record<string, string>[];
   };
+  freezeLeft?: number;
+  freezeRight?: number;
+  columnsWidth?: number;
+  checkboxColumnsWidth?: number;
+  headerHeight?: number;
+  rowHeight?: number;
 }
 
-const VirtualTable = forwardRef(
+const VirtualTable = forwardRef<HTMLDivElement, VirtualTableProps>(
   (
     {
       tableData,
@@ -37,15 +46,15 @@ const VirtualTable = forwardRef(
     ref
   ) => {
     const parentRef = useRef<HTMLDivElement>(null);
-    const [sorting, setSorting] = useState<any[]>([]);
-    const [columnFilters, setColumnFilters] = useState<any[]>([]);
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-    const filtersRef = useRef<Record<string, string>>({}); // ✅ ref로 관리
+    const [tempFilters, setTempFilters] = useState<Record<string, string>>({});
 
+    const data = useMemo(() => tableData.data, [tableData.data]);
     const columns = tableData.columns;
-    const rows = tableData.data;
-    const data = useMemo(() => rows, [rows]);
 
+    // 필터 함수
     const columnFilterFn = useCallback(
       (row: any, columnId: string, filterValue: string) => {
         if (!filterValue) return true;
@@ -57,54 +66,57 @@ const VirtualTable = forwardRef(
       []
     );
 
+    // 컬럼 정의
+    const columnDefs = useMemo<ColumnDef<any>[]>(
+      () => [
+        {
+          id: "select",
+          header: () => (
+            <input
+              type="checkbox"
+              onChange={(e) => {
+                const filteredRows = table.getFilteredRowModel().rows;
+                if (e.target.checked) {
+                  setSelectedRows(new Set(filteredRows.map((r) => r.index)));
+                } else {
+                  setSelectedRows(new Set());
+                }
+              }}
+              checked={
+                selectedRows.size > 0 &&
+                selectedRows.size ===
+                  table.getFilteredRowModel().rows.length &&
+                table.getFilteredRowModel().rows.length > 0
+              }
+            />
+          ),
+          cell: (info: any) => (
+            <input
+              type="checkbox"
+              checked={selectedRows.has(info.row.index)}
+              onChange={(e) => {
+                const newSet = new Set(selectedRows);
+                if (e.target.checked) newSet.add(info.row.index);
+                else newSet.delete(info.row.index);
+                setSelectedRows(newSet);
+              }}
+            />
+          ),
+          size: checkboxColumnsWidth,
+        },
+        ...columns.map((col) => ({
+          accessorKey: col,
+          header: col,
+          filterFn: columnFilterFn,
+          cell: (info: any) => info.row.original[col] ?? "",
+        })),
+      ],
+      [columns, selectedRows, columnFilterFn]
+    );
+
     const table = useReactTable({
       data,
-      columns: useMemo(() => {
-        const defs: any[] = [
-          {
-            id: "select",
-            header: () => (
-              <input
-                type="checkbox"
-                onChange={(e) => {
-                  const filteredRows = table.getFilteredRowModel().rows;
-                  if (e.target.checked) {
-                    setSelectedRows(new Set(filteredRows.map((r) => r.index)));
-                  } else {
-                    setSelectedRows(new Set());
-                  }
-                }}
-                checked={
-                  selectedRows.size > 0 &&
-                  selectedRows.size ===
-                    table.getFilteredRowModel().rows.length &&
-                  table.getFilteredRowModel().rows.length > 0
-                }
-              />
-            ),
-            cell: (info: any) => (
-              <input
-                type="checkbox"
-                checked={selectedRows.has(info.row.index)}
-                onChange={(e) => {
-                  const newSet = new Set(selectedRows);
-                  if (e.target.checked) newSet.add(info.row.index);
-                  else newSet.delete(info.row.index);
-                  setSelectedRows(newSet);
-                }}
-              />
-            ),
-            size: checkboxColumnsWidth,
-          },
-          ...columns.map((col) => ({
-            accessorKey: col,
-            header: col,
-            filterFn: columnFilterFn,
-            cell: (info: any) => info.row.original[col] ?? "",
-          })),
-        ];
-        return defs;
-      }, [columns, columnFilterFn, selectedRows]),
+      columns: columnDefs,
       state: { sorting, columnFilters },
       onSortingChange: setSorting,
       onColumnFiltersChange: setColumnFilters,
@@ -113,15 +125,6 @@ const VirtualTable = forwardRef(
       getFilteredRowModel: getFilteredRowModel(),
     });
 
-    const debouncedSetFilter = useMemo(
-      () =>
-        debounce((columnId: string, value: string) => {
-          const column = table.getColumn(columnId);
-          column?.setFilterValue(value);
-        }, 200),
-      [table]
-    );
-
     const rowVirtualizer = useVirtualizer({
       count: table.getRowModel().rows.length,
       getScrollElement: () => parentRef.current,
@@ -129,7 +132,7 @@ const VirtualTable = forwardRef(
       overscan: 10,
     });
 
-    const totalCols = table.getAllColumns().length;
+    const totalCols = columnDefs.length;
 
     const getStickyStyle = (colIndex: number): React.CSSProperties => {
       if (colIndex < freezeLeft) {
@@ -155,13 +158,22 @@ const VirtualTable = forwardRef(
       return {};
     };
 
-    const handlePrintSelected = () => {
+    // ✅ 버튼으로 필터 적용
+    const applyFilters = useCallback(() => {
+      Object.keys(tempFilters).forEach((key) => {
+        const column = table.getColumn(key);
+        if (column) column.setFilterValue(tempFilters[key] ?? "");
+      });
+    }, [table, tempFilters]);
+
+    // ✅ 선택 데이터 반환 (부모 호출용)
+    const handlePrintSelected = useCallback(() => {
       const filteredRows = table.getFilteredRowModel().rows;
       const selectedData = filteredRows
         .filter((r) => selectedRows.has(r.index))
         .map((r) => r.original);
       return selectedData;
-    };
+    }, [table, selectedRows]);
 
     useImperativeHandle(ref, () => ({
       handlePrintSelected,
@@ -181,7 +193,7 @@ const VirtualTable = forwardRef(
       >
         <div
           style={{
-            width: `${columns.length * columnsWidth + checkboxColumnsWidth}px`,
+            width: `${(columnDefs.length - 1) * columnsWidth + checkboxColumnsWidth}px`,
             height: `${rowVirtualizer.getTotalSize()}px`,
             position: "relative",
           }}
@@ -197,7 +209,7 @@ const VirtualTable = forwardRef(
               height: `${headerHeight}px`,
             }}
           >
-            {/* 헤더 라벨 */}
+            {/* 컬럼명 */}
             <div style={{ display: "flex" }}>
               {table.getHeaderGroups().map((headerGroup) =>
                 headerGroup.headers.map((header, i) => (
@@ -233,7 +245,7 @@ const VirtualTable = forwardRef(
               )}
             </div>
 
-            {/* 필터 input */}
+            {/* 필터 라인 */}
             <div style={{ display: "flex", borderBottom: "1px solid #ccc" }}>
               {table.getHeaderGroups()[0].headers.map((header, i) => (
                 <div
@@ -251,23 +263,60 @@ const VirtualTable = forwardRef(
                 >
                   {header.column.getCanFilter() &&
                     header.column.columnDef.id !== "select" && (
-                      <input
-                        type="text"
-                        defaultValue=""
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          filtersRef.current[header.column.id] = value; // ✅ state 대신 ref 업데이트
-                          debouncedSetFilter(header.column.id, value);
-                        }}
-                        placeholder="검색"
-                        style={{
-                          width: "100%",
-                          border: "1px solid #ccc",
-                          borderRadius: "3px",
-                          padding: "2px 4px",
-                          fontSize: "12px",
-                        }}
-                      />
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <input
+                          type="text"
+                          value={tempFilters[header.column.id] ?? ""}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            const value = e.target.value;
+                            setTempFilters((prev) => ({
+                              ...prev,
+                              [header.column.id]: value,
+                            }));
+                          }}
+                          placeholder="검색어 입력"
+                          style={{
+                            width: "100%",
+                            border: "1px solid #ccc",
+                            borderRadius: "3px",
+                            padding: "2px 4px",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: "2px", marginTop: "4px" }}>
+                          <button
+                            onClick={() => {
+                              const value = tempFilters[header.column.id] ?? "";
+                              header.column.setFilterValue(value);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "2px 4px",
+                              fontSize: "11px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            검색
+                          </button>
+                          <button
+                            onClick={() => {
+                              setTempFilters((prev) => ({
+                                ...prev,
+                                [header.column.id]: "",
+                              }));
+                              header.column.setFilterValue("");
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "2px 4px",
+                              fontSize: "11px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            리셋
+                          </button>
+                        </div>
+                      </div>
                     )}
                 </div>
               ))}
