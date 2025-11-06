@@ -1,24 +1,57 @@
+let debounceTimer;
+
 Highcharts.chart('container', {
   chart: {
+    type: 'scatter',
     zoomType: 'xy',
     panning: { enabled: true, type: 'xy' },
     panKey: 'shift'
   },
+
   xAxis: {
     events: {
-      afterSetExtremes: function(e) {
-        console.log('X축 변경:', e.min, e.max);
+      afterSetExtremes: function () {
+        handlePanEnd(this.chart);
       }
     }
   },
+
   yAxis: {
     events: {
-      afterSetExtremes: function(e) {
-        console.log('Y축 변경:', e.min, e.max);
+      afterSetExtremes: function () {
+        handlePanEnd(this.chart);
       }
     }
   },
+
   series: [{
-    data: Array.from({ length: 200 }, (_, i) => [i, Math.sin(i / 5) * 10])
+    name: 'Points',
+    data: Array.from({ length: 500 }, () => [
+      Math.random() * 100, // x
+      Math.random() * 100  // y
+    ])
   }]
 });
+
+function handlePanEnd(chart) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    const xAxis = chart.xAxis[0];
+    const yAxis = chart.yAxis[0];
+
+    const xMin = xAxis.min;
+    const xMax = xAxis.max;
+    const yMin = yAxis.min;
+    const yMax = yAxis.max;
+
+    // 현재 보이는 범위 내의 점만 필터링
+    const visibleData = chart.series[0].options.data.filter(([x, y]) => {
+      return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
+    });
+
+    console.log('현재 표시 영역:');
+    console.log(`x: ${xMin.toFixed(2)} ~ ${xMax.toFixed(2)}`);
+    console.log(`y: ${yMin.toFixed(2)} ~ ${yMax.toFixed(2)}`);
+    console.log('표시 중 데이터:', visibleData);
+  }, 150); // 패닝이 완전히 끝난 후 실행
+}
