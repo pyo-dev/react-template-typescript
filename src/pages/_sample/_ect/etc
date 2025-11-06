@@ -1,69 +1,51 @@
-import React, { useRef, useEffect } from 'react';
-import Highcharts from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
+import Highcharts from "highcharts";
+import HighchartsReact from "highcharts-react-official";
+import React, { useRef } from "react";
 
-let debounceTimer: ReturnType<typeof setTimeout>;
+let panTimer: ReturnType<typeof setTimeout> | null = null;
 
 const ScatterPanChart: React.FC = () => {
-  const chartComponentRef = useRef<HighchartsReact.RefObject>(null);
-
-  // 공통 처리 함수
-  const handlePanEnd = (chart: Highcharts.Chart) => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      const xAxis = chart.xAxis[0];
-      const yAxis = chart.yAxis[0];
-
-      const xMin = xAxis.min ?? 0;
-      const xMax = xAxis.max ?? 0;
-      const yMin = yAxis.min ?? 0;
-      const yMax = yAxis.max ?? 0;
-
-      const allSeries = chart.series;
-
-      allSeries.forEach((series) => {
-        const data = (series.options.data as [number, number][]) || [];
-        const visibleData = data.filter(([x, y]) => (
-          x >= xMin && x <= xMax && y >= yMin && y <= yMax
-        ));
-
-        console.log(`시리즈: ${series.name}`);
-        console.log('현재 보이는 데이터:', visibleData);
-      });
-
-      console.log(`x: ${xMin.toFixed(2)} ~ ${xMax.toFixed(2)}`);
-      console.log(`y: ${yMin.toFixed(2)} ~ ${yMax.toFixed(2)}`);
-    }, 150);
-  };
-
-  // 차트 옵션
   const options: Highcharts.Options = {
     chart: {
-      type: 'scatter',
-      zoomType: 'xy',
-      panning: { enabled: true, type: 'xy' },
-      panKey: 'shift',
-    },
-    title: { text: 'Scatter Pan Test' },
-    xAxis: {
+      type: "scatter",
+      zoomType: "xy",
+      panning: { enabled: true, type: "xy" },
+      panKey: "shift",
       events: {
-        afterSetExtremes: function () {
-          handlePanEnd(this.chart);
-        },
-      },
-    },
-    yAxis: {
-      events: {
-        afterSetExtremes: function () {
-          handlePanEnd(this.chart);
+        panning: function (event) {
+          const chart = this;
+
+          // shift키 눌렀을 때만 패닝으로 간주
+          if (!event.originalEvent?.shiftKey) return;
+
+          if (panTimer) clearTimeout(panTimer);
+
+          // 🔹 사용자가 드래그를 멈춘 뒤 200ms 후 실행
+          panTimer = setTimeout(() => {
+            const xAxis = chart.xAxis[0];
+            const yAxis = chart.yAxis[0];
+
+            const xMin = xAxis.min ?? 0;
+            const xMax = xAxis.max ?? 0;
+            const yMin = yAxis.min ?? 0;
+            const yMax = yAxis.max ?? 0;
+
+            // 현재 보이는 영역 내 데이터 필터링
+            const visibleData = chart.series[0].data.filter(
+              (p) =>
+                p.x >= xMin && p.x <= xMax &&
+                p.y >= yMin && p.y <= yMax
+            );
+
+            console.log("패닝 끝, 현재 보이는 데이터 수:", visibleData.length);
+          }, 200);
         },
       },
     },
     series: [
       {
-        name: 'Points',
-        type: 'scatter',
-        data: Array.from({ length: 500 }, () => [
+        type: "scatter",
+        data: Array.from({ length: 300 }, () => [
           Math.random() * 100,
           Math.random() * 100,
         ]),
@@ -71,22 +53,7 @@ const ScatterPanChart: React.FC = () => {
     ],
   };
 
-  useEffect(() => {
-    const chart = chartComponentRef.current?.chart;
-    if (chart) {
-      console.log('Chart ready:', chart);
-    }
-  }, []);
-
-  return (
-    <div>
-      <HighchartsReact
-        highcharts={Highcharts}
-        options={options}
-        ref={chartComponentRef}
-      />
-    </div>
-  );
+  return <HighchartsReact highcharts={Highcharts} options={options} />;
 };
 
 export default ScatterPanChart;
