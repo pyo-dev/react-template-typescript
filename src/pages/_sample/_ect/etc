@@ -1,62 +1,24 @@
 Highcharts.chart('container', {
   chart: {
-    type: 'scatter',
     zoomType: 'xy',
-    panning: { enabled: true },
-    panKey: '', // 직접 처리할 거라 비워둠
+    panning: { enabled: true, type: 'xy' },
+    panKey: 'shift'
+  },
+  xAxis: {
     events: {
-      load: function () {
-        const chart = this;
-        let isPanning = false;
-        let startX, startY;
-        let startMinX, startMaxX, startMinY, startMaxY;
-
-        // Ctrl 누른 상태에서만 패닝
-        chart.container.addEventListener('mousedown', function (e) {
-          if (!e.ctrlKey) return;
-          e.preventDefault();
-
-          isPanning = true;
-          startX = e.chartX;
-          startY = e.chartY;
-
-          startMinX = chart.xAxis[0].min;
-          startMaxX = chart.xAxis[0].max;
-          startMinY = chart.yAxis[0].min;
-          startMaxY = chart.yAxis[0].max;
-        });
-
-        chart.container.addEventListener('mousemove', function (e) {
-          if (!isPanning) return;
-
-          const dx = e.chartX - startX;
-          const dy = e.chartY - startY;
-
-          // 픽셀 -> 좌표 변환
-          const xAxis = chart.xAxis[0];
-          const yAxis = chart.yAxis[0];
-
-          const xDiff = xAxis.toValue(0) - xAxis.toValue(dx);
-          const yDiff = yAxis.toValue(0) - yAxis.toValue(dy);
-
-          xAxis.setExtremes(startMinX + xDiff, startMaxX + xDiff, false);
-          yAxis.setExtremes(startMinY + yDiff, startMaxY + yDiff, false);
-          chart.redraw();
-        });
-
-        document.addEventListener('mouseup', function () {
-          isPanning = false;
-        });
+      afterSetExtremes: function(e) {
+        console.log('X축 변경:', e.min, e.max);
       }
     }
   },
-  title: { text: 'XY 패닝 가능한 스캐터 차트 (Ctrl + 드래그)' },
-  xAxis: { min: 0, max: 10 },
-  yAxis: { min: 0, max: 10 },
+  yAxis: {
+    events: {
+      afterSetExtremes: function(e) {
+        console.log('Y축 변경:', e.min, e.max);
+      }
+    }
+  },
   series: [{
-    data: [
-      [1, 2], [2, 4], [3, 1], [4, 6],
-      [5, 3], [6, 7], [7, 5], [8, 8], [9, 4]
-    ]
+    data: Array.from({ length: 200 }, (_, i) => [i, Math.sin(i / 5) * 10])
   }]
 });
