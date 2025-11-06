@@ -1,51 +1,94 @@
-import Highcharts from "highcharts";
-import HighchartsReact from "highcharts-react-official";
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from 'react';
+import Highcharts from 'highcharts';
+import HighchartsReact from 'highcharts-react-official';
 
-let panTimer: ReturnType<typeof setTimeout> | null = null;
+let debounceTimer: ReturnType<typeof setTimeout>;
 
 const ScatterPanChart: React.FC = () => {
+  const chartRef = useRef<HighchartsReact.RefObject | null>(null);
+
+  // 플래그를 useRef로 관리 (리렌더 방지)
+  const initializedRef = useRef(false);
+  const isZoomingRef = useRef(false);
+
+  const handlePanEnd = (chart: Highcharts.Chart) => {
+    // 초기 로드 시 또는 현재 줌 동작이면 무시
+    if (!initializedRef.current) return;
+    if (isZoomingRef.current) return;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const xAxis = chart.xAxis[0];
+      const yAxis = chart.yAxis[0];
+
+      const xMin = xAxis.min ?? 0;
+      const xMax = xAxis.max ?? 0;
+      const yMin = yAxis.min ?? 0;
+      const yMax = yAxis.max ?? 0;
+
+      chart.series.forEach((series) => {
+        const data = (series.options.data as [number, number][]) || [];
+        const visibleData = data.filter(([x, y]) =>
+          x >= xMin && x <= xMax && y >= yMin && y <= yMax
+        );
+        console.log(`시리즈: ${series.name}`, visibleData);
+      });
+
+      console.log(`현재 영역 x: ${xMin} ~ ${xMax}, y: ${yMin} ~ ${yMax}`);
+    }, 150);
+  };
+
   const options: Highcharts.Options = {
     chart: {
-      type: "scatter",
-      zoomType: "xy",
-      panning: { enabled: true, type: "xy" },
-      panKey: "shift",
+      type: 'scatter',
+      zoomType: 'xy', // 드래그로 줌
+      panning: { enabled: true, type: 'xy' }, // 패닝
+      panKey: 'shift',
       events: {
-        panning: function (event) {
-          const chart = this;
-
-          // shift키 눌렀을 때만 패닝으로 간주
-          if (!event.originalEvent?.shiftKey) return;
-
-          if (panTimer) clearTimeout(panTimer);
-
-          // 🔹 사용자가 드래그를 멈춘 뒤 200ms 후 실행
-          panTimer = setTimeout(() => {
-            const xAxis = chart.xAxis[0];
-            const yAxis = chart.yAxis[0];
-
-            const xMin = xAxis.min ?? 0;
-            const xMax = xAxis.max ?? 0;
-            const yMin = yAxis.min ?? 0;
-            const yMax = yAxis.max ?? 0;
-
-            // 현재 보이는 영역 내 데이터 필터링
-            const visibleData = chart.series[0].data.filter(
-              (p) =>
-                p.x >= xMin && p.x <= xMax &&
-                p.y >= yMin && p.y <= yMax
-            );
-
-            console.log("패닝 끝, 현재 보이는 데이터 수:", visibleData.length);
+        load() {
+          // 차트 초기 로드 후 초기화 허용
+          // setTimeout으로 약간 지연을 줘서 초기 afterSetExtremes 호출을 무시
+          setTimeout(() => {
+            initializedRef.current = true;
           }, 200);
+        },
+        // 사용자가 드래그로 영역을 선택(줌)할 때 selection 이벤트가 들어옵니다.
+        selection: function (event) {
+          // selection은 줌을 의미하므로 플래그를 켭니다.
+          isZoomingRef.current = true;
+
+          // selection 직후에 afterSetExtremes가 호출되므로
+          // 짧은 시간 뒤 플래그를 끕니다.
+          // (필요하면 타임아웃 길이 조정)
+          setTimeout(() => {
+            isZoomingRef.current = false;
+          }, 50);
+
+          // 기본 동작(줌)을 허용하려면 undefined/true 반환(아무것도 안함)
+          // 만약 드래그 줌을 막고 싶다면 `return false;`
+          return undefined;
+        },
+      },
+    },
+    xAxis: {
+      events: {
+        afterSetExtremes: function () {
+          handlePanEnd(this.chart);
+        },
+      },
+    },
+    yAxis: {
+      events: {
+        afterSetExtremes: function () {
+          handlePanEnd(this.chart);
         },
       },
     },
     series: [
       {
-        type: "scatter",
-        data: Array.from({ length: 300 }, () => [
+        name: 'Points',
+        type: 'scatter',
+        data: Array.from({ length: 500 }, () => [
           Math.random() * 100,
           Math.random() * 100,
         ]),
@@ -53,7 +96,21 @@ const ScatterPanChart: React.FC = () => {
     ],
   };
 
-  return <HighchartsReact highcharts={Highcharts} options={options} />;
+  useEffect(() => {
+    const chart = chartRef.current?.chart;
+    if (chart) {
+      // 혹시 필요하면 여기서 추가 초기화 로직
+      console.log('chart ready');
+    }
+  }, []);
+
+  return (
+    <HighchartsReact
+      highcharts={Highcharts}
+      options={options}
+      ref={(node) => (chartRef.current = node)}
+    />
+  );
 };
 
 export default ScatterPanChart;
