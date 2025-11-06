@@ -1,57 +1,92 @@
-let debounceTimer;
+import React, { useRef, useEffect } from 'react';
+import Highcharts from 'highcharts';
+import HighchartsReact from 'highcharts-react-official';
 
-Highcharts.chart('container', {
-  chart: {
-    type: 'scatter',
-    zoomType: 'xy',
-    panning: { enabled: true, type: 'xy' },
-    panKey: 'shift'
-  },
+let debounceTimer: ReturnType<typeof setTimeout>;
 
-  xAxis: {
-    events: {
-      afterSetExtremes: function () {
-        handlePanEnd(this.chart);
-      }
+const ScatterPanChart: React.FC = () => {
+  const chartComponentRef = useRef<HighchartsReact.RefObject>(null);
+
+  // 공통 처리 함수
+  const handlePanEnd = (chart: Highcharts.Chart) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const xAxis = chart.xAxis[0];
+      const yAxis = chart.yAxis[0];
+
+      const xMin = xAxis.min ?? 0;
+      const xMax = xAxis.max ?? 0;
+      const yMin = yAxis.min ?? 0;
+      const yMax = yAxis.max ?? 0;
+
+      const allSeries = chart.series;
+
+      allSeries.forEach((series) => {
+        const data = (series.options.data as [number, number][]) || [];
+        const visibleData = data.filter(([x, y]) => (
+          x >= xMin && x <= xMax && y >= yMin && y <= yMax
+        ));
+
+        console.log(`시리즈: ${series.name}`);
+        console.log('현재 보이는 데이터:', visibleData);
+      });
+
+      console.log(`x: ${xMin.toFixed(2)} ~ ${xMax.toFixed(2)}`);
+      console.log(`y: ${yMin.toFixed(2)} ~ ${yMax.toFixed(2)}`);
+    }, 150);
+  };
+
+  // 차트 옵션
+  const options: Highcharts.Options = {
+    chart: {
+      type: 'scatter',
+      zoomType: 'xy',
+      panning: { enabled: true, type: 'xy' },
+      panKey: 'shift',
+    },
+    title: { text: 'Scatter Pan Test' },
+    xAxis: {
+      events: {
+        afterSetExtremes: function () {
+          handlePanEnd(this.chart);
+        },
+      },
+    },
+    yAxis: {
+      events: {
+        afterSetExtremes: function () {
+          handlePanEnd(this.chart);
+        },
+      },
+    },
+    series: [
+      {
+        name: 'Points',
+        type: 'scatter',
+        data: Array.from({ length: 500 }, () => [
+          Math.random() * 100,
+          Math.random() * 100,
+        ]),
+      },
+    ],
+  };
+
+  useEffect(() => {
+    const chart = chartComponentRef.current?.chart;
+    if (chart) {
+      console.log('Chart ready:', chart);
     }
-  },
+  }, []);
 
-  yAxis: {
-    events: {
-      afterSetExtremes: function () {
-        handlePanEnd(this.chart);
-      }
-    }
-  },
+  return (
+    <div>
+      <HighchartsReact
+        highcharts={Highcharts}
+        options={options}
+        ref={chartComponentRef}
+      />
+    </div>
+  );
+};
 
-  series: [{
-    name: 'Points',
-    data: Array.from({ length: 500 }, () => [
-      Math.random() * 100, // x
-      Math.random() * 100  // y
-    ])
-  }]
-});
-
-function handlePanEnd(chart) {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    const xAxis = chart.xAxis[0];
-    const yAxis = chart.yAxis[0];
-
-    const xMin = xAxis.min;
-    const xMax = xAxis.max;
-    const yMin = yAxis.min;
-    const yMax = yAxis.max;
-
-    // 현재 보이는 범위 내의 점만 필터링
-    const visibleData = chart.series[0].options.data.filter(([x, y]) => {
-      return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
-    });
-
-    console.log('현재 표시 영역:');
-    console.log(`x: ${xMin.toFixed(2)} ~ ${xMax.toFixed(2)}`);
-    console.log(`y: ${yMin.toFixed(2)} ~ ${yMax.toFixed(2)}`);
-    console.log('표시 중 데이터:', visibleData);
-  }, 150); // 패닝이 완전히 끝난 후 실행
-}
+export default ScatterPanChart;
