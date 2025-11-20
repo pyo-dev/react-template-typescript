@@ -1,116 +1,108 @@
-import React, { useRef, useEffect } from 'react';
-import Highcharts from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
+import React, { useRef } from "react";
+import Highcharts, { Point } from "highcharts";
+import HighchartsReact from "highcharts-react-official";
 
-let debounceTimer: ReturnType<typeof setTimeout>;
-
-const ScatterPanChart: React.FC = () => {
-  const chartRef = useRef<HighchartsReact.RefObject | null>(null);
-
-  // 플래그를 useRef로 관리 (리렌더 방지)
-  const initializedRef = useRef(false);
-  const isZoomingRef = useRef(false);
-
-  const handlePanEnd = (chart: Highcharts.Chart) => {
-    // 초기 로드 시 또는 현재 줌 동작이면 무시
-    if (!initializedRef.current) return;
-    if (isZoomingRef.current) return;
-
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      const xAxis = chart.xAxis[0];
-      const yAxis = chart.yAxis[0];
-
-      const xMin = xAxis.min ?? 0;
-      const xMax = xAxis.max ?? 0;
-      const yMin = yAxis.min ?? 0;
-      const yMax = yAxis.max ?? 0;
-
-      chart.series.forEach((series) => {
-        const data = (series.options.data as [number, number][]) || [];
-        const visibleData = data.filter(([x, y]) =>
-          x >= xMin && x <= xMax && y >= yMin && y <= yMax
-        );
-        console.log(`시리즈: ${series.name}`, visibleData);
-      });
-
-      console.log(`현재 영역 x: ${xMin} ~ ${xMax}, y: ${yMin} ~ ${yMax}`);
-    }, 150);
-  };
+const ChartComponent: React.FC = () => {
+  const chartRef = useRef<HighchartsReact.RefObject>(null);
 
   const options: Highcharts.Options = {
     chart: {
-      type: 'scatter',
-      zoomType: 'xy', // 드래그로 줌
-      panning: { enabled: true, type: 'xy' }, // 패닝
-      panKey: 'shift',
+      type: "column",
       events: {
-        load() {
-          // 차트 초기 로드 후 초기화 허용
-          // setTimeout으로 약간 지연을 줘서 초기 afterSetExtremes 호출을 무시
-          setTimeout(() => {
-            initializedRef.current = true;
-          }, 200);
-        },
-        // 사용자가 드래그로 영역을 선택(줌)할 때 selection 이벤트가 들어옵니다.
-        selection: function (event) {
-          // selection은 줌을 의미하므로 플래그를 켭니다.
-          isZoomingRef.current = true;
+        click: function () {
+          const chart = this;
 
-          // selection 직후에 afterSetExtremes가 호출되므로
-          // 짧은 시간 뒤 플래그를 끕니다.
-          // (필요하면 타임아웃 길이 조정)
-          setTimeout(() => {
-            isZoomingRef.current = false;
-          }, 50);
+          // 빈 공간 클릭 → opacity 초기화
+          chart.series.forEach((s) => {
+            s.data.forEach((p: any) => {
+              if (p.options._originalColor) {
+                p.update(
+                  {
+                    color: p.options._originalColor,
+                  },
+                  false
+                );
+              }
+            });
+          });
 
-          // 기본 동작(줌)을 허용하려면 undefined/true 반환(아무것도 안함)
-          // 만약 드래그 줌을 막고 싶다면 `return false;`
-          return undefined;
+          chart.redraw();
         },
       },
     },
+
+    plotOptions: {
+      series: {
+        allowPointSelect: true,
+        point: {
+          events: {
+            click: function (e: any) {
+              e.preventDefault();
+              const chart = this.series.chart;
+              const index = this.index; // 클릭한 x 인덱스
+
+              // 1) 전체 막대 원래색 저장 & opacity 줄이기
+              chart.series.forEach((s: any) => {
+                s.data.forEach((p: any, i: number) => {
+                  // 원래 색 저장
+                  if (!p.options._originalColor) {
+                    p.update(
+                      {
+                        _originalColor: p.color,
+                      },
+                      false
+                    );
+                  }
+
+                  // 비활성화 opacity 적용
+                  if (i !== index) {
+                    p.update(
+                      {
+                        color: Highcharts.color(p.options._originalColor)
+                          .setOpacity(0.2)
+                          .get(),
+                      },
+                      false
+                    );
+                  }
+                });
+              });
+
+              // 2) 클릭한 인덱스의 시리즈 포인트는 원래색 + select
+              chart.series.forEach((s: any) => {
+                const target = s.data[index];
+                if (target) {
+                  target.update(
+                    {
+                      color: target.options._originalColor,
+                    },
+                    false
+                  );
+                  target.select(true, false);
+                }
+              });
+
+              chart.redraw();
+            },
+          },
+        },
+      },
+    },
+
     xAxis: {
-      events: {
-        afterSetExtremes: function () {
-          handlePanEnd(this.chart);
-        },
-      },
+      categories: ["A", "B", "C", "D"],
     },
-    yAxis: {
-      events: {
-        afterSetExtremes: function () {
-          handlePanEnd(this.chart);
-        },
-      },
-    },
+
     series: [
-      {
-        name: 'Points',
-        type: 'scatter',
-        data: Array.from({ length: 500 }, () => [
-          Math.random() * 100,
-          Math.random() * 100,
-        ]),
-      },
+      { name: "남자", type: "column", data: [10, 20, 30, 40] },
+      { name: "여자", type: "column", data: [15, 25, 35, 45] },
+      { name: "기타", type: "column", data: [5, 10, 15, 20] },
     ],
   };
 
-  useEffect(() => {
-    const chart = chartRef.current?.chart;
-    if (chart) {
-      // 혹시 필요하면 여기서 추가 초기화 로직
-      console.log('chart ready');
-    }
-  }, []);
-
   return (
-    <HighchartsReact
-      highcharts={Highcharts}
-      options={options}
-      ref={(node) => (chartRef.current = node)}
-    />
+    <HighchartsReact ref={chartRef} highcharts={Highcharts} options={options} />
   );
 };
 
-export default ScatterPanChart;
+export default ChartComponent;
