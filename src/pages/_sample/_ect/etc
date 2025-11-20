@@ -1,34 +1,32 @@
-import React, { useRef } from "react";
-import Highcharts, { Point } from "highcharts";
+import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
+import React from "react";
 
 const ChartComponent: React.FC = () => {
-  const chartRef = useRef<HighchartsReact.RefObject>(null);
 
   const options: Highcharts.Options = {
     chart: {
       type: "column",
       events: {
-        click: function () {
+        click() {
           const chart = this;
 
-          // 빈 공간 클릭 → opacity 초기화
-          chart.series.forEach((s) => {
+          // 빈 공간 클릭 → 전체 복구
+          chart.series.forEach((s: any) => {
             s.data.forEach((p: any) => {
               if (p.options._originalColor) {
                 p.update(
-                  {
-                    color: p.options._originalColor,
-                  },
+                  { color: p.options._originalColor },
                   false
                 );
               }
+              p.select(false, false);
             });
           });
 
           chart.redraw();
-        },
-      },
+        }
+      }
     },
 
     plotOptions: {
@@ -36,31 +34,27 @@ const ChartComponent: React.FC = () => {
         allowPointSelect: true,
         point: {
           events: {
-            click: function (e: any) {
+            click(this: Highcharts.Point, e: any) {
               e.preventDefault();
-              const chart = this.series.chart;
-              const index = this.index; // 클릭한 x 인덱스
 
-              // 1) 전체 막대 원래색 저장 & opacity 줄이기
+              const chart = this.series.chart;
+              const clickedIndex = this.index;
+
+              // 1) 모든 포인트의 원래 색을 저장 & 먼저 opacity 낮추기
               chart.series.forEach((s: any) => {
-                s.data.forEach((p: any, i: number) => {
-                  // 원래 색 저장
+                s.data.forEach((p: any, idx: number) => {
+                  // 원래색 저장 (1회만)
                   if (!p.options._originalColor) {
-                    p.update(
-                      {
-                        _originalColor: p.color,
-                      },
-                      false
-                    );
+                    p.update({ _originalColor: p.color }, false);
                   }
 
-                  // 비활성화 opacity 적용
-                  if (i !== index) {
+                  // 다른 x 인덱스 → opacity 0.2
+                  if (idx !== clickedIndex) {
                     p.update(
                       {
                         color: Highcharts.color(p.options._originalColor)
                           .setOpacity(0.2)
-                          .get(),
+                          .get()
                       },
                       false
                     );
@@ -68,14 +62,12 @@ const ChartComponent: React.FC = () => {
                 });
               });
 
-              // 2) 클릭한 인덱스의 시리즈 포인트는 원래색 + select
+              // 2) 클릭한 x 인덱스 전체 → 원색 + select 활성화
               chart.series.forEach((s: any) => {
-                const target = s.data[index];
+                const target = s.data[clickedIndex];
                 if (target) {
                   target.update(
-                    {
-                      color: target.options._originalColor,
-                    },
+                    { color: target.options._originalColor },
                     false
                   );
                   target.select(true, false);
@@ -83,26 +75,24 @@ const ChartComponent: React.FC = () => {
               });
 
               chart.redraw();
-            },
-          },
-        },
-      },
+            }
+          }
+        }
+      }
     },
 
     xAxis: {
-      categories: ["A", "B", "C", "D"],
+      categories: ["A", "B", "C", "D"]
     },
 
     series: [
-      { name: "남자", type: "column", data: [10, 20, 30, 40] },
-      { name: "여자", type: "column", data: [15, 25, 35, 45] },
-      { name: "기타", type: "column", data: [5, 10, 15, 20] },
-    ],
+      { name: "시리즈 1", type: "column", data: [10, 20, 30, 40] },
+      { name: "시리즈 2", type: "column", data: [15, 25, 35, 45] },
+      { name: "시리즈 3", type: "column", data: [5, 10, 15, 20] }
+    ]
   };
 
-  return (
-    <HighchartsReact ref={chartRef} highcharts={Highcharts} options={options} />
-  );
+  return <HighchartsReact highcharts={Highcharts} options={options} />;
 };
 
 export default ChartComponent;
