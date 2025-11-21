@@ -1,98 +1,69 @@
+import React, { useRef, useEffect } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
-import React from "react";
 
-const ChartComponent: React.FC = () => {
+const ChartZoomWheel: React.FC = () => {
+  const chartRef = useRef<HighchartsReact.RefObject>(null);
 
   const options: Highcharts.Options = {
     chart: {
       type: "column",
-      events: {
-        click() {
-          const chart = this;
-
-          // 빈 공간 클릭 → 전체 복구
-          chart.series.forEach((s: any) => {
-            s.data.forEach((p: any) => {
-              if (p.options._originalColor) {
-                p.update(
-                  { color: p.options._originalColor },
-                  false
-                );
-              }
-              p.select(false, false);
-            });
-          });
-
-          chart.redraw();
-        }
-      }
+      zoomType: "xy", // 드래그 박스 줌 가능
     },
-
-    plotOptions: {
-      series: {
-        allowPointSelect: true,
-        point: {
-          events: {
-            click(this: Highcharts.Point, e: any) {
-              e.preventDefault();
-
-              const chart = this.series.chart;
-              const clickedIndex = this.index;
-
-              // 1) 모든 포인트의 원래 색을 저장 & 먼저 opacity 낮추기
-              chart.series.forEach((s: any) => {
-                s.data.forEach((p: any, idx: number) => {
-                  // 원래색 저장 (1회만)
-                  if (!p.options._originalColor) {
-                    p.update({ _originalColor: p.color }, false);
-                  }
-
-                  // 다른 x 인덱스 → opacity 0.2
-                  if (idx !== clickedIndex) {
-                    p.update(
-                      {
-                        color: Highcharts.color(p.options._originalColor)
-                          .setOpacity(0.2)
-                          .get()
-                      },
-                      false
-                    );
-                  }
-                });
-              });
-
-              // 2) 클릭한 x 인덱스 전체 → 원색 + select 활성화
-              chart.series.forEach((s: any) => {
-                const target = s.data[clickedIndex];
-                if (target) {
-                  target.update(
-                    { color: target.options._originalColor },
-                    false
-                  );
-                  target.select(true, false);
-                }
-              });
-
-              chart.redraw();
-            }
-          }
-        }
-      }
-    },
-
+    title: { text: "Mouse Wheel Zoom X & Y" },
     xAxis: {
-      categories: ["A", "B", "C", "D"]
+      categories: Array.from({ length: 50 }, (_, i) => `Cat ${i + 1}`),
     },
-
+    yAxis: { title: { text: "Value" } },
     series: [
-      { name: "시리즈 1", type: "column", data: [10, 20, 30, 40] },
-      { name: "시리즈 2", type: "column", data: [15, 25, 35, 45] },
-      { name: "시리즈 3", type: "column", data: [5, 10, 15, 20] }
-    ]
+      {
+        type: "column",
+        data: Array.from({ length: 50 }, () => Math.floor(Math.random() * 100)),
+      },
+    ],
   };
 
-  return <HighchartsReact highcharts={Highcharts} options={options} />;
+  useEffect(() => {
+    const chart = chartRef.current?.chart;
+    if (!chart) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const zoomFactor = 0.2; // 확대/축소 비율
+
+      // X축 확대/축소
+      const xAxis = chart.xAxis[0];
+      const xExt = xAxis.getExtremes();
+      const xRange = xExt.max - xExt.min;
+      let newXMin = xExt.min + (e.deltaY > 0 ? xRange * zoomFactor / 2 : -xRange * zoomFactor / 2);
+      let newXMax = xExt.max - (e.deltaY > 0 ? xRange * zoomFactor / 2 : -xRange * zoomFactor / 2);
+      if (newXMin < xExt.dataMin) newXMin = xExt.dataMin;
+      if (newXMax > xExt.dataMax) newXMax = xExt.dataMax;
+      if (newXMax - newXMin < 1) return; // 최소 범위 제한
+
+      xAxis.setExtremes(newXMin, newXMax, true, false);
+
+      // Y축 확대/축소
+      const yAxis = chart.yAxis[0];
+      const yExt = yAxis.getExtremes();
+      const yRange = yExt.max - yExt.min;
+      let newYMin = yExt.min + (e.deltaY > 0 ? yRange * zoomFactor / 2 : -yRange * zoomFactor / 2);
+      let newYMax = yExt.max - (e.deltaY > 0 ? yRange * zoomFactor / 2 : -yRange * zoomFactor / 2);
+      if (newYMin < yExt.dataMin) newYMin = yExt.dataMin;
+      if (newYMax > yExt.dataMax) newYMax = yExt.dataMax;
+      if (newYMax - newYMin < 1) return;
+
+      yAxis.setExtremes(newYMin, newYMax, true, false);
+    };
+
+    const container = chart.container;
+    container.addEventListener("wheel", handleWheel);
+
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  return <HighchartsReact ref={chartRef} highcharts={Highcharts} options={options} />;
 };
 
-export default ChartComponent;
+export default ChartZoomWheel;
