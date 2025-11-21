@@ -1,65 +1,80 @@
+const originalRef = useRef({
+  xMin: 0,
+  xMax: 0,
+  yMin: 0,
+  yMax: 0,
+});
+
 useEffect(() => {
   const chart = chartRef.current?.chart;
   if (!chart) return;
+
+  // 1) 초기 렌더 후 원본 범위 저장
+  const xExt = chart.xAxis[0].getExtremes();
+  const yExt = chart.yAxis[0].getExtremes();
+
+  originalRef.current = {
+    xMin: xExt.dataMin ?? xExt.min,
+    xMax: xExt.dataMax ?? xExt.max,
+    yMin: yExt.dataMin ?? yExt.min,
+    yMax: yExt.dataMax ?? yExt.max,
+  };
 
   const handleWheel = (e: WheelEvent) => {
     if (!e.shiftKey) return;
     e.preventDefault();
 
     const zoomFactor = 0.2;
-
-    // 휠 반전
-    const isZoomIn = e.deltaY < 0; 
+    const isZoomIn = e.deltaY < 0;
     const direction = isZoomIn ? -1 : 1;
 
-    /* ----------------------- X축 Zoom ----------------------- */
+    /* ----------------------- X축 ----------------------- */
     const xAxis = chart.xAxis[0];
-    const xExt = xAxis.getExtremes();
-    const xRange = xExt.max - xExt.min;
+    const xExt2 = xAxis.getExtremes();
+    const xRange = xExt2.max - xExt2.min;
 
-    const isFullXRange = 
-      Math.abs(xExt.max - xExt.dataMax) < 0.00001 &&
-      Math.abs(xExt.min - xExt.dataMin) < 0.00001;
+    const isFullX =
+      Math.abs(xExt2.min - originalRef.current.xMin) < 0.00001 &&
+      Math.abs(xExt2.max - originalRef.current.xMax) < 0.00001;
 
-    // 전체 범위일 때는 축소 금지
-    if (!isZoomIn && isFullXRange) {
-      // 축소 요청인데 이미 전체범위면 그냥 return
-    } else {
-      let newXMin = xExt.min + direction * xRange * zoomFactor / 2;
-      let newXMax = xExt.max - direction * xRange * zoomFactor / 2;
+    // 전체 범위인데 축소 요청이면 무시
+    if (!isZoomIn && isFullX) return;
 
-      if (newXMin < xExt.dataMin) newXMin = xExt.dataMin;
-      if (newXMax > xExt.dataMax) newXMax = xExt.dataMax;
-      if (newXMax - newXMin >= 1) {
-        xAxis.setExtremes(newXMin, newXMax, true, false);
-      }
-    }
+    let newXMin = xExt2.min + direction * xRange * zoomFactor / 2;
+    let newXMax = xExt2.max - direction * xRange * zoomFactor / 2;
 
-    /* ----------------------- Y축 Zoom ----------------------- */
+    if (newXMin < originalRef.current.xMin)
+      newXMin = originalRef.current.xMin;
+    if (newXMax > originalRef.current.xMax)
+      newXMax = originalRef.current.xMax;
+
+    if (newXMax - newXMin >= 1)
+      xAxis.setExtremes(newXMin, newXMax, true, false);
+
+    /* ----------------------- Y축 ----------------------- */
     const yAxis = chart.yAxis[0];
-    const yExt = yAxis.getExtremes();
-    const yRange = yExt.max - yExt.min;
+    const yExt2 = yAxis.getExtremes();
+    const yRange = yExt2.max - yExt2.min;
 
-    const isFullYRange =
-      Math.abs(yExt.max - yExt.dataMax) < 0.00001 &&
-      Math.abs(yExt.min - yExt.dataMin) < 0.00001;
+    const isFullY =
+      Math.abs(yExt2.min - originalRef.current.yMin) < 0.00001 &&
+      Math.abs(yExt2.max - originalRef.current.yMax) < 0.00001;
 
-    if (!isZoomIn && isFullYRange) {
-      // 축소 금지
-    } else {
-      let newYMin = yExt.min + direction * yRange * zoomFactor / 2;
-      let newYMax = yExt.max - direction * yRange * zoomFactor / 2;
+    if (!isZoomIn && isFullY) return;
 
-      if (newYMin < yExt.dataMin) newYMin = yExt.dataMin;
-      if (newYMax > yExt.dataMax) newYMax = yExt.dataMax;
-      if (newYMax - newYMin >= 1) {
-        yAxis.setExtremes(newYMin, newYMax, true, false);
-      }
-    }
+    let newYMin = yExt2.min + direction * yRange * zoomFactor / 2;
+    let newYMax = yExt2.max - direction * yRange * zoomFactor / 2;
+
+    if (newYMin < originalRef.current.yMin)
+      newYMin = originalRef.current.yMin;
+    if (newYMax > originalRef.current.yMax)
+      newYMax = originalRef.current.yMax;
+
+    if (newYMax - newYMin >= 1)
+      yAxis.setExtremes(newYMin, newYMax, true, false);
   };
 
   const container = chart.container;
   container.addEventListener("wheel", handleWheel);
-
   return () => container.removeEventListener("wheel", handleWheel);
 }, []);
