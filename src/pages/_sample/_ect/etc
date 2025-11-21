@@ -3,43 +3,70 @@ useEffect(() => {
   if (!chart) return;
 
   const handleWheel = (e: WheelEvent) => {
-    if (!e.shiftKey) return; // Shift를 누른 경우만 작동
+    // Shift를 누르지 않으면 작동하지 않음
+    if (!e.shiftKey) return;
     e.preventDefault();
 
     const zoomFactor = 0.2;
+
+    /* ----------------------- X축 Zoom ----------------------- */
+    const xAxis = chart.xAxis[0];
+    const xExt = xAxis.getExtremes();
+    const xRange = xExt.max - xExt.min;
+    const xMinRange = (xExt.dataMax - xExt.dataMin) * 0.01;
+
     const isZoomIn = e.deltaY < 0; // 휠 ↑ 확대
     const direction = isZoomIn ? -1 : 1;
 
-    /* -------------------- X축 -------------------- */
-    const xAxis = chart.xAxis[0];
-    const xExt = xAxis.getExtremes();
-    const xRange = xExt.max - xExt.min; // padding 포함
+    let newXMin = xExt.min + direction * xRange * zoomFactor / 2;
+    let newXMax = xExt.max - direction * xRange * zoomFactor / 2;
 
-    let newXMin = xExt.min + (direction * xRange * zoomFactor) / 2;
-    let newXMax = xExt.max - (direction * xRange * zoomFactor) / 2;
+    if (newXMin < xExt.dataMin) newXMin = xExt.dataMin;
+    if (newXMax > xExt.dataMax) newXMax = xExt.dataMax;
 
-    // padding 포함 범위 제한
-    const xMinLimit = xExt.dataMin - xRange * (xAxis.options.minPadding ?? 0);
-    const xMaxLimit = xExt.dataMax + xRange * (xAxis.options.maxPadding ?? 0);
+    if (newXMax - newXMin < xMinRange) {
+      const mid = (newXMax + newXMin) / 2;
+      newXMin = mid - xMinRange / 2;
+      newXMax = mid + xMinRange / 2;
 
-    if (newXMin < xMinLimit) newXMin = xMinLimit;
-    if (newXMax > xMaxLimit) newXMax = xMaxLimit;
+      if (newXMin < xExt.dataMin) {
+        newXMin = xExt.dataMin;
+        newXMax = newXMin + xMinRange;
+      }
+      if (newXMax > xExt.dataMax) {
+        newXMax = xExt.dataMax;
+        newXMin = newXMax - xMinRange;
+      }
+    }
 
     xAxis.setExtremes(newXMin, newXMax, true, false);
 
-    /* -------------------- Y축 -------------------- */
+    /* ----------------------- Y축 Zoom ----------------------- */
     const yAxis = chart.yAxis[0];
     const yExt = yAxis.getExtremes();
-    const yRange = yExt.max - yExt.min; // padding 포함
+    const yRange = yExt.max - yExt.min;
+    const yMinRange = (yExt.dataMax - yExt.dataMin) * 0.01;
 
-    let newYMin = yExt.min + (direction * yRange * zoomFactor) / 2;
-    let newYMax = yExt.max - (direction * yRange * zoomFactor) / 2;
+    let newYMin = yExt.min + direction * yRange * zoomFactor / 2;
+    let newYMax = yExt.max - direction * yRange * zoomFactor / 2;
 
-    const yMinLimit = yExt.dataMin - yRange * (yAxis.options.minPadding ?? 0);
-    const yMaxLimit = yExt.dataMax + yRange * (yAxis.options.maxPadding ?? 0);
+    if (newYMin < yExt.dataMin) newYMin = yExt.dataMin;
+    if (newYMax > yExt.dataMax) newYMax = yExt.dataMax;
 
-    if (newYMin < yMinLimit) newYMin = yMinLimit;
-    if (newYMax > yMaxLimit) newYMax = yMaxLimit;
+    if (newYMax - newYMin < yMinRange) {
+      const mid = (newYMax + newYMin) / 2;
+      newYMin = mid - yMinRange / 2;
+      newYMax = mid + yMinRange / 2;
+
+      if (newYMin < yExt.dataMin) {
+        newYMin = yExt.dataMin;
+        newYMax = newYMin + yMinRange;
+      }
+      if (newYMax > yExt.dataMax) {
+        newYMax = yExt.dataMax;
+        newYMin = newYMax - yMinRange;
+      }
+    }
 
     yAxis.setExtremes(newYMin, newYMax, true, false);
   };
