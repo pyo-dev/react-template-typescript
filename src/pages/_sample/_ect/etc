@@ -2,18 +2,46 @@ useEffect(() => {
   const chart = chartRef.current?.chart;
   if (!chart) return;
 
-  // 초기 범위 저장
-  const x0 = chart.xAxis[0].getExtremes();
-  const y0 = chart.yAxis[0].getExtremes();
+  const xAxis = chart.xAxis[0];
+  const yAxis = chart.yAxis[0];
+
+  // 초기값 저장
+  const x0 = xAxis.getExtremes();
+  const y0 = yAxis.getExtremes();
 
   const original = {
-    xRange: x0.dataMax - x0.dataMin,
-    yRange: y0.dataMax - y0.dataMin,
     xMin: x0.dataMin,
     xMax: x0.dataMax,
     yMin: y0.dataMin,
     yMax: y0.dataMax,
   };
+
+  // 축 padding 완전 제거
+  xAxis.update(
+    {
+      minPadding: 0,
+      maxPadding: 0,
+      startOnTick: false,
+      endOnTick: false,
+      softMin: original.xMin,
+      softMax: original.xMax,
+    },
+    false
+  );
+
+  yAxis.update(
+    {
+      minPadding: 0,
+      maxPadding: 0,
+      startOnTick: false,
+      endOnTick: false,
+      softMin: original.yMin,
+      softMax: original.yMax,
+    },
+    false
+  );
+
+  chart.redraw();
 
   const handleWheel = (e: WheelEvent) => {
     if (!e.shiftKey) return;
@@ -23,49 +51,50 @@ useEffect(() => {
     const isZoomIn = e.deltaY < 0;
     const direction = isZoomIn ? -1 : 1;
 
-    /* ------------------------ X축 ------------------------ */
-    const xAxis = chart.xAxis[0];
-    const xExt = xAxis.getExtremes();
-    const currXRange = xExt.max - xExt.min;
+    /* -------------------- X축 ---------------------- */
+    const extX = xAxis.getExtremes();
+    const currXRange = extX.max - extX.min;
 
     const isFullX =
-      Math.abs(currXRange - original.xRange) < original.xRange * 0.01;  
-      // 1% 오차 내 → 전체범위로 인정
+      extX.min <= original.xMin && extX.max >= original.xMax;
 
-    // 전체 범위면 축소 금지
     if (!isZoomIn && isFullX) {
-      return;
+      // 전체 범위면 축소 금지 + 강제 원래범위로 고정
+      xAxis.setExtremes(original.xMin, original.xMax, true, false);
+    } else {
+      let newMin = extX.min + (currXRange * zoomFactor * direction) / 2;
+      let newMax = extX.max - (currXRange * zoomFactor * direction) / 2;
+
+      if (newMin < original.xMin) newMin = original.xMin;
+      if (newMax > original.xMax) newMax = original.xMax;
+
+      xAxis.setExtremes(newMin, newMax, true, false);
     }
 
-    let newXMin = xExt.min + direction * currXRange * zoomFactor / 2;
-    let newXMax = xExt.max - direction * currXRange * zoomFactor / 2;
-
-    if (newXMin < original.xMin) newXMin = original.xMin;
-    if (newXMax > original.xMax) newXMax = original.xMax;
-
-    xAxis.setExtremes(newXMin, newXMax, true, false);
-
-    /* ------------------------ Y축 ------------------------ */
-    const yAxis = chart.yAxis[0];
-    const yExt = yAxis.getExtremes();
-    const currYRange = yExt.max - yExt.min;
+    /* -------------------- Y축 ---------------------- */
+    const extY = yAxis.getExtremes();
+    const currYRange = extY.max - extY.min;
 
     const isFullY =
-      Math.abs(currYRange - original.yRange) < original.yRange * 0.01;
+      extY.min <= original.yMin && extY.max >= original.yMax;
 
     if (!isZoomIn && isFullY) {
-      return;
+      yAxis.setExtremes(original.yMin, original.yMax, true, false);
+    } else {
+      let newMin = extY.min + (currYRange * zoomFactor * direction) / 2;
+      let newMax = extY.max - (currYRange * zoomFactor * direction) / 2;
+
+      if (newMin < original.yMin) newMin = original.yMin;
+      if (newMax > original.yMax) newMax = original.yMax;
+
+      yAxis.setExtremes(newMin, newMax, true, false);
     }
-
-    let newYMin = yExt.min + direction * currYRange * zoomFactor / 2;
-    let newYMax = yExt.max - direction * currYRange * zoomFactor / 2;
-
-    if (newYMin < original.yMin) newYMin = original.yMin;
-    if (newYMax > original.yMax) newYMax = original.yMax;
-
-    yAxis.setExtremes(newYMin, newYMax, true, false);
   };
 
-  chart.container.addEventListener("wheel", handleWheel);
-  return () => chart.container.removeEventListener("wheel", handleWheel);
+  const el = chart.container;
+  el.addEventListener("wheel", handleWheel);
+
+  return () => {
+    el.removeEventListener("wheel", handleWheel);
+  };
 }, []);
