@@ -3,15 +3,13 @@ useEffect(() => {
   if (!chart) return;
 
   const handleWheel = (e: WheelEvent) => {
-    // Shift를 누르지 않으면 작동하지 않음
     if (!e.shiftKey) return;
-
     e.preventDefault();
 
     const zoomFactor = 0.2;
 
-    // 휠 방향 반전 (기존 deltaY > 0 확대 → 반대로)
-    const isZoomIn = e.deltaY < 0; // 휠 ↑ 확대
+    // 휠 반전
+    const isZoomIn = e.deltaY < 0; 
     const direction = isZoomIn ? -1 : 1;
 
     /* ----------------------- X축 Zoom ----------------------- */
@@ -19,13 +17,22 @@ useEffect(() => {
     const xExt = xAxis.getExtremes();
     const xRange = xExt.max - xExt.min;
 
-    let newXMin = xExt.min + direction * xRange * zoomFactor / 2;
-    let newXMax = xExt.max - direction * xRange * zoomFactor / 2;
+    const isFullXRange = 
+      Math.abs(xExt.max - xExt.dataMax) < 0.00001 &&
+      Math.abs(xExt.min - xExt.dataMin) < 0.00001;
 
-    if (newXMin < xExt.dataMin) newXMin = xExt.dataMin;
-    if (newXMax > xExt.dataMax) newXMax = xExt.dataMax;
-    if (newXMax - newXMin > 1) {
-      xAxis.setExtremes(newXMin, newXMax, true, false);
+    // 전체 범위일 때는 축소 금지
+    if (!isZoomIn && isFullXRange) {
+      // 축소 요청인데 이미 전체범위면 그냥 return
+    } else {
+      let newXMin = xExt.min + direction * xRange * zoomFactor / 2;
+      let newXMax = xExt.max - direction * xRange * zoomFactor / 2;
+
+      if (newXMin < xExt.dataMin) newXMin = xExt.dataMin;
+      if (newXMax > xExt.dataMax) newXMax = xExt.dataMax;
+      if (newXMax - newXMin >= 1) {
+        xAxis.setExtremes(newXMin, newXMax, true, false);
+      }
     }
 
     /* ----------------------- Y축 Zoom ----------------------- */
@@ -33,13 +40,21 @@ useEffect(() => {
     const yExt = yAxis.getExtremes();
     const yRange = yExt.max - yExt.min;
 
-    let newYMin = yExt.min + direction * yRange * zoomFactor / 2;
-    let newYMax = yExt.max - direction * yRange * zoomFactor / 2;
+    const isFullYRange =
+      Math.abs(yExt.max - yExt.dataMax) < 0.00001 &&
+      Math.abs(yExt.min - yExt.dataMin) < 0.00001;
 
-    if (newYMin < yExt.dataMin) newYMin = yExt.dataMin;
-    if (newYMax > yExt.dataMax) newYMax = yExt.dataMax;
-    if (newYMax - newYMin > 1) {
-      yAxis.setExtremes(newYMin, newYMax, true, false);
+    if (!isZoomIn && isFullYRange) {
+      // 축소 금지
+    } else {
+      let newYMin = yExt.min + direction * yRange * zoomFactor / 2;
+      let newYMax = yExt.max - direction * yRange * zoomFactor / 2;
+
+      if (newYMin < yExt.dataMin) newYMin = yExt.dataMin;
+      if (newYMax > yExt.dataMax) newYMax = yExt.dataMax;
+      if (newYMax - newYMin >= 1) {
+        yAxis.setExtremes(newYMin, newYMax, true, false);
+      }
     }
   };
 
