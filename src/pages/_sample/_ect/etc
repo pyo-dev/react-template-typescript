@@ -3,22 +3,30 @@ import Plot from "react-plotly.js";
 import Plotly from "plotly.js-dist-min";
 import type { Layout, Shape } from "plotly.js";
 
-type PlotDiv = HTMLDivElement & { _fullLayout: any; layout: any };
+type PlotDiv = HTMLDivElement & {
+  _fullLayout: any;
+  layout: any;
+};
+
 type CellKey = `${number}-${number}`;
 
 export default function WaferHeatmap() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<PlotDiv | null>(null);
 
+  /* ================= 상태 플래그 ================= */
   const isPanning = useRef(false);
   const isSelecting = useRef(false);
 
   const panStart = useRef({ x: 0, y: 0 });
   const selectStart = useRef({ x: 0, y: 0 });
 
+  const selectingShape = useRef<Shape | null>(null);
+
   /* ================= 데이터 ================= */
-  const size = 200;
   const radius = 100;
+  const size = 200;
+
   const x = Array.from({ length: size }, (_, i) => i - radius);
   const y = Array.from({ length: size }, (_, i) => i - radius);
 
@@ -37,7 +45,7 @@ export default function WaferHeatmap() {
 
   /* ================= layout (고정) ================= */
   const layoutRef = useRef<Partial<Layout>>({
-    uirevision: "wafer-fixed",
+    uirevision: "wafer-fixed", // ⭐ 핵심
     dragmode: false,
     margin: { t: 10, r: 10, b: 10, l: 10 },
     xaxis: {
@@ -71,6 +79,7 @@ export default function WaferHeatmap() {
     const wrapper = wrapperRef.current!;
     const plot = plotRef.current!;
 
+    /* ---- Shift + Wheel : Zoom ---- */
     const onWheel = (e: WheelEvent) => {
       if (!e.shiftKey) return;
       e.preventDefault();
@@ -92,6 +101,7 @@ export default function WaferHeatmap() {
       });
     };
 
+    /* ---- Mouse Down ---- */
     const onMouseDown = (e: MouseEvent) => {
       if (e.shiftKey) {
         isPanning.current = true;
@@ -102,23 +112,26 @@ export default function WaferHeatmap() {
       isSelecting.current = true;
       selectStart.current = pixelToData(e, plot);
 
+      selectingShape.current = {
+        type: "rect",
+        xref: "x",
+        yref: "y",
+        x0: selectStart.current.x,
+        y0: selectStart.current.y,
+        x1: selectStart.current.x,
+        y1: selectStart.current.y,
+        fillcolor: "rgba(0,120,255,0.25)",
+        line: { color: "#0078ff", width: 1 },
+      };
+
       Plotly.relayout(plot, {
-        shapes: [
-          {
-            type: "rect",
-            xref: "x",
-            yref: "y",
-            x0: selectStart.current.x,
-            y0: selectStart.current.y,
-            x1: selectStart.current.x,
-            y1: selectStart.current.y,
-            fillcolor: "rgba(0,120,255,0.25)",
-            line: { color: "#0078ff", width: 1 },
-          } as Shape,
-        ],
+        shapes: [selectingShape.current],
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
       });
     };
 
+    /* ---- Mouse Move ---- */
     const onMouseMove = (e: MouseEvent) => {
       if (isPanning.current) {
         const dx = e.clientX - panStart.current.x;
@@ -137,28 +150,36 @@ export default function WaferHeatmap() {
             y0 + (dy / plot.clientHeight) * (y1 - y0),
             y1 + (dy / plot.clientHeight) * (y1 - y0),
           ],
+          "xaxis.autorange": false,
+          "yaxis.autorange": false,
         });
         return;
       }
 
-      if (!isSelecting.current) return;
+      if (!isSelecting.current || !selectingShape.current) return;
 
       const cur = pixelToData(e, plot);
+      selectingShape.current.x1 = cur.x;
+      selectingShape.current.y1 = cur.y;
+
       Plotly.relayout(plot, {
-        "shapes[0].x1": cur.x,
-        "shapes[0].y1": cur.y,
+        shapes: [selectingShape.current],
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
       });
     };
 
+    /* ---- Mouse Up ---- */
     const onMouseUp = (e: MouseEvent) => {
       if (isPanning.current) {
         isPanning.current = false;
         return;
       }
 
-      if (!isSelecting.current) return;
+      if (!isSelecting.current || !selectingShape.current) return;
 
       const end = pixelToData(e, plot);
+
       const minX = Math.min(selectStart.current.x, end.x);
       const maxX = Math.max(selectStart.current.x, end.x);
       const minY = Math.min(selectStart.current.y, end.y);
@@ -166,12 +187,16 @@ export default function WaferHeatmap() {
 
       if (!e.ctrlKey) selectedSet.current.clear();
 
+      const values: number[] = [];
+
       y.forEach((yy, iy) => {
         if (yy < minY || yy > maxY) return;
         x.forEach((xx, ix) => {
           if (xx < minX || xx > maxX) return;
-          if (!Number.isNaN(baseZ.current[iy][ix])) {
+          const v = baseZ.current[iy][ix];
+          if (!Number.isNaN(v)) {
             selectedSet.current.add(`${ix}-${iy}`);
+            values.push(v);
           }
         });
       });
@@ -184,7 +209,11 @@ export default function WaferHeatmap() {
         )
       );
 
+      console.log("선택 데이터:", values);
+
+      selectingShape.current = null;
       Plotly.relayout(plot, { shapes: [] });
+
       isSelecting.current = false;
     };
 
@@ -201,6 +230,7 @@ export default function WaferHeatmap() {
     };
   }, []);
 
+  /* ================= 렌더 ================= */
   return (
     <div ref={wrapperRef} style={{ width: "100%", height: 500 }}>
       <Plot
