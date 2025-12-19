@@ -3,48 +3,45 @@ import Plot from "react-plotly.js";
 import Plotly from "plotly.js-dist-min";
 import type { Layout, Config, Shape } from "plotly.js";
 
-/* ================= 타입 ================= */
 type PlotlyGraphDiv = HTMLDivElement & {
   layout: {
-    xaxis: { range?: [number, number]; autorange?: boolean };
-    yaxis: { range?: [number, number]; autorange?: boolean };
+    xaxis: { range: [number, number]; autorange?: boolean };
+    yaxis: { range: [number, number]; autorange?: boolean };
     shapes?: Shape[];
   };
 };
 
 type CellKey = `${number}-${number}`;
 
-/* ================= 컴포넌트 ================= */
-const WaferHeatmap: React.FC = () => {
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+const WaferHeatmap = () => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<PlotlyGraphDiv | null>(null);
 
-  const isPanningRef = useRef(false);
-  const isSelectingRef = useRef(false);
+  const isPanning = useRef(false);
+  const isSelecting = useRef(false);
 
-  const panStartRef = useRef({ x: 0, y: 0 });
-  const selectStartRef = useRef({ x: 0, y: 0 });
+  const panStart = useRef({ x: 0, y: 0 });
+  const selectStart = useRef({ x: 0, y: 0 });
 
   /* ================= 데이터 ================= */
   const R = 100;
   const x = Array.from({ length: 200 }, (_, i) => i - 100);
   const y = Array.from({ length: 200 }, (_, i) => i - 100);
 
-  const originalZ = useRef<number[][]>(
+  const originalZ = useRef(
     y.map((yy) =>
-      x.map((xx) =>
-        xx * xx + yy * yy <= R * R ? Math.random() * 10 : NaN
-      )
+      x.map((xx) => (xx * xx + yy * yy <= R * R ? Math.random() * 10 : NaN))
     )
   );
 
-  const selectedRef = useRef<Set<CellKey>>(new Set());
-  const [selectedZ, setSelectedZ] = useState<number[][]>(
+  const selectedSet = useRef<Set<CellKey>>(new Set());
+  const [selectedZ, setSelectedZ] = useState(
     y.map(() => x.map(() => NaN))
   );
 
   /* ================= layout / config ================= */
   const layout: Partial<Layout> = {
+    uirevision: "wafer-fixed", // ⭐ 확대/패닝 유지 핵심
     dragmode: false,
     margin: { t: 20, r: 20, b: 20, l: 20 },
     xaxis: {
@@ -52,14 +49,12 @@ const WaferHeatmap: React.FC = () => {
       autorange: false,
       scaleanchor: "y",
       scaleratio: 1,
-      zeroline: false,
     },
     yaxis: {
       range: [-100, 100],
       autorange: false,
       scaleanchor: "x",
       scaleratio: 1,
-      zeroline: false,
     },
     shapes: [],
   };
@@ -70,119 +65,93 @@ const WaferHeatmap: React.FC = () => {
     displayModeBar: true,
   };
 
-  /* ================= 좌표 변환 (최종 수정본) ================= */
-  const pixelToData = (e: MouseEvent, plot: PlotlyGraphDiv) => {
-    const fullLayout = (plot as any)._fullLayout;
-    const xaxis = fullLayout.xaxis;
-    const yaxis = fullLayout.yaxis;
-
-    const plotRect = plot.getBoundingClientRect();
-
-    const px =
-      e.clientX - plotRect.left - xaxis._offset;
-    const py =
-      e.clientY - plotRect.top - yaxis._offset;
-
-    return {
-      x: xaxis.p2d(px),
-      y: yaxis.p2d(py),
-    };
-  };
-
-  /* ================= 선택 적용 ================= */
-  const applySelection = (
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    append: boolean
-  ) => {
-    const minX = Math.min(x0, x1);
-    const maxX = Math.max(x0, x1);
-    const minY = Math.min(y0, y1);
-    const maxY = Math.max(y0, y1);
-
-    const next = append ? new Set(selectedRef.current) : new Set<CellKey>();
-    const selectedValues: number[] = [];
-
-    y.forEach((yy, iy) => {
-      if (yy < minY || yy > maxY) return;
-
-      x.forEach((xx, ix) => {
-        if (xx < minX || xx > maxX) return;
-
-        const val = originalZ.current[iy][ix];
-        if (Number.isNaN(val)) return;
-
-        const key: CellKey = `${ix}-${iy}`;
-        next.add(key);
-        selectedValues.push(val);
-      });
-    });
-
-    selectedRef.current = next;
-
-    setSelectedZ(
-      y.map((_, iy) =>
-        x.map((_, ix) =>
-          selectedRef.current.has(`${ix}-${iy}`) ? 1 : NaN
-        )
-      )
-    );
-
-    console.log("선택된 데이터:", selectedValues);
-  };
-
   /* ================= 이벤트 ================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
-    /* Shift + Wheel (Zoom) */
+    const pixelToData = (e: MouseEvent, plot: PlotlyGraphDiv) => {
+      const fl = (plot as any)._fullLayout;
+      const rect = plot.getBoundingClientRect();
+      return {
+        x: fl.xaxis.p2d(e.clientX - rect.left - fl.xaxis._offset),
+        y: fl.yaxis.p2d(e.clientY - rect.top - fl.yaxis._offset),
+      };
+    };
+
+    const applySelection = (
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number,
+      append: boolean
+    ) => {
+      const minX = Math.min(x0, x1);
+      const maxX = Math.max(x0, x1);
+      const minY = Math.min(y0, y1);
+      const maxY = Math.max(y0, y1);
+
+      const next = append
+        ? new Set(selectedSet.current)
+        : new Set<CellKey>();
+
+      const values: number[] = [];
+
+      y.forEach((yy, iy) => {
+        if (yy < minY || yy > maxY) return;
+        x.forEach((xx, ix) => {
+          if (xx < minX || xx > maxX) return;
+          const v = originalZ.current[iy][ix];
+          if (Number.isNaN(v)) return;
+          next.add(`${ix}-${iy}`);
+          values.push(v);
+        });
+      });
+
+      selectedSet.current = next;
+
+      setSelectedZ(
+        y.map((_, iy) =>
+          x.map((_, ix) =>
+            selectedSet.current.has(`${ix}-${iy}`) ? 1 : NaN
+          )
+        )
+      );
+
+      console.log("선택 데이터:", values);
+    };
+
     const onWheel = (e: WheelEvent) => {
       if (!e.shiftKey) return;
       e.preventDefault();
 
-      const plot = plotRef.current;
-      if (!plot) return;
-
+      const plot = plotRef.current!;
       const rect = plot.getBoundingClientRect();
-      const [x0, x1] = plot.layout.xaxis.range!;
-      const [y0, y1] = plot.layout.yaxis.range!;
+      const [x0, x1] = plot.layout.xaxis.range;
+      const [y0, y1] = plot.layout.yaxis.range;
 
       const zoom = e.deltaY > 0 ? 1.15 : 0.85;
-      const cx =
-        x0 + ((e.clientX - rect.left) / rect.width) * (x1 - x0);
-      const cy =
-        y1 - ((e.clientY - rect.top) / rect.height) * (y1 - y0);
+      const cx = x0 + ((e.clientX - rect.left) / rect.width) * (x1 - x0);
+      const cy = y1 - ((e.clientY - rect.top) / rect.height) * (y1 - y0);
 
       Plotly.relayout(plot, {
-        "xaxis.range": [
-          cx - (cx - x0) * zoom,
-          cx + (x1 - cx) * zoom,
-        ],
-        "yaxis.range": [
-          cy - (cy - y0) * zoom,
-          cy + (y1 - cy) * zoom,
-        ],
+        "xaxis.range": [cx - (cx - x0) * zoom, cx + (x1 - cx) * zoom],
+        "yaxis.range": [cy - (cy - y0) * zoom, cy + (y1 - cy) * zoom],
         "xaxis.autorange": false,
         "yaxis.autorange": false,
       });
     };
 
-    /* Mouse Down */
     const onMouseDown = (e: MouseEvent) => {
-      const plot = plotRef.current;
-      if (!plot) return;
-
+      const plot = plotRef.current!;
       if (e.shiftKey) {
-        isPanningRef.current = true;
-        panStartRef.current = { x: e.clientX, y: e.clientY };
+        isPanning.current = true;
+        panStart.current = { x: e.clientX, y: e.clientY };
         return;
       }
 
-      isSelectingRef.current = true;
-      selectStartRef.current = pixelToData(e, plot);
+      isSelecting.current = true;
+      selectStart.current = pixelToData(e, plot);
 
       Plotly.relayout(plot, {
         shapes: [
@@ -190,12 +159,11 @@ const WaferHeatmap: React.FC = () => {
             type: "rect",
             xref: "x",
             yref: "y",
-            x0: selectStartRef.current.x,
-            y0: selectStartRef.current.y,
-            x1: selectStartRef.current.x,
-            y1: selectStartRef.current.y,
+            ...selectStart.current,
+            x1: selectStart.current.x,
+            y1: selectStart.current.y,
             fillcolor: "rgba(0,120,255,0.2)",
-            line: { width: 1, color: "#0078ff" },
+            line: { color: "#0078ff", width: 1 },
           },
         ],
         "xaxis.autorange": false,
@@ -203,18 +171,15 @@ const WaferHeatmap: React.FC = () => {
       });
     };
 
-    /* Mouse Move */
     const onMouseMove = (e: MouseEvent) => {
-      const plot = plotRef.current;
-      if (!plot) return;
+      const plot = plotRef.current!;
+      if (isPanning.current) {
+        const dx = e.clientX - panStart.current.x;
+        const dy = e.clientY - panStart.current.y;
+        panStart.current = { x: e.clientX, y: e.clientY };
 
-      if (isPanningRef.current) {
-        const dx = e.clientX - panStartRef.current.x;
-        const dy = e.clientY - panStartRef.current.y;
-        panStartRef.current = { x: e.clientX, y: e.clientY };
-
-        const [x0, x1] = plot.layout.xaxis.range!;
-        const [y0, y1] = plot.layout.yaxis.range!;
+        const [x0, x1] = plot.layout.xaxis.range;
+        const [y0, y1] = plot.layout.yaxis.range;
 
         Plotly.relayout(plot, {
           "xaxis.range": [
@@ -231,35 +196,31 @@ const WaferHeatmap: React.FC = () => {
         return;
       }
 
-      if (isSelectingRef.current) {
-        const current = pixelToData(e, plot);
+      if (isSelecting.current) {
+        const cur = pixelToData(e, plot);
         const shape = plot.layout.shapes?.[0];
         if (!shape) return;
 
         Plotly.relayout(plot, {
-          shapes: [{ ...shape, x1: current.x, y1: current.y }],
+          shapes: [{ ...shape, x1: cur.x, y1: cur.y }],
           "xaxis.autorange": false,
           "yaxis.autorange": false,
         });
       }
     };
 
-    /* Mouse Up */
     const onMouseUp = (e: MouseEvent) => {
-      const plot = plotRef.current;
-      if (!plot) return;
-
-      if (isPanningRef.current) {
-        isPanningRef.current = false;
+      const plot = plotRef.current!;
+      if (isPanning.current) {
+        isPanning.current = false;
         return;
       }
 
-      if (isSelectingRef.current) {
+      if (isSelecting.current) {
         const end = pixelToData(e, plot);
-
         applySelection(
-          selectStartRef.current.x,
-          selectStartRef.current.y,
+          selectStart.current.x,
+          selectStart.current.y,
           end.x,
           end.y,
           e.ctrlKey
@@ -271,7 +232,7 @@ const WaferHeatmap: React.FC = () => {
           "yaxis.autorange": false,
         });
 
-        isSelectingRef.current = false;
+        isSelecting.current = false;
       }
     };
 
@@ -288,38 +249,24 @@ const WaferHeatmap: React.FC = () => {
     };
   }, []);
 
-  /* ================= 렌더 ================= */
   return (
-    <div ref={wrapperRef} style={{ width: "100%", height: "500px" }}>
+    <div ref={wrapperRef} style={{ width: "100%", height: 500 }}>
       <Plot
         data={[
-          {
-            type: "heatmap",
-            x,
-            y,
-            z: originalZ.current,
-            colorscale: "Viridis",
-            hoverongaps: false,
-          },
+          { type: "heatmap", x, y, z: originalZ.current },
           {
             type: "heatmap",
             x,
             y,
             z: selectedZ,
-            colorscale: [[0, "rgba(0,0,0,0)"], [1, "#ff0000"]],
+            colorscale: [[0, "rgba(0,0,0,0)"], [1, "red"]],
             showscale: false,
-            hoverinfo: "skip",
           },
         ]}
         layout={layout}
         config={config}
         style={{ width: "100%", height: "100%" }}
-        onInitialized={(_, gd) => {
-          plotRef.current = gd as PlotlyGraphDiv;
-        }}
-        onUpdate={(_, gd) => {
-          plotRef.current = gd as PlotlyGraphDiv;
-        }}
+        onInitialized={(_, gd) => (plotRef.current = gd as PlotlyGraphDiv)}
       />
     </div>
   );
