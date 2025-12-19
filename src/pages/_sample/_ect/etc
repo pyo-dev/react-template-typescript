@@ -19,7 +19,6 @@ const WaferHeatmap: React.FC = () => {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<PlotlyGraphDiv | null>(null);
 
-  /* ---------- 상태 ---------- */
   const isPanningRef = useRef(false);
   const isSelectingRef = useRef(false);
 
@@ -40,9 +39,7 @@ const WaferHeatmap: React.FC = () => {
     )
   );
 
-  /* ---------- 선택 상태 ---------- */
   const selectedRef = useRef<Set<CellKey>>(new Set());
-
   const [selectedZ, setSelectedZ] = useState<number[][]>(
     y.map(() => x.map(() => NaN))
   );
@@ -74,15 +71,18 @@ const WaferHeatmap: React.FC = () => {
     displayModeBar: true,
   };
 
-  /* ================= 좌표 변환 ================= */
+  /* ================= 좌표 변환 (⭐ 핵심 수정) ================= */
   const pixelToData = (e: MouseEvent, plot: PlotlyGraphDiv) => {
-    const rect = plot.getBoundingClientRect();
-    const [x0, x1] = plot.layout.xaxis.range!;
-    const [y0, y1] = plot.layout.yaxis.range!;
+    const fullLayout = (plot as any)._fullLayout;
+    const xaxis = fullLayout.xaxis;
+    const yaxis = fullLayout.yaxis;
+
+    const px = e.clientX - xaxis._offset;
+    const py = e.clientY - yaxis._offset;
 
     return {
-      x: x0 + ((e.clientX - rect.left) / rect.width) * (x1 - x0),
-      y: y1 - ((e.clientY - rect.top) / rect.height) * (y1 - y0),
+      x: xaxis.p2d(px),
+      y: yaxis.p2d(py),
     };
   };
 
@@ -99,10 +99,7 @@ const WaferHeatmap: React.FC = () => {
     const minY = Math.min(y0, y1);
     const maxY = Math.max(y0, y1);
 
-    const nextSelected = append
-      ? new Set(selectedRef.current)
-      : new Set<CellKey>();
-
+    const next = append ? new Set(selectedRef.current) : new Set<CellKey>();
     const selectedValues: number[] = [];
 
     y.forEach((yy, iy) => {
@@ -115,20 +112,21 @@ const WaferHeatmap: React.FC = () => {
         if (Number.isNaN(val)) return;
 
         const key: CellKey = `${ix}-${iy}`;
-        nextSelected.add(key);
+        next.add(key);
         selectedValues.push(val);
       });
     });
 
-    selectedRef.current = nextSelected;
+    selectedRef.current = next;
 
-    const newSelectedZ = y.map((_, iy) =>
-      x.map((_, ix) =>
-        selectedRef.current.has(`${ix}-${iy}`) ? 1 : NaN
+    setSelectedZ(
+      y.map((_, iy) =>
+        x.map((_, ix) =>
+          selectedRef.current.has(`${ix}-${iy}`) ? 1 : NaN
+        )
       )
     );
 
-    setSelectedZ(newSelectedZ);
     console.log("선택된 데이터:", selectedValues);
   };
 
@@ -137,7 +135,7 @@ const WaferHeatmap: React.FC = () => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
-    /* ---------- Shift + Wheel (Zoom) ---------- */
+    /* Shift + Wheel (Zoom) */
     const onWheel = (e: WheelEvent) => {
       if (!e.shiftKey) return;
       e.preventDefault();
@@ -169,7 +167,7 @@ const WaferHeatmap: React.FC = () => {
       });
     };
 
-    /* ---------- Mouse Down ---------- */
+    /* Mouse Down */
     const onMouseDown = (e: MouseEvent) => {
       const plot = plotRef.current;
       if (!plot) return;
@@ -202,7 +200,7 @@ const WaferHeatmap: React.FC = () => {
       });
     };
 
-    /* ---------- Mouse Move ---------- */
+    /* Mouse Move */
     const onMouseMove = (e: MouseEvent) => {
       const plot = plotRef.current;
       if (!plot) return;
@@ -241,7 +239,7 @@ const WaferHeatmap: React.FC = () => {
       }
     };
 
-    /* ---------- Mouse Up ---------- */
+    /* Mouse Up */
     const onMouseUp = (e: MouseEvent) => {
       const plot = plotRef.current;
       if (!plot) return;
