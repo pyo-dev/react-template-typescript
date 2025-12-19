@@ -27,7 +27,6 @@ const WaferHeatmap: React.FC = () => {
 
   /* ================= 데이터 ================= */
   const R = 100;
-
   const x = Array.from({ length: 200 }, (_, i) => i - 100);
   const y = Array.from({ length: 200 }, (_, i) => i - 100);
 
@@ -71,14 +70,18 @@ const WaferHeatmap: React.FC = () => {
     displayModeBar: true,
   };
 
-  /* ================= 좌표 변환 (⭐ 핵심 수정) ================= */
+  /* ================= 좌표 변환 (최종 수정본) ================= */
   const pixelToData = (e: MouseEvent, plot: PlotlyGraphDiv) => {
     const fullLayout = (plot as any)._fullLayout;
     const xaxis = fullLayout.xaxis;
     const yaxis = fullLayout.yaxis;
 
-    const px = e.clientX - xaxis._offset;
-    const py = e.clientY - yaxis._offset;
+    const plotRect = plot.getBoundingClientRect();
+
+    const px =
+      e.clientX - plotRect.left - xaxis._offset;
+    const py =
+      e.clientY - plotRect.top - yaxis._offset;
 
     return {
       x: xaxis.p2d(px),
@@ -130,7 +133,7 @@ const WaferHeatmap: React.FC = () => {
     console.log("선택된 데이터:", selectedValues);
   };
 
-  /* ================= 마우스 이벤트 ================= */
+  /* ================= 이벤트 ================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -222,6 +225,8 @@ const WaferHeatmap: React.FC = () => {
             y0 + (dy / plot.clientHeight) * (y1 - y0),
             y1 + (dy / plot.clientHeight) * (y1 - y0),
           ],
+          "xaxis.autorange": false,
+          "yaxis.autorange": false,
         });
         return;
       }
