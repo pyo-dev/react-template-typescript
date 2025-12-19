@@ -22,7 +22,7 @@ const WaferHeatmap: React.FC = () => {
   const isPanningRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
 
-  /* ===== 예시: 원형 반도체 좌표 데이터 ===== */
+  /* ================= 데이터 (예시) ================= */
   const R = 100;
 
   const x = Array.from({ length: 200 }, (_, i) => i - 100);
@@ -43,20 +43,20 @@ const WaferHeatmap: React.FC = () => {
     },
   ];
 
-  /* ===== 데이터 기반 range 자동 계산 ===== */
+  /* ================= range 자동 계산 ================= */
   const xMin = Math.min(...x);
   const xMax = Math.max(...x);
   const yMin = Math.min(...y);
   const yMax = Math.max(...y);
 
-  /* ===== layout ===== */
+  /* ================= layout ================= */
   const layout: Partial<Layout> = {
     dragmode: false,
     margin: { t: 20, r: 20, b: 20, l: 20 },
     xaxis: {
       autorange: false,
       range: [xMin, xMax],
-      scaleanchor: "y", // 🔥 비율 고정
+      scaleanchor: "y",
       scaleratio: 1,
       zeroline: false,
     },
@@ -69,19 +69,34 @@ const WaferHeatmap: React.FC = () => {
     },
   };
 
-  /* ===== config ===== */
+  /* ================= config ================= */
   const config: Partial<Config> = {
     scrollZoom: false,
     displayModeBar: true,
     doubleClick: false,
   };
 
-  /* ===== Shift + Wheel Zoom / Shift + Drag Pan ===== */
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
+  /* ================= 커서 제어 ================= */
+  const setCursor = (cursor: "default" | "grab" | "grabbing") => {
+    const plot = plotRef.current;
+    if (!plot) return;
 
-    /* ---------- ZOOM ---------- */
+    plot.style.cursor = cursor;
+    plot
+      .querySelectorAll<HTMLElement>(
+        ".plotly, .cartesianlayer, .hoverlayer, svg"
+      )
+      .forEach((el) => {
+        el.style.cursor = cursor;
+      });
+  };
+
+  /* ================= 인터랙션 ================= */
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    /* ---------- Shift + Wheel (Zoom) ---------- */
     const onWheel = (e: WheelEvent) => {
       if (!e.shiftKey) return;
 
@@ -91,7 +106,6 @@ const WaferHeatmap: React.FC = () => {
       if (!plot) return;
 
       const rect = plot.getBoundingClientRect();
-
       const [x0, x1] = plot.layout.xaxis.range!;
       const [y0, y1] = plot.layout.yaxis.range!;
 
@@ -100,8 +114,8 @@ const WaferHeatmap: React.FC = () => {
 
       const zoom = e.deltaY > 0 ? 1.15 : 0.85;
 
-      const cx = x0 + xSpan * ((e.clientX - rect.left) / rect.width);
-      const cy = y1 - ySpan * ((e.clientY - rect.top) / rect.height);
+      const cx = x0 + (xSpan * (e.clientX - rect.left)) / rect.width;
+      const cy = y1 - (ySpan * (e.clientY - rect.top)) / rect.height;
 
       Plotly.relayout(plot, {
         "xaxis.range": [
@@ -115,13 +129,13 @@ const WaferHeatmap: React.FC = () => {
       });
     };
 
-    /* ---------- PAN ---------- */
+    /* ---------- Shift + Drag (Pan) ---------- */
     const onMouseDown = (e: MouseEvent) => {
       if (!e.shiftKey) return;
 
       isPanningRef.current = true;
       lastPosRef.current = { x: e.clientX, y: e.clientY };
-      el.style.cursor = "grabbing";
+      setCursor("grabbing");
       e.preventDefault();
     };
 
@@ -153,20 +167,34 @@ const WaferHeatmap: React.FC = () => {
     };
 
     const onMouseUp = () => {
+      if (!isPanningRef.current) return;
       isPanningRef.current = false;
-      el.style.cursor = "default";
+      setCursor("grab");
     };
 
-    el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("mousedown", onMouseDown);
+    /* ---------- Shift key 커서 ---------- */
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setCursor("grab");
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setCursor("default");
+    };
+
+    wrapper.addEventListener("wheel", onWheel, { passive: false });
+    wrapper.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
 
     return () => {
-      el.removeEventListener("wheel", onWheel);
-      el.removeEventListener("mousedown", onMouseDown);
+      wrapper.removeEventListener("wheel", onWheel);
+      wrapper.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
   }, []);
 
