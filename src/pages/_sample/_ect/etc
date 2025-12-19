@@ -1,239 +1,254 @@
-import Plot from "react-plotly.js";
 import { useEffect, useRef, useState } from "react";
+import Plot from "react-plotly.js";
+import Plotly from "plotly.js-dist-min";
+import type { Layout, Shape } from "plotly.js";
 
-type CellExtra = {
-  dieId: string;
-  lotId: string;
-  temp: number;
-  passLabel: string;
+type PlotDiv = HTMLDivElement & {
+  _fullLayout: any;
+  layout: any;
 };
 
+type CellKey = `${number}-${number}`;
+
 export default function WaferHeatmap() {
-  const plotRef = useRef<any>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const plotRef = useRef<PlotDiv | null>(null);
 
-  /* ---------------- 데이터 ---------------- */
+  /* ================= 상태 플래그 ================= */
+  const isPanning = useRef(false);
+  const isSelecting = useRef(false);
 
-  const size = 41;
-  const radius = 20;
+  const panStart = useRef({ x: 0, y: 0 });
+  const selectStart = useRef({ x: 0, y: 0 });
+
+  const selectingShape = useRef<Shape | null>(null);
+
+  /* ================= 데이터 ================= */
+  const radius = 100;
+  const size = 200;
 
   const x = Array.from({ length: size }, (_, i) => i - radius);
   const y = Array.from({ length: size }, (_, i) => i - radius);
 
-  const baseZ = useRef<number[][]>(
+  const baseZ = useRef(
     y.map((yy) =>
-      x.map((xx) => {
-        const r = Math.sqrt(xx * xx + yy * yy);
-        if (r > radius) return NaN;
-        return Math.random() * 10;
-      })
+      x.map((xx) =>
+        xx * xx + yy * yy <= radius * radius ? Math.random() * 10 : NaN
+      )
     )
   );
 
-  const selectedZ = useRef<number[][]>(
+  const selectedSet = useRef<Set<CellKey>>(new Set());
+  const [selectedZ, setSelectedZ] = useState(
     y.map(() => x.map(() => NaN))
   );
 
-  /* ----------- customdata / tooltip ----------- */
+  /* ================= layout (고정) ================= */
+  const layoutRef = useRef<Partial<Layout>>({
+    uirevision: "wafer-fixed", // ⭐ 핵심
+    dragmode: false,
+    margin: { t: 10, r: 10, b: 10, l: 10 },
+    xaxis: {
+      range: [-radius, radius],
+      autorange: false,
+      scaleanchor: "y",
+      scaleratio: 1,
+    },
+    yaxis: {
+      range: [-radius, radius],
+      autorange: false,
+      scaleanchor: "x",
+      scaleratio: 1,
+    },
+    shapes: [],
+  });
 
-  const customData = useRef<CellExtra[][]>(
-    y.map((yy, iy) =>
-      x.map((xx, ix) => {
-        const v = baseZ.current[iy][ix];
-        return {
-          dieId: `D-${ix}-${iy}`,
-          lotId: "LOT-2025-01",
-          temp: Math.round(20 + Math.random() * 30),
-          passLabel: !Number.isNaN(v) && v > 5 ? "PASS" : "FAIL",
-        };
-      })
-    )
-  );
+  /* ================= 유틸 ================= */
+  const pixelToData = (e: MouseEvent, plot: PlotDiv) => {
+    const fl = plot._fullLayout;
+    const rect = plot.getBoundingClientRect();
 
-  /* ----------- 확대 레벨에 따른 텍스트 ----------- */
-
-  const [showText, setShowText] = useState(false);
-
-  const textData = useRef<string[][]>(
-    y.map((yy, iy) =>
-      x.map((xx, ix) => {
-        const v = baseZ.current[iy][ix];
-        return Number.isNaN(v) ? "" : v.toFixed(1);
-      })
-    )
-  );
-
-  /* ---------------- 상태 ---------------- */
-
-  const dragStart = useRef<{ x: number; y: number } | null>(null);
-  const overlayShapeIndex = useRef<number | null>(null);
-
-  /* ---------------- 이벤트 ---------------- */
-
-  const handleRelayout = (e: any) => {
-    if (!e["xaxis.range[0]"]) return;
-
-    const xRange =
-      e["xaxis.range[1]"] - e["xaxis.range[0]"];
-    const yRange =
-      e["yaxis.range[1]"] - e["yaxis.range[0]"];
-
-    // 확대 충분히 됐을 때만 텍스트 표시
-    setShowText(xRange < 15 && yRange < 15);
+    return {
+      x: fl.xaxis.p2d(e.clientX - rect.left - fl.xaxis._offset),
+      y: fl.yaxis.p2d(e.clientY - rect.top - fl.yaxis._offset),
+    };
   };
 
-  const handleMouseDown = (e: any) => {
-    if (!plotRef.current) return;
-    if (e.event.shiftKey) return; // 패닝
+  /* ================= 이벤트 ================= */
+  useEffect(() => {
+    const wrapper = wrapperRef.current!;
+    const plot = plotRef.current!;
 
-    const { xval, yval } = e.points[0];
-    dragStart.current = { x: xval, y: yval };
+    /* ---- Shift + Wheel : Zoom ---- */
+    const onWheel = (e: WheelEvent) => {
+      if (!e.shiftKey) return;
+      e.preventDefault();
 
-    const plot = plotRef.current.el;
-    const shapes = plot.layout.shapes ?? [];
+      const [x0, x1] = plot.layout.xaxis.range;
+      const [y0, y1] = plot.layout.yaxis.range;
 
-    overlayShapeIndex.current = shapes.length;
+      const rect = plot.getBoundingClientRect();
+      const zoom = e.deltaY > 0 ? 1.15 : 0.85;
 
-    Plotly.relayout(plot, {
-      shapes: [
-        ...shapes,
-        {
-          type: "rect",
-          xref: "x",
-          yref: "y",
-          x0: xval,
-          x1: xval,
-          y0: yval,
-          y1: yval,
-          line: { color: "#ff0000", width: 1 },
-          fillcolor: "rgba(255,0,0,0.15)",
-        },
-      ],
-      "xaxis.autorange": false,
-      "yaxis.autorange": false,
-    });
-  };
+      const cx = x0 + ((e.clientX - rect.left) / rect.width) * (x1 - x0);
+      const cy = y1 - ((e.clientY - rect.top) / rect.height) * (y1 - y0);
 
-  const handleMouseMove = (e: any) => {
-    if (!dragStart.current || !plotRef.current) return;
-
-    const { xval, yval } = e.points[0];
-    const plot = plotRef.current.el;
-    const idx = overlayShapeIndex.current!;
-    const shapes = [...(plot.layout.shapes ?? [])];
-
-    shapes[idx] = {
-      ...shapes[idx],
-      x1: xval,
-      y1: yval,
+      Plotly.relayout(plot, {
+        "xaxis.range": [cx - (cx - x0) * zoom, cx + (x1 - cx) * zoom],
+        "yaxis.range": [cy - (cy - y0) * zoom, cy + (y1 - cy) * zoom],
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
+      });
     };
 
-    Plotly.relayout(plot, {
-      shapes,
-      "xaxis.autorange": false,
-      "yaxis.autorange": false,
-    });
-  };
+    /* ---- Mouse Down ---- */
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.shiftKey) {
+        isPanning.current = true;
+        panStart.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
 
-  const handleMouseUp = (e: any) => {
-    if (!dragStart.current || !plotRef.current) return;
+      isSelecting.current = true;
+      selectStart.current = pixelToData(e, plot);
 
-    const plot = plotRef.current.el;
-    const shapes = [...(plot.layout.shapes ?? [])];
-    shapes.pop(); // overlay 제거
+      selectingShape.current = {
+        type: "rect",
+        xref: "x",
+        yref: "y",
+        x0: selectStart.current.x,
+        y0: selectStart.current.y,
+        x1: selectStart.current.x,
+        y1: selectStart.current.y,
+        fillcolor: "rgba(0,120,255,0.25)",
+        line: { color: "#0078ff", width: 1 },
+      };
 
-    const { x, y } = e.points[0];
-    const { x: sx, y: sy } = dragStart.current;
-
-    const minX = Math.min(sx, x);
-    const maxX = Math.max(sx, x);
-    const minY = Math.min(sy, y);
-    const maxY = Math.max(sy, y);
-
-    if (!e.event.ctrlKey) {
-      selectedZ.current = y.map(() => x.map(() => NaN));
-    }
-
-    const selectedValues: number[] = [];
-
-    y.forEach((yy, iy) => {
-      if (yy < minY || yy > maxY) return;
-      x.forEach((xx, ix) => {
-        if (xx < minX || xx > maxX) return;
-        const v = baseZ.current[iy][ix];
-        if (!Number.isNaN(v)) {
-          selectedZ.current[iy][ix] = 1;
-          selectedValues.push(v);
-        }
+      Plotly.relayout(plot, {
+        shapes: [selectingShape.current],
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
       });
-    });
+    };
 
-    console.log("선택 데이터:", selectedValues);
+    /* ---- Mouse Move ---- */
+    const onMouseMove = (e: MouseEvent) => {
+      if (isPanning.current) {
+        const dx = e.clientX - panStart.current.x;
+        const dy = e.clientY - panStart.current.y;
+        panStart.current = { x: e.clientX, y: e.clientY };
 
-    Plotly.relayout(plot, {
-      shapes,
-      "xaxis.autorange": false,
-      "yaxis.autorange": false,
-    });
+        const [x0, x1] = plot.layout.xaxis.range;
+        const [y0, y1] = plot.layout.yaxis.range;
 
-    dragStart.current = null;
-    overlayShapeIndex.current = null;
-  };
-
-  /* ---------------- 렌더 ---------------- */
-
-  return (
-    <Plot
-      ref={plotRef}
-      data={[
-        {
-          type: "heatmap",
-          x,
-          y,
-          z: baseZ.current,
-          customdata: customData.current,
-          text: showText ? textData.current : undefined,
-          texttemplate: showText ? "%{text}" : undefined,
-          textfont: { size: 9, color: "#000" },
-          hovertemplate: `
-            <b>Die</b>: %{customdata.dieId}<br>
-            <b>Lot</b>: %{customdata.lotId}<br>
-            <b>X</b>: %{x}<br>
-            <b>Y</b>: %{y}<br>
-            <b>Value</b>: %{z:.2f}<br>
-            <b>Temp</b>: %{customdata.temp} ℃<br>
-            <b>Status</b>: %{customdata.passLabel}
-            <extra></extra>
-          `,
-        },
-        {
-          type: "heatmap",
-          x,
-          y,
-          z: selectedZ.current,
-          hoverinfo: "skip",
-          showscale: false,
-          colorscale: [
-            [0, "white"],
-            [0.499, "white"],
-            [0.5, "red"],
-            [1, "red"],
+        Plotly.relayout(plot, {
+          "xaxis.range": [
+            x0 - (dx / plot.clientWidth) * (x1 - x0),
+            x1 - (dx / plot.clientWidth) * (x1 - x0),
           ],
-        },
-      ]}
-      layout={{
-        dragmode: "pan",
-        xaxis: { scaleanchor: "y" },
-        yaxis: {},
-        uirevision: "keep",
-      }}
-      config={{
-        scrollZoom: true,
-        displayModeBar: false,
-      }}
-      onRelayout={handleRelayout}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    />
+          "yaxis.range": [
+            y0 + (dy / plot.clientHeight) * (y1 - y0),
+            y1 + (dy / plot.clientHeight) * (y1 - y0),
+          ],
+          "xaxis.autorange": false,
+          "yaxis.autorange": false,
+        });
+        return;
+      }
+
+      if (!isSelecting.current || !selectingShape.current) return;
+
+      const cur = pixelToData(e, plot);
+      selectingShape.current.x1 = cur.x;
+      selectingShape.current.y1 = cur.y;
+
+      Plotly.relayout(plot, {
+        shapes: [selectingShape.current],
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
+      });
+    };
+
+    /* ---- Mouse Up ---- */
+    const onMouseUp = (e: MouseEvent) => {
+      if (isPanning.current) {
+        isPanning.current = false;
+        return;
+      }
+
+      if (!isSelecting.current || !selectingShape.current) return;
+
+      const end = pixelToData(e, plot);
+
+      const minX = Math.min(selectStart.current.x, end.x);
+      const maxX = Math.max(selectStart.current.x, end.x);
+      const minY = Math.min(selectStart.current.y, end.y);
+      const maxY = Math.max(selectStart.current.y, end.y);
+
+      if (!e.ctrlKey) selectedSet.current.clear();
+
+      const values: number[] = [];
+
+      y.forEach((yy, iy) => {
+        if (yy < minY || yy > maxY) return;
+        x.forEach((xx, ix) => {
+          if (xx < minX || xx > maxX) return;
+          const v = baseZ.current[iy][ix];
+          if (!Number.isNaN(v)) {
+            selectedSet.current.add(`${ix}-${iy}`);
+            values.push(v);
+          }
+        });
+      });
+
+      setSelectedZ(
+        y.map((_, iy) =>
+          x.map((_, ix) =>
+            selectedSet.current.has(`${ix}-${iy}`) ? 1 : NaN
+          )
+        )
+      );
+
+      console.log("선택 데이터:", values);
+
+      selectingShape.current = null;
+      Plotly.relayout(plot, { shapes: [] });
+
+      isSelecting.current = false;
+    };
+
+    wrapper.addEventListener("wheel", onWheel, { passive: false });
+    wrapper.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      wrapper.removeEventListener("wheel", onWheel);
+      wrapper.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  /* ================= 렌더 ================= */
+  return (
+    <div ref={wrapperRef} style={{ width: "100%", height: 500 }}>
+      <Plot
+        data={[
+          { type: "heatmap", x, y, z: baseZ.current },
+          {
+            type: "heatmap",
+            x,
+            y,
+            z: selectedZ,
+            showscale: false,
+            colorscale: [[0, "rgba(0,0,0,0)"], [1, "red"]],
+          },
+        ]}
+        layout={layoutRef.current}
+        style={{ width: "100%", height: "100%" }}
+        onInitialized={(_, gd) => (plotRef.current = gd as PlotDiv)}
+      />
+    </div>
   );
 }
