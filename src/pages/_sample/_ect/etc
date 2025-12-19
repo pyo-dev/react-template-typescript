@@ -1,49 +1,77 @@
 import { useEffect, useRef } from "react";
 import Plot from "react-plotly.js";
 import Plotly from "plotly.js-dist-min";
+import type { Layout, Config } from "plotly.js";
 
-export default function HeatmapShiftInteraction() {
-  const wrapperRef = useRef(null);
-  const plotDivRef = useRef(null);
+/* ===== Plotly graphDiv 최소 타입 ===== */
+type PlotlyGraphDiv = HTMLDivElement & {
+  layout: {
+    xaxis: { range?: [number, number] };
+    yaxis: { range?: [number, number] };
+  };
+  data: Array<{
+    x: number[];
+    y: number[];
+  }>;
+};
 
-  // 패닝 상태 ref
+const WaferHeatmap: React.FC = () => {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const plotRef = useRef<PlotlyGraphDiv | null>(null);
+
   const isPanningRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
 
-  /* ===== 예제 heatmap 데이터 ===== */
+  /* ===== 예시: 원형 반도체 좌표 데이터 ===== */
+  const R = 100;
+
+  const x = Array.from({ length: 200 }, (_, i) => i - 100);
+  const y = Array.from({ length: 200 }, (_, i) => i - 100);
+
+  const z = y.map((yy) =>
+    x.map((xx) => (xx * xx + yy * yy <= R * R ? Math.random() * 10 : null))
+  );
+
   const data = [
     {
-      type: "heatmap",
-      z: [
-        [1, 2, 3, 4],
-        [2, 3, 4, 5],
-        [3, 4, 5, 6],
-      ],
-      x: ["A", "B", "C", "D"],   // categorical
-      y: ["Y1", "Y2", "Y3"],    // categorical
+      type: "heatmap" as const,
+      x,
+      y,
+      z,
       colorscale: "Viridis",
+      hoverongaps: false,
     },
   ];
 
-  /* ===== Plotly layout ===== */
-  const layout = {
-    dragmode: false, // 🔥 기본 드래그 OFF
-    margin: { t: 20, r: 20, b: 40, l: 40 },
+  /* ===== 데이터 기반 range 자동 계산 ===== */
+  const xMin = Math.min(...x);
+  const xMax = Math.max(...x);
+  const yMin = Math.min(...y);
+  const yMax = Math.max(...y);
+
+  /* ===== layout ===== */
+  const layout: Partial<Layout> = {
+    dragmode: false,
+    margin: { t: 20, r: 20, b: 20, l: 20 },
     xaxis: {
-      type: "category",
       autorange: false,
-      fixedrange: false,
+      range: [xMin, xMax],
+      scaleanchor: "y", // 🔥 비율 고정
+      scaleratio: 1,
+      zeroline: false,
     },
     yaxis: {
-      type: "category",
       autorange: false,
-      fixedrange: false,
+      range: [yMin, yMax],
+      scaleanchor: "x",
+      scaleratio: 1,
+      zeroline: false,
     },
   };
 
-  /* ===== Plotly config ===== */
-  const config = {
-    scrollZoom: false, // 🔥 기본 휠 줌 OFF
+  /* ===== config ===== */
+  const config: Partial<Config> = {
+    scrollZoom: false,
     displayModeBar: true,
     doubleClick: false,
   };
@@ -53,43 +81,42 @@ export default function HeatmapShiftInteraction() {
     const el = wrapperRef.current;
     if (!el) return;
 
-    /* --- Zoom --- */
-    const onWheel = (e) => {
+    /* ---------- ZOOM ---------- */
+    const onWheel = (e: WheelEvent) => {
       if (!e.shiftKey) return;
 
       e.preventDefault();
-      e.stopPropagation();
 
-      const plot = plotDivRef.current;
+      const plot = plotRef.current;
       if (!plot) return;
 
-      const xLen = plot.data[0].x.length;
-      const yLen = plot.data[0].y.length;
+      const rect = plot.getBoundingClientRect();
 
-      const xRange = plot.layout.xaxis.range ?? [0, xLen - 1];
-      const yRange = plot.layout.yaxis.range ?? [0, yLen - 1];
+      const [x0, x1] = plot.layout.xaxis.range!;
+      const [y0, y1] = plot.layout.yaxis.range!;
+
+      const xSpan = x1 - x0;
+      const ySpan = y1 - y0;
 
       const zoom = e.deltaY > 0 ? 1.15 : 0.85;
 
-      const cx = (xRange[0] + xRange[1]) / 2;
-      const cy = (yRange[0] + yRange[1]) / 2;
+      const cx = x0 + xSpan * ((e.clientX - rect.left) / rect.width);
+      const cy = y1 - ySpan * ((e.clientY - rect.top) / rect.height);
 
       Plotly.relayout(plot, {
-        "xaxis.autorange": false,
-        "yaxis.autorange": false,
         "xaxis.range": [
-          Math.max(0, cx + (xRange[0] - cx) * zoom),
-          Math.min(xLen - 1, cx + (xRange[1] - cx) * zoom),
+          cx - (cx - x0) * zoom,
+          cx + (x1 - cx) * zoom,
         ],
         "yaxis.range": [
-          Math.max(0, cy + (yRange[0] - cy) * zoom),
-          Math.min(yLen - 1, cy + (yRange[1] - cy) * zoom),
+          cy - (cy - y0) * zoom,
+          cy + (y1 - cy) * zoom,
         ],
       });
     };
 
-    /* --- Pan --- */
-    const onMouseDown = (e) => {
+    /* ---------- PAN ---------- */
+    const onMouseDown = (e: MouseEvent) => {
       if (!e.shiftKey) return;
 
       isPanningRef.current = true;
@@ -98,33 +125,30 @@ export default function HeatmapShiftInteraction() {
       e.preventDefault();
     };
 
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!isPanningRef.current) return;
 
-      const plot = plotDivRef.current;
+      const plot = plotRef.current;
       if (!plot) return;
+
+      const rect = plot.getBoundingClientRect();
 
       const dx = e.clientX - lastPosRef.current.x;
       const dy = e.clientY - lastPosRef.current.y;
       lastPosRef.current = { x: e.clientX, y: e.clientY };
 
-      const xLen = plot.data[0].x.length;
-      const yLen = plot.data[0].y.length;
+      const [x0, x1] = plot.layout.xaxis.range!;
+      const [y0, y1] = plot.layout.yaxis.range!;
 
-      const xRange = plot.layout.xaxis.range ?? [0, xLen - 1];
-      const yRange = plot.layout.yaxis.range ?? [0, yLen - 1];
+      const xSpan = x1 - x0;
+      const ySpan = y1 - y0;
 
-      const scale = 0.01; // 패닝 감도
+      const moveX = -(dx / rect.width) * xSpan;
+      const moveY = (dy / rect.height) * ySpan;
 
       Plotly.relayout(plot, {
-        "xaxis.range": [
-          Math.max(0, xRange[0] - dx * scale),
-          Math.min(xLen - 1, xRange[1] - dx * scale),
-        ],
-        "yaxis.range": [
-          Math.max(0, yRange[0] + dy * scale),
-          Math.min(yLen - 1, yRange[1] + dy * scale),
-        ],
+        "xaxis.range": [x0 + moveX, x1 + moveX],
+        "yaxis.range": [y0 + moveY, y1 + moveY],
       });
     };
 
@@ -133,7 +157,6 @@ export default function HeatmapShiftInteraction() {
       el.style.cursor = "default";
     };
 
-    // 이벤트 등록
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
@@ -152,7 +175,7 @@ export default function HeatmapShiftInteraction() {
       ref={wrapperRef}
       style={{
         width: "100%",
-        height: "400px",
+        height: "500px",
         overflow: "hidden",
         userSelect: "none",
       }}
@@ -162,13 +185,15 @@ export default function HeatmapShiftInteraction() {
         layout={layout}
         config={config}
         style={{ width: "100%", height: "100%" }}
-        onInitialized={(figure, graphDiv) => {
-          plotDivRef.current = graphDiv; // 🔑 핵심
+        onInitialized={(_, graphDiv) => {
+          plotRef.current = graphDiv as PlotlyGraphDiv;
         }}
-        onUpdate={(figure, graphDiv) => {
-          plotDivRef.current = graphDiv;
+        onUpdate={(_, graphDiv) => {
+          plotRef.current = graphDiv as PlotlyGraphDiv;
         }}
       />
     </div>
   );
-}
+};
+
+export default WaferHeatmap;
