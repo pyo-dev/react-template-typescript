@@ -1,58 +1,174 @@
-useEffect(() => {
-  const el = wrapperRef.current;
-  if (!el) return;
+import { useEffect, useRef } from "react";
+import Plot from "react-plotly.js";
+import Plotly from "plotly.js-dist-min";
 
-  const onMouseDown = (e) => {
-    if (!e.shiftKey) return;
+export default function HeatmapShiftInteraction() {
+  const wrapperRef = useRef(null);
+  const plotDivRef = useRef(null);
 
-    isPanningRef.current = true;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-    e.preventDefault();
-  };
+  // 패닝 상태 ref
+  const isPanningRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
 
-  const onMouseMove = (e) => {
-    if (!isPanningRef.current) return;
-
-    const plot = plotDivRef.current;
-    if (!plot) return;
-
-    const dx = e.clientX - lastPosRef.current.x;
-    const dy = e.clientY - lastPosRef.current.y;
-
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-
-    const xLen = plot.data[0].x.length;
-    const yLen = plot.data[0].y.length;
-
-    const xRange = plot.layout.xaxis.range ?? [0, xLen - 1];
-    const yRange = plot.layout.yaxis.range ?? [0, yLen - 1];
-
-    // 픽셀 → 인덱스 변환 (감도 조절)
-    const scale = 0.01;
-
-    Plotly.relayout(plot, {
-      "xaxis.range": [
-        Math.max(0, xRange[0] - dx * scale),
-        Math.min(xLen - 1, xRange[1] - dx * scale),
+  /* ===== 예제 heatmap 데이터 ===== */
+  const data = [
+    {
+      type: "heatmap",
+      z: [
+        [1, 2, 3, 4],
+        [2, 3, 4, 5],
+        [3, 4, 5, 6],
       ],
-      "yaxis.range": [
-        Math.max(0, yRange[0] + dy * scale),
-        Math.min(yLen - 1, yRange[1] + dy * scale),
-      ],
-    });
+      x: ["A", "B", "C", "D"],   // categorical
+      y: ["Y1", "Y2", "Y3"],    // categorical
+      colorscale: "Viridis",
+    },
+  ];
+
+  /* ===== Plotly layout ===== */
+  const layout = {
+    dragmode: false, // 🔥 기본 드래그 OFF
+    margin: { t: 20, r: 20, b: 40, l: 40 },
+    xaxis: {
+      type: "category",
+      autorange: false,
+      fixedrange: false,
+    },
+    yaxis: {
+      type: "category",
+      autorange: false,
+      fixedrange: false,
+    },
   };
 
-  const onMouseUp = () => {
-    isPanningRef.current = false;
+  /* ===== Plotly config ===== */
+  const config = {
+    scrollZoom: false, // 🔥 기본 휠 줌 OFF
+    displayModeBar: true,
+    doubleClick: false,
   };
 
-  el.addEventListener("mousedown", onMouseDown);
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp);
+  /* ===== Shift + Wheel Zoom / Shift + Drag Pan ===== */
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
 
-  return () => {
-    el.removeEventListener("mousedown", onMouseDown);
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
-  };
-}, []);
+    /* --- Zoom --- */
+    const onWheel = (e) => {
+      if (!e.shiftKey) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const plot = plotDivRef.current;
+      if (!plot) return;
+
+      const xLen = plot.data[0].x.length;
+      const yLen = plot.data[0].y.length;
+
+      const xRange = plot.layout.xaxis.range ?? [0, xLen - 1];
+      const yRange = plot.layout.yaxis.range ?? [0, yLen - 1];
+
+      const zoom = e.deltaY > 0 ? 1.15 : 0.85;
+
+      const cx = (xRange[0] + xRange[1]) / 2;
+      const cy = (yRange[0] + yRange[1]) / 2;
+
+      Plotly.relayout(plot, {
+        "xaxis.autorange": false,
+        "yaxis.autorange": false,
+        "xaxis.range": [
+          Math.max(0, cx + (xRange[0] - cx) * zoom),
+          Math.min(xLen - 1, cx + (xRange[1] - cx) * zoom),
+        ],
+        "yaxis.range": [
+          Math.max(0, cy + (yRange[0] - cy) * zoom),
+          Math.min(yLen - 1, cy + (yRange[1] - cy) * zoom),
+        ],
+      });
+    };
+
+    /* --- Pan --- */
+    const onMouseDown = (e) => {
+      if (!e.shiftKey) return;
+
+      isPanningRef.current = true;
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
+      el.style.cursor = "grabbing";
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isPanningRef.current) return;
+
+      const plot = plotDivRef.current;
+      if (!plot) return;
+
+      const dx = e.clientX - lastPosRef.current.x;
+      const dy = e.clientY - lastPosRef.current.y;
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
+
+      const xLen = plot.data[0].x.length;
+      const yLen = plot.data[0].y.length;
+
+      const xRange = plot.layout.xaxis.range ?? [0, xLen - 1];
+      const yRange = plot.layout.yaxis.range ?? [0, yLen - 1];
+
+      const scale = 0.01; // 패닝 감도
+
+      Plotly.relayout(plot, {
+        "xaxis.range": [
+          Math.max(0, xRange[0] - dx * scale),
+          Math.min(xLen - 1, xRange[1] - dx * scale),
+        ],
+        "yaxis.range": [
+          Math.max(0, yRange[0] + dy * scale),
+          Math.min(yLen - 1, yRange[1] + dy * scale),
+        ],
+      });
+    };
+
+    const onMouseUp = () => {
+      isPanningRef.current = false;
+      el.style.cursor = "default";
+    };
+
+    // 이벤트 등록
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{
+        width: "100%",
+        height: "400px",
+        overflow: "hidden",
+        userSelect: "none",
+      }}
+    >
+      <Plot
+        data={data}
+        layout={layout}
+        config={config}
+        style={{ width: "100%", height: "100%" }}
+        onInitialized={(figure, graphDiv) => {
+          plotDivRef.current = graphDiv; // 🔑 핵심
+        }}
+        onUpdate={(figure, graphDiv) => {
+          plotDivRef.current = graphDiv;
+        }}
+      />
+    </div>
+  );
+}
