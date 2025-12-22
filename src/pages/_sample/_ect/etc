@@ -25,12 +25,8 @@ export default function WaferHeatmap({
 
   const [tooltip, setTooltip] = useState<{ x: number; y: number; v: number; px: number; py: number } | null>(null);
 
-  /* =========================
-     meta 계산
-  ========================= */
   useEffect(() => {
     if (!data.length) return;
-
     const xs = data.map(d => d[0]);
     const ys = data.map(d => d[1]);
     const minX = Math.min(...xs);
@@ -40,9 +36,6 @@ export default function WaferHeatmap({
     metaRef.current = { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }, [data]);
 
-  /* =========================
-     ResizeObserver로 초기 렌더링 안정화
-  ========================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -70,19 +63,15 @@ export default function WaferHeatmap({
     const size = Math.min(canvas.clientWidth, canvas.clientHeight);
     const dpr = window.devicePixelRatio || 1;
     const raw = size / Math.max(w, h);
-    return Math.floor(raw * dpr) / dpr;
+    return Math.max(1, Math.floor(raw * dpr) / dpr); // 최소 1px
   };
 
-  /* =========================
-     DRAW
-  ========================= */
   const draw = () => {
     const canvas = canvasRef.current;
     const wrapper = wrapperRef.current;
     if (!canvas || !wrapper) return;
 
     const ctx = canvas.getContext("2d")!;
-    const dpr = window.devicePixelRatio || 1;
     const width = wrapper.clientWidth;
     const height = wrapper.clientHeight;
 
@@ -92,13 +81,11 @@ export default function WaferHeatmap({
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
 
-    // 중앙 정렬 오프셋
     const totalWidth = w * cell;
     const totalHeight = h * cell;
     const xOffset = (width / scaleRef.current - totalWidth) / 2;
     const yOffset = (height / scaleRef.current - totalHeight) / 2;
 
-    /* ===== heatmap + 중앙 텍스트 ===== */
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
@@ -116,7 +103,6 @@ export default function WaferHeatmap({
       ctx.fillText(v.toString(), xOffset + gx * cell + cell / 2, yOffset + gy * cell + cell / 2);
     }
 
-    /* ===== grid line ===== */
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -134,7 +120,6 @@ export default function WaferHeatmap({
     }
     ctx.stroke();
 
-    /* ===== drag overlay ===== */
     if (dragRef.current.dragging) {
       const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
@@ -145,9 +130,6 @@ export default function WaferHeatmap({
     }
   };
 
-  /* =========================
-     MOUSE HANDLERS
-  ========================= */
   const handleMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -206,7 +188,6 @@ export default function WaferHeatmap({
   const handleUp = () => {
     dragRef.current.dragging = false;
     draw();
-
     if (dragHappenedRef.current && onSelectionChange) {
       const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
       onSelectionChange(selectedData);
@@ -216,7 +197,6 @@ export default function WaferHeatmap({
 
   const handleClick = (e: React.MouseEvent) => {
     if (dragHappenedRef.current) return;
-
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scaleRef.current;
@@ -247,16 +227,23 @@ export default function WaferHeatmap({
     }
   };
 
-  /* =========================
-     SHIFT + WHEEL ZOOM
-  ========================= */
   const handleWheel = (e: React.WheelEvent) => {
     if (!e.shiftKey) return;
     e.preventDefault();
+
+    const canvas = canvasRef.current!;
+    const cell = getCellSize();
+    const { w, h } = metaRef.current;
+
     const delta = -e.deltaY;
     const factor = 1.05;
-    scaleRef.current *= delta > 0 ? factor : 1 / factor;
-    scaleRef.current = Math.max(0.2, Math.min(scaleRef.current, 10)); // 제한
+    let newScale = scaleRef.current * (delta > 0 ? factor : 1 / factor);
+
+    // 최소 scale 제한
+    const minScale = Math.min(1, canvas.clientWidth / (w * cell), canvas.clientHeight / (h * cell));
+    newScale = Math.max(minScale, Math.min(newScale, 10));
+
+    scaleRef.current = newScale;
     draw();
   };
 
