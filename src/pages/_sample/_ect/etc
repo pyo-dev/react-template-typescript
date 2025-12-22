@@ -1,21 +1,26 @@
-import Plot from 'react-plotly.js';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type WaferData = [number, number, number];
 
 interface Props {
   data: WaferData[];
+  size?: number; // canvas px
 }
 
-export default function WaferHeatmap({ data }: Props) {
-  const zRef = useRef<Float32Array | null>(null);
-  const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
-  const offsetRef = useRef<{ minX: number; minY: number }>({ minX: 0, minY: 0 });
-  const [revision, setRevision] = useState(0);
+export default function WaferCanvas({ data, size = 600 }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scaleRef = useRef(1);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
 
-  /* 1️⃣ data → grid */
+  const gridRef = useRef<Float32Array | null>(null);
+  const metaRef = useRef({ w: 0, h: 0, minX: 0, minY: 0 });
+
+  const [, forceRender] = useState(0);
+
+  /* 1️⃣ grid 생성 */
   useEffect(() => {
-    if (!data?.length) return;
+    if (!data.length) return;
 
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
@@ -27,137 +32,121 @@ export default function WaferHeatmap({ data }: Props) {
       maxY = Math.max(maxY, y);
     }
 
-    const W = maxX - minX + 1;
-    const H = maxY - minY + 1;
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
 
-    sizeRef.current = { w: W, h: H };
-    offsetRef.current = { minX, minY };
+    metaRef.current = { w, h, minX, minY };
 
-    const r = Math.min(W, H) / 2;
-    const cx = W / 2;
-    const cy = H / 2;
+    const grid = new Float32Array(w * h);
+    const cx = (w - 1) / 2;
+    const cy = (h - 1) / 2;
+    const r = Math.min(w, h) / 2;
 
-    const z = new Float32Array(W * H);
-
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
         const dx = x - cx;
         const dy = y - cy;
-        z[y * W + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
+        grid[y * w + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
       }
     }
 
     for (const [x, y, v] of data) {
       const ix = x - minX;
       const iy = y - minY;
-      const idx = iy * W + ix;
-      if (!Number.isNaN(z[idx])) z[idx] = v;
+      const idx = iy * w + ix;
+      if (!Number.isNaN(grid[idx])) grid[idx] = v;
     }
 
-    zRef.current = z;
-    setRevision(r => r + 1);
+    gridRef.current = grid;
+    forceRender(v => v + 1);
   }, [data]);
 
-  /* 2️⃣ select */
-  const handleSelected = (e: any) => {
-    if (!e?.range || !zRef.current) return;
+  /* 2️⃣ draw */
+  const draw = () => {
+    const canvas = canvasRef.current;
+    const grid = gridRef.current;
+    if (!canvas || !grid) return;
 
-    const { w: W } = sizeRef.current;
-    const { minX, minY } = offsetRef.current;
-    const z = zRef.current;
+    const ctx = canvas.getContext('2d')!;
+    const { w, h } = metaRef.current;
 
-    let [x0, x1] = e.range.x;
-    let [y0, y1] = e.range.y;
+    ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
+    ctx.clearRect(-10000, -10000, 20000, 20000);
 
-    const ix0 = Math.floor(x0 - minX);
-    const ix1 = Math.floor(x1 - minX);
-    const iy0 = Math.floor(y0 - minY);
-    const iy1 = Math.floor(y1 - minY);
+    const cell = size / Math.max(w, h);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const v = grid[y * w + x];
+        if (Number.isNaN(v)) continue;
+
+        ctx.fillStyle =
+          v > 5 ? '#ef4444' :
+          v > 2 ? '#22c55e' :
+          '#111827';
+
+        ctx.fillRect(x * cell, y * cell, cell, cell);
+      }
+    }
+  };
+
+  useEffect(draw);
+
+  /* 3️⃣ zoom */
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1.1 : 0.9;
+    scaleRef.current *= delta;
+    draw();
+  };
+
+  /* 4️⃣ drag select */
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragRef.current = { x: e.offsetX, y: e.offsetY };
+  };
+
+  const onMouseUp = (e: React.MouseEvent) => {
+    if (!dragRef.current || !gridRef.current) return;
+
+    const { w, h } = metaRef.current;
+    const cell = size / Math.max(w, h);
+
+    const x0 = Math.min(dragRef.current.x, e.offsetX) / scaleRef.current;
+    const x1 = Math.max(dragRef.current.x, e.offsetX) / scaleRef.current;
+    const y0 = Math.min(dragRef.current.y, e.offsetY) / scaleRef.current;
+    const y1 = Math.max(dragRef.current.y, e.offsetY) / scaleRef.current;
+
+    const ix0 = Math.floor(x0 / cell);
+    const ix1 = Math.floor(x1 / cell);
+    const iy0 = Math.floor(y0 / cell);
+    const iy1 = Math.floor(y1 / cell);
 
     let maxV = 0;
-    for (const v of z) if (!Number.isNaN(v)) maxV = Math.max(maxV, v);
-    const selectValue = maxV + 1;
+    for (const v of gridRef.current) if (!Number.isNaN(v)) maxV = Math.max(maxV, v);
+    const mark = maxV + 1;
 
     for (let y = iy0; y <= iy1; y++) {
       for (let x = ix0; x <= ix1; x++) {
-        const idx = y * W + x;
-        if (!Number.isNaN(z[idx])) z[idx] = selectValue;
+        const idx = y * w + x;
+        if (!Number.isNaN(gridRef.current[idx])) {
+          gridRef.current[idx] = mark;
+        }
       }
     }
 
-    setRevision(r => r + 1);
+    dragRef.current = null;
+    draw();
   };
 
-  /* 3️⃣ plotly data */
-  const { z2D, custom2D } = useMemo(() => {
-    if (!zRef.current) return { z2D: [], custom2D: [] };
-
-    const { w: W, h: H } = sizeRef.current;
-    const { minX, minY } = offsetRef.current;
-    const z = zRef.current;
-
-    const z2D: number[][] = [];
-    const custom2D: [number, number][][] = [];
-
-    for (let y = 0; y < H; y++) {
-      z2D[y] = [];
-      custom2D[y] = [];
-      for (let x = 0; x < W; x++) {
-        z2D[y][x] = z[y * W + x];
-        custom2D[y][x] = [x + minX, y + minY];
-      }
-    }
-
-    return { z2D, custom2D };
-  }, [revision]);
-
-  if (!zRef.current) return null;
-
-  const { w: W, h: H } = sizeRef.current;
-  const { minX, minY } = offsetRef.current;
-
   return (
-    <Plot
-      data={[
-        {
-          type: 'heatmap',
-          z: z2D,
-          customdata: custom2D,
-          hovertemplate:
-            'x: %{customdata[0]}<br>' +
-            'y: %{customdata[1]}<br>' +
-            'v: %{z}<extra></extra>',
-          colorscale: [
-            [0, '#111827'],
-            [0.7, '#22c55e'],
-            [1, '#ef4444'],
-          ],
-        },
-      ]}
-      layout={{
-        width: 600,
-        height: 600,
-        dragmode: 'zoom',          // 🔥 핵심
-        uirevision: 'wafer-fixed', // 🔥 핵심
-        xaxis: {
-          range: [minX, minX + W],
-          autorange: false,
-          visible: false,
-        },
-        yaxis: {
-          range: [minY, minY + H],
-          autorange: 'reversed',
-          visible: false,
-          scaleanchor: 'x',
-        },
-        margin: { l: 0, r: 0, t: 0, b: 0 },
-      }}
-      config={{
-        displayModeBar: true,
-        modeBarButtonsToAdd: ['select2d'], // 🔥 셀렉트는 버튼으로만
-      }}
-      revision={revision}
-      onSelected={handleSelected}
+    <canvas
+      ref={canvasRef}
+      width={size}
+      height={size}
+      onWheel={onWheel}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      style={{ background: '#000', cursor: 'crosshair' }}
     />
   );
 }
