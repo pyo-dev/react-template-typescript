@@ -1,254 +1,128 @@
-import { useEffect, useRef, useState } from "react";
-import Plot from "react-plotly.js";
-import Plotly from "plotly.js-dist-min";
-import type { Layout, Shape } from "plotly.js";
+import Plot from 'react-plotly.js';
+import { useEffect, useMemo, useState } from 'react';
 
-type PlotDiv = HTMLDivElement & {
-  _fullLayout: any;
-  layout: any;
-};
+/* ===============================
+   웨이퍼 Heatmap 데이터 생성
+================================ */
+function generateWaferHeatmap(size = 200, radius = 1) {
+  const x: number[] = [];
+  const y: number[] = [];
+  const z: (number | null)[][] = [];
 
-type CellKey = `${number}-${number}`;
+  for (let i = 0; i < size; i++) {
+    x.push(-radius + (2 * radius * i) / size);
+    y.push(-radius + (2 * radius * i) / size);
+  }
 
+  for (let i = 0; i < size; i++) {
+    const row: (number | null)[] = [];
+    for (let j = 0; j < size; j++) {
+      const dist = Math.sqrt(x[j] ** 2 + y[i] ** 2);
+      row.push(dist <= radius ? Math.random() * 100 : null);
+    }
+    z.push(row);
+  }
+
+  return { x, y, z };
+}
+
+/* ===============================
+   메인 컴포넌트
+================================ */
 export default function WaferHeatmap() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const plotRef = useRef<PlotDiv | null>(null);
+  const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
+  const [dragMode, setDragMode] = useState<'select' | 'pan'>('select');
 
-  /* ================= 상태 플래그 ================= */
-  const isPanning = useRef(false);
-  const isSelecting = useRef(false);
-
-  const panStart = useRef({ x: 0, y: 0 });
-  const selectStart = useRef({ x: 0, y: 0 });
-
-  const selectingShape = useRef<Shape | null>(null);
-
-  /* ================= 데이터 ================= */
-  const radius = 100;
-  const size = 200;
-
-  const x = Array.from({ length: size }, (_, i) => i - radius);
-  const y = Array.from({ length: size }, (_, i) => i - radius);
-
-  const baseZ = useRef(
-    y.map((yy) =>
-      x.map((xx) =>
-        xx * xx + yy * yy <= radius * radius ? Math.random() * 10 : NaN
-      )
-    )
-  );
-
-  const selectedSet = useRef<Set<CellKey>>(new Set());
-  const [selectedZ, setSelectedZ] = useState(
-    y.map(() => x.map(() => NaN))
-  );
-
-  /* ================= layout (고정) ================= */
-  const layoutRef = useRef<Partial<Layout>>({
-    uirevision: "wafer-fixed", // ⭐ 핵심
-    dragmode: false,
-    margin: { t: 10, r: 10, b: 10, l: 10 },
-    xaxis: {
-      range: [-radius, radius],
-      autorange: false,
-      scaleanchor: "y",
-      scaleratio: 1,
-    },
-    yaxis: {
-      range: [-radius, radius],
-      autorange: false,
-      scaleanchor: "x",
-      scaleratio: 1,
-    },
-    shapes: [],
-  });
-
-  /* ================= 유틸 ================= */
-  const pixelToData = (e: MouseEvent, plot: PlotDiv) => {
-    const fl = plot._fullLayout;
-    const rect = plot.getBoundingClientRect();
-
+  /* ===== Heatmap 데이터 (한 번만 생성) ===== */
+  const heatmapTrace = useMemo(() => {
+    const { x, y, z } = generateWaferHeatmap(220);
     return {
-      x: fl.xaxis.p2d(e.clientX - rect.left - fl.xaxis._offset),
-      y: fl.yaxis.p2d(e.clientY - rect.top - fl.yaxis._offset),
-    };
-  };
-
-  /* ================= 이벤트 ================= */
-  useEffect(() => {
-    const wrapper = wrapperRef.current!;
-    const plot = plotRef.current!;
-
-    /* ---- Shift + Wheel : Zoom ---- */
-    const onWheel = (e: WheelEvent) => {
-      if (!e.shiftKey) return;
-      e.preventDefault();
-
-      const [x0, x1] = plot.layout.xaxis.range;
-      const [y0, y1] = plot.layout.yaxis.range;
-
-      const rect = plot.getBoundingClientRect();
-      const zoom = e.deltaY > 0 ? 1.15 : 0.85;
-
-      const cx = x0 + ((e.clientX - rect.left) / rect.width) * (x1 - x0);
-      const cy = y1 - ((e.clientY - rect.top) / rect.height) * (y1 - y0);
-
-      Plotly.relayout(plot, {
-        "xaxis.range": [cx - (cx - x0) * zoom, cx + (x1 - cx) * zoom],
-        "yaxis.range": [cy - (cy - y0) * zoom, cy + (y1 - cy) * zoom],
-        "xaxis.autorange": false,
-        "yaxis.autorange": false,
-      });
-    };
-
-    /* ---- Mouse Down ---- */
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.shiftKey) {
-        isPanning.current = true;
-        panStart.current = { x: e.clientX, y: e.clientY };
-        return;
-      }
-
-      isSelecting.current = true;
-      selectStart.current = pixelToData(e, plot);
-
-      selectingShape.current = {
-        type: "rect",
-        xref: "x",
-        yref: "y",
-        x0: selectStart.current.x,
-        y0: selectStart.current.y,
-        x1: selectStart.current.x,
-        y1: selectStart.current.y,
-        fillcolor: "rgba(0,120,255,0.25)",
-        line: { color: "#0078ff", width: 1 },
-      };
-
-      Plotly.relayout(plot, {
-        shapes: [selectingShape.current],
-        "xaxis.autorange": false,
-        "yaxis.autorange": false,
-      });
-    };
-
-    /* ---- Mouse Move ---- */
-    const onMouseMove = (e: MouseEvent) => {
-      if (isPanning.current) {
-        const dx = e.clientX - panStart.current.x;
-        const dy = e.clientY - panStart.current.y;
-        panStart.current = { x: e.clientX, y: e.clientY };
-
-        const [x0, x1] = plot.layout.xaxis.range;
-        const [y0, y1] = plot.layout.yaxis.range;
-
-        Plotly.relayout(plot, {
-          "xaxis.range": [
-            x0 - (dx / plot.clientWidth) * (x1 - x0),
-            x1 - (dx / plot.clientWidth) * (x1 - x0),
-          ],
-          "yaxis.range": [
-            y0 + (dy / plot.clientHeight) * (y1 - y0),
-            y1 + (dy / plot.clientHeight) * (y1 - y0),
-          ],
-          "xaxis.autorange": false,
-          "yaxis.autorange": false,
-        });
-        return;
-      }
-
-      if (!isSelecting.current || !selectingShape.current) return;
-
-      const cur = pixelToData(e, plot);
-      selectingShape.current.x1 = cur.x;
-      selectingShape.current.y1 = cur.y;
-
-      Plotly.relayout(plot, {
-        shapes: [selectingShape.current],
-        "xaxis.autorange": false,
-        "yaxis.autorange": false,
-      });
-    };
-
-    /* ---- Mouse Up ---- */
-    const onMouseUp = (e: MouseEvent) => {
-      if (isPanning.current) {
-        isPanning.current = false;
-        return;
-      }
-
-      if (!isSelecting.current || !selectingShape.current) return;
-
-      const end = pixelToData(e, plot);
-
-      const minX = Math.min(selectStart.current.x, end.x);
-      const maxX = Math.max(selectStart.current.x, end.x);
-      const minY = Math.min(selectStart.current.y, end.y);
-      const maxY = Math.max(selectStart.current.y, end.y);
-
-      if (!e.ctrlKey) selectedSet.current.clear();
-
-      const values: number[] = [];
-
-      y.forEach((yy, iy) => {
-        if (yy < minY || yy > maxY) return;
-        x.forEach((xx, ix) => {
-          if (xx < minX || xx > maxX) return;
-          const v = baseZ.current[iy][ix];
-          if (!Number.isNaN(v)) {
-            selectedSet.current.add(`${ix}-${iy}`);
-            values.push(v);
-          }
-        });
-      });
-
-      setSelectedZ(
-        y.map((_, iy) =>
-          x.map((_, ix) =>
-            selectedSet.current.has(`${ix}-${iy}`) ? 1 : NaN
-          )
-        )
-      );
-
-      console.log("선택 데이터:", values);
-
-      selectingShape.current = null;
-      Plotly.relayout(plot, { shapes: [] });
-
-      isSelecting.current = false;
-    };
-
-    wrapper.addEventListener("wheel", onWheel, { passive: false });
-    wrapper.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-
-    return () => {
-      wrapper.removeEventListener("wheel", onWheel);
-      wrapper.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      type: 'heatmapgl',
+      x,
+      y,
+      z,
+      colorscale: 'Jet',
+      hoverinfo: 'x+y+z',
     };
   }, []);
 
-  /* ================= 렌더 ================= */
+  /* ===== 선택 포인트 Overlay ===== */
+  const selectedOverlay = useMemo(() => ({
+    type: 'scattergl',
+    mode: 'markers',
+    x: selectedPoints.map(p => p.x),
+    y: selectedPoints.map(p => p.y),
+    marker: {
+      color: 'lime',
+      size: 6,
+    },
+    hoverinfo: 'skip',
+  }), [selectedPoints]);
+
+  /* ===== 선택 이벤트 ===== */
+  const handleSelected = (e: any) => {
+    if (!e?.points) return;
+
+    const isCtrl = e.event?.ctrlKey;
+
+    setSelectedPoints(prev =>
+      isCtrl ? [...prev, ...e.points] : e.points
+    );
+
+    // 선택 데이터 출력
+    console.log(
+      '선택 Z 값:',
+      e.points.map((p: any) => p.z)
+    );
+  };
+
+  /* ===== Shift 키로 패닝 전환 ===== */
+  useEffect(() => {
+    const keyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey) setDragMode('pan');
+    };
+    const keyUp = () => setDragMode('select');
+
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    return () => {
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+    };
+  }, []);
+
+  /* ===== Layout ===== */
+  const layout = {
+    dragmode: dragMode,
+    selectdirection: 'any',
+    autosize: true,
+    uirevision: 'wafer-static', // 🔥 리렌더 방지
+    margin: { t: 20, l: 20, r: 20, b: 20 },
+    xaxis: {
+      fixedrange: false,
+      zeroline: false,
+    },
+    yaxis: {
+      fixedrange: false,
+      scaleanchor: 'x',
+      zeroline: false,
+    },
+  };
+
+  /* ===== Config ===== */
+  const config = {
+    scrollZoom: true,          // 휠 줌
+    displayModeBar: false,    // UI 제거 (성능)
+  };
+
   return (
-    <div ref={wrapperRef} style={{ width: "100%", height: 500 }}>
-      <Plot
-        data={[
-          { type: "heatmap", x, y, z: baseZ.current },
-          {
-            type: "heatmap",
-            x,
-            y,
-            z: selectedZ,
-            showscale: false,
-            colorscale: [[0, "rgba(0,0,0,0)"], [1, "red"]],
-          },
-        ]}
-        layout={layoutRef.current}
-        style={{ width: "100%", height: "100%" }}
-        onInitialized={(_, gd) => (plotRef.current = gd as PlotDiv)}
-      />
-    </div>
+    <Plot
+      data={[heatmapTrace, selectedOverlay]}
+      layout={layout}
+      config={config}
+      onSelected={handleSelected}
+      style={{ width: '100%', height: '100vh' }}
+      useResizeHandler
+    />
   );
 }
