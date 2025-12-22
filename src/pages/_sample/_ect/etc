@@ -25,10 +25,11 @@ export default function WaferHeatmap({
   const [tooltip, setTooltip] = useState<{ x: number; y: number; v: number; px: number; py: number } | null>(null);
 
   /* =========================
-     초기 meta 계산
+     meta 계산
   ========================= */
   useEffect(() => {
     if (!data.length) return;
+
     const xs = data.map(d => d[0]);
     const ys = data.map(d => d[1]);
     const minX = Math.min(...xs);
@@ -36,9 +37,30 @@ export default function WaferHeatmap({
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
     metaRef.current = { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
-    draw();
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
+  }, [data]);
+
+  /* =========================
+     ResizeObserver로 초기 렌더링 안정화
+  ========================= */
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      draw();
+    });
+
+    resizeObserver.observe(wrapper);
+    return () => resizeObserver.disconnect();
   }, [data]);
 
   const getCellSize = () => {
@@ -61,10 +83,6 @@ export default function WaferHeatmap({
     const ctx = canvas.getContext("2d")!;
     const dpr = window.devicePixelRatio || 1;
     const size = Math.min(wrapper.clientWidth, wrapper.clientHeight);
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, size, size);
@@ -178,12 +196,12 @@ export default function WaferHeatmap({
     if (dragHappenedRef.current && onSelectionChange) {
       const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
       onSelectionChange(selectedData);
-      dragHappenedRef.current = false; // 초기화
+      dragHappenedRef.current = false;
     }
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (dragHappenedRef.current) return; // 드래그 직후 클릭 무시
+    if (dragHappenedRef.current) return;
 
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
