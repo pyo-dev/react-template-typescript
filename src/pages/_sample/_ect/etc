@@ -16,12 +16,16 @@ export default function WaferCanvas({ data }: Props) {
   const scaleRef = useRef(1);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  /* 1️⃣ 데이터 → grid */
+  /* ===============================
+   * 1️⃣ API 데이터 → Grid 생성
+   * =============================== */
   useEffect(() => {
     if (!data.length) return;
 
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
 
     for (const [x, y] of data) {
       minX = Math.min(minX, x);
@@ -36,10 +40,12 @@ export default function WaferCanvas({ data }: Props) {
     metaRef.current = { w, h, minX, minY };
 
     const grid = new Float32Array(w * h);
+
     const cx = (w - 1) / 2;
     const cy = (h - 1) / 2;
     const r = Math.min(w, h) / 2;
 
+    // 웨이퍼 마스크
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const dx = x - cx;
@@ -48,6 +54,7 @@ export default function WaferCanvas({ data }: Props) {
       }
     }
 
+    // 값 매핑
     for (const [x, y, v] of data) {
       const ix = x - minX;
       const iy = y - minY;
@@ -59,17 +66,20 @@ export default function WaferCanvas({ data }: Props) {
     draw();
   }, [data]);
 
-  /* 2️⃣ draw */
+  /* ===============================
+   * 2️⃣ Draw
+   * =============================== */
   const draw = () => {
     const canvas = canvasRef.current;
-    const grid = gridRef.current;
     const container = containerRef.current;
-    if (!canvas || !grid || !container) return;
+    const grid = gridRef.current;
+    if (!canvas || !container || !grid) return;
 
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
 
     const size = Math.min(container.clientWidth, container.clientHeight);
+
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = `${size}px`;
@@ -81,35 +91,57 @@ export default function WaferCanvas({ data }: Props) {
     const { w, h } = metaRef.current;
     const cell = size / Math.max(w, h);
 
+    /* 2-1️⃣ 셀 채우기 */
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const v = grid[y * w + x];
         if (Number.isNaN(v)) continue;
 
-        // 🔥 선택 셀 색상 우선
-        if (v >= 10000) {
-          ctx.fillStyle = '#2563eb'; // 선택 영역
-        } else if (v > 5) {
-          ctx.fillStyle = '#ef4444';
-        } else if (v > 2) {
-          ctx.fillStyle = '#22c55e';
-        } else {
-          ctx.fillStyle = '#111827';
-        }
+        if (v >= 10000) ctx.fillStyle = '#2563eb'; // 선택 영역
+        else if (v > 5) ctx.fillStyle = '#ef4444';
+        else if (v > 2) ctx.fillStyle = '#22c55e';
+        else ctx.fillStyle = '#111827';
 
         ctx.fillRect(x * cell, y * cell, cell, cell);
       }
     }
+
+    /* 2-2️⃣ 그리드 라인 오버레이 */
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1 / dpr;
+
+    for (let x = 0; x <= w; x++) {
+      const px = x * cell;
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h * cell);
+      ctx.stroke();
+    }
+
+    for (let y = 0; y <= h; y++) {
+      const py = y * cell;
+      ctx.beginPath();
+      ctx.moveTo(0, py);
+      ctx.lineTo(w * cell, py);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   };
 
-  /* 3️⃣ 반응형 */
+  /* ===============================
+   * 3️⃣ 반응형 처리
+   * =============================== */
   useEffect(() => {
     const ro = new ResizeObserver(draw);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
 
-  /* 4️⃣ 줌 */
+  /* ===============================
+   * 4️⃣ Zoom (Wheel)
+   * =============================== */
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     scaleRef.current *= e.deltaY < 0 ? 1.1 : 0.9;
@@ -117,9 +149,14 @@ export default function WaferCanvas({ data }: Props) {
     draw();
   };
 
-  /* 5️⃣ 드래그 셀렉트 */
+  /* ===============================
+   * 5️⃣ Drag Select
+   * =============================== */
   const onMouseDown = (e: React.MouseEvent) => {
-    dragStartRef.current = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
+    dragStartRef.current = {
+      x: e.nativeEvent.offsetX,
+      y: e.nativeEvent.offsetY,
+    };
   };
 
   const onMouseUp = (e: React.MouseEvent) => {
@@ -129,10 +166,18 @@ export default function WaferCanvas({ data }: Props) {
     const size = canvasRef.current!.clientWidth;
     const cell = size / Math.max(w, h);
 
-    const x0 = Math.min(dragStartRef.current.x, e.nativeEvent.offsetX) / scaleRef.current;
-    const x1 = Math.max(dragStartRef.current.x, e.nativeEvent.offsetX) / scaleRef.current;
-    const y0 = Math.min(dragStartRef.current.y, e.nativeEvent.offsetY) / scaleRef.current;
-    const y1 = Math.max(dragStartRef.current.y, e.nativeEvent.offsetY) / scaleRef.current;
+    const x0 =
+      Math.min(dragStartRef.current.x, e.nativeEvent.offsetX) /
+      scaleRef.current;
+    const x1 =
+      Math.max(dragStartRef.current.x, e.nativeEvent.offsetX) /
+      scaleRef.current;
+    const y0 =
+      Math.min(dragStartRef.current.y, e.nativeEvent.offsetY) /
+      scaleRef.current;
+    const y1 =
+      Math.max(dragStartRef.current.y, e.nativeEvent.offsetY) /
+      scaleRef.current;
 
     const ix0 = Math.floor(x0 / cell);
     const ix1 = Math.floor(x1 / cell);
@@ -143,7 +188,7 @@ export default function WaferCanvas({ data }: Props) {
       for (let x = ix0; x <= ix1; x++) {
         const idx = y * w + x;
         if (!Number.isNaN(gridRef.current[idx])) {
-          gridRef.current[idx] = 10000; // 🔥 선택 마킹
+          gridRef.current[idx] = 10000; // 선택 마킹
         }
       }
     }
@@ -159,6 +204,7 @@ export default function WaferCanvas({ data }: Props) {
         width: '100%',
         height: '100%',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
       <canvas
@@ -166,7 +212,11 @@ export default function WaferCanvas({ data }: Props) {
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
-        style={{ display: 'block', cursor: 'crosshair' }}
+        style={{
+          display: 'block',
+          cursor: 'crosshair',
+          background: '#000',
+        }}
       />
     </div>
   );
