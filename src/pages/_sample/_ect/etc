@@ -27,13 +27,13 @@ export default function WaferHeatmap({ data }: Props) {
     py: number;
   } | null>(null);
 
-  const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-    dragging: boolean;
-  }>({ startX: 0, startY: 0, endX: 0, endY: 0, dragging: false });
+  const dragRef = useRef({
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+    dragging: false,
+  });
 
   /* =========================
      META 계산
@@ -64,7 +64,7 @@ export default function WaferHeatmap({ data }: Props) {
   }, [data]);
 
   /* =========================
-     공통 cell 계산 (중요)
+     공통 cell 계산 (렌더/툴팁/드래그 동일)
   ========================= */
   const getCellSize = () => {
     const canvas = canvasRef.current!;
@@ -95,32 +95,30 @@ export default function WaferHeatmap({ data }: Props) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, size, size);
 
-    const { minX, minY, maxY, w, h } = metaRef.current;
+    const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
 
+    // 웨이퍼 중심 & 반지름 (★ 오프바이원 해결)
     const cx = (w - 1) / 2;
     const cy = (h - 1) / 2;
     const r = (Math.min(w, h) - 1) / 2;
 
-    // heatmap
+    /* ===== heatmap ===== */
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
 
-      const dx = gx - cx;
-      const dy = gy - cy;
+      // ★ 셀 "중앙 기준" 거리 계산 (중요)
+      const dx = gx + 0.5 - cx;
+      const dy = gy + 0.5 - cy;
+
       if (dx * dx + dy * dy > r * r) continue;
 
       ctx.fillStyle = `hsl(${240 - v * 2}, 80%, 50%)`;
-      ctx.fillRect(
-        gx * cell,
-        gy * cell,
-        cell,
-        cell
-      );
+      ctx.fillRect(gx * cell, gy * cell, cell, cell);
     }
 
-    // grid line (선명하게)
+    /* ===== grid line (선명) ===== */
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -136,24 +134,14 @@ export default function WaferHeatmap({ data }: Props) {
     }
     ctx.stroke();
 
-    // drag overlay
+    /* ===== drag overlay ===== */
     if (dragRef.current.dragging) {
       const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
-      ctx.strokeStyle = "rgba(0,120,255,0.8)";
+      ctx.strokeStyle = "rgba(0,120,255,0.9)";
       ctx.lineWidth = 1;
-      ctx.fillRect(
-        startX,
-        startY,
-        endX - startX,
-        endY - startY
-      );
-      ctx.strokeRect(
-        startX,
-        startY,
-        endX - startX,
-        endY - startY
-      );
+      ctx.fillRect(startX, startY, endX - startX, endY - startY);
+      ctx.strokeRect(startX, startY, endX - startX, endY - startY);
     }
   };
 
