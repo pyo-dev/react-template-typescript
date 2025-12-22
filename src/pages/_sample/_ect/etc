@@ -11,16 +11,10 @@ interface Props {
 export default function WaferHeatmap({ data }: Props) {
   const zRef = useRef<Float32Array | null>(null);
   const sizeRef = useRef<number>(0);
-  const plotRef = useRef<any>(null);
-
-  const axisRangeRef = useRef<{
-    x?: [number, number];
-    y?: [number, number];
-  }>({});
-
+  const axisRangeRef = useRef<{ x?: [number, number]; y?: [number, number] }>({});
   const [revision, setRevision] = useState(0);
 
-  /** 1️⃣ data → SIZE 계산 + 웨이퍼 생성 */
+  /** 1️⃣ 데이터 → SIZE + 웨이퍼 생성 */
   useEffect(() => {
     if (!data || data.length === 0) return;
 
@@ -29,35 +23,30 @@ export default function WaferHeatmap({ data }: Props) {
     let maxV = 0;
 
     for (const [x, y, v] of data) {
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-      if (v > maxV) maxV = v;
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      maxV = Math.max(maxV, v);
     }
 
     const SIZE = Math.max(maxX, maxY) + 1;
     sizeRef.current = SIZE;
 
-    const SELECT_VALUE = maxV + 1;
-
     const r = SIZE / 2;
     const z = new Float32Array(SIZE * SIZE);
 
-    /** 웨이퍼 원형 마스크 */
+    // 웨이퍼 마스크
     for (let y = 0; y < SIZE; y++) {
       for (let x = 0; x < SIZE; x++) {
         const dx = x - r;
         const dy = y - r;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        z[y * SIZE + x] = dist <= r ? 0 : NaN;
+        z[y * SIZE + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
       }
     }
 
-    /** API 데이터 매핑 */
+    // 데이터 매핑
     for (const [x, y, v] of data) {
       const idx = y * SIZE + x;
-      if (!Number.isNaN(z[idx])) {
-        z[idx] = v;
-      }
+      if (!Number.isNaN(z[idx])) z[idx] = v;
     }
 
     zRef.current = z;
@@ -67,20 +56,14 @@ export default function WaferHeatmap({ data }: Props) {
   /** 2️⃣ 줌 상태 저장 */
   const handleRelayout = (e: any) => {
     if (e['xaxis.range[0]'] !== undefined) {
-      axisRangeRef.current.x = [
-        e['xaxis.range[0]'],
-        e['xaxis.range[1]'],
-      ];
+      axisRangeRef.current.x = [e['xaxis.range[0]'], e['xaxis.range[1]']];
     }
     if (e['yaxis.range[0]'] !== undefined) {
-      axisRangeRef.current.y = [
-        e['yaxis.range[0]'],
-        e['yaxis.range[1]'],
-      ];
+      axisRangeRef.current.y = [e['yaxis.range[0]'], e['yaxis.range[1]']];
     }
   };
 
-  /** 3️⃣ 드래그 셀렉트 (좌표 보정 포함) */
+  /** 3️⃣ 드래그 셀렉트 */
   const handleSelected = (e: any) => {
     if (!e?.range || !zRef.current) return;
 
@@ -93,28 +76,27 @@ export default function WaferHeatmap({ data }: Props) {
     x0 = Math.floor(Math.max(0, x0));
     x1 = Math.floor(Math.min(SIZE - 1, x1));
 
-    // 🔥 Plotly y축 → 배열 y축 보정
-    const ay0 = SIZE - 1 - Math.floor(y1);
-    const ay1 = SIZE - 1 - Math.floor(y0);
+    // y축 반전 (reversed axis 기준)
+    const ay0 = Math.floor(y0);
+    const ay1 = Math.floor(y1);
 
-    const SELECT_VALUE = Math.max(...z) + 1;
+    const selectValue = Math.max(...z.filter(v => !Number.isNaN(v))) + 1;
 
     for (let y = ay0; y <= ay1; y++) {
       for (let x = x0; x <= x1; x++) {
         const idx = y * SIZE + x;
-        if (!Number.isNaN(z[idx])) {
-          z[idx] = SELECT_VALUE;
-        }
+        if (!Number.isNaN(z[idx])) z[idx] = selectValue;
       }
     }
 
     setRevision(r => r + 1);
 
-    /** 🔒 줌 유지 */
+    // 🔒 줌 유지 (안전한 방식)
     requestAnimationFrame(() => {
+      const gd = e?.event?.target;
       const { x, y } = axisRangeRef.current;
-      if (x && y && plotRef.current) {
-        Plotly.relayout(plotRef.current, {
+      if (gd && x && y) {
+        Plotly.relayout(gd, {
           'xaxis.range': x,
           'yaxis.range': y,
         });
@@ -122,24 +104,22 @@ export default function WaferHeatmap({ data }: Props) {
     });
   };
 
-  /** 4️⃣ Plotly용 2D 변환 */
+  /** 4️⃣ 2D 변환 */
   const z2D = useMemo(() => {
     if (!zRef.current) return [];
     const SIZE = sizeRef.current;
     const z = zRef.current;
-
-    const arr: number[][] = new Array(SIZE);
-    for (let i = 0; i < SIZE; i++) {
-      arr[i] = Array.from(z.slice(i * SIZE, (i + 1) * SIZE));
-    }
-    return arr;
+    return Array.from({ length: SIZE }, (_, i) =>
+      Array.from(z.slice(i * SIZE, (i + 1) * SIZE)),
+    );
   }, [revision]);
 
   if (!zRef.current) return null;
 
+  const SIZE = sizeRef.current;
+
   return (
     <Plot
-      ref={plotRef}
       data={[
         {
           type: 'heatmap',
@@ -148,7 +128,7 @@ export default function WaferHeatmap({ data }: Props) {
           colorscale: [
             [0, '#111827'],
             [0.7, '#22c55e'],
-            [1, '#ef4444'], // 선택 영역
+            [1, '#ef4444'],
           ],
         },
       ]}
@@ -157,13 +137,14 @@ export default function WaferHeatmap({ data }: Props) {
         height: 600,
         dragmode: 'select',
         xaxis: {
+          range: [0, SIZE],
           visible: false,
           autorange: false,
-          constrain: 'domain',
         },
         yaxis: {
+          range: [0, SIZE],
+          autorange: 'reversed', // 🔥 핵심
           visible: false,
-          autorange: false,
           scaleanchor: 'x',
         },
         margin: { l: 0, r: 0, t: 0, b: 0 },
