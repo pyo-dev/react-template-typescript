@@ -11,7 +11,13 @@ export default function WaferCanvas({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const gridRef = useRef<Float32Array | null>(null);
-  const metaRef = useRef({ w: 0, h: 0, minX: 0, minY: 0 });
+  const metaRef = useRef({
+    w: 0,
+    h: 0,
+    minX: 0,
+    minY: 0,
+    maxY: 0,
+  });
 
   const scaleRef = useRef(1);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -24,7 +30,7 @@ export default function WaferCanvas({ data }: Props) {
   } | null>(null);
 
   /* ===============================
-   * 1️⃣ API 데이터 → Grid
+   * 1️⃣ API 데이터 → Grid (Y 반전)
    * =============================== */
   useEffect(() => {
     if (!data.length) return;
@@ -44,7 +50,7 @@ export default function WaferCanvas({ data }: Props) {
     const w = maxX - minX + 1;
     const h = maxY - minY + 1;
 
-    metaRef.current = { w, h, minX, minY };
+    metaRef.current = { w, h, minX, minY, maxY };
 
     const grid = new Float32Array(w * h);
 
@@ -52,17 +58,20 @@ export default function WaferCanvas({ data }: Props) {
     const cy = (h - 1) / 2;
     const r = Math.min(w, h) / 2;
 
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const dx = x - cx;
-        const dy = y - cy;
-        grid[y * w + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
+    // 웨이퍼 원형 마스크
+    for (let gy = 0; gy < h; gy++) {
+      for (let gx = 0; gx < w; gx++) {
+        const dx = gx - cx;
+        const dy = gy - cy;
+        grid[gy * w + gx] =
+          Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
       }
     }
 
+    // 🔥 데이터 매핑 (Y 반전)
     for (const [x, y, v] of data) {
       const ix = x - minX;
-      const iy = y - minY;
+      const iy = maxY - y; // 핵심
       const idx = iy * w + ix;
       if (!Number.isNaN(grid[idx])) grid[idx] = v;
     }
@@ -94,13 +103,14 @@ export default function WaferCanvas({ data }: Props) {
     ctx.clearRect(0, 0, size, size);
 
     const { w, h } = metaRef.current;
+
     const rawCell = size / Math.max(w, h);
     const cell = Math.floor(rawCell * dpr) / dpr;
 
-    // 셀
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const v = grid[y * w + x];
+    // 셀 렌더
+    for (let gy = 0; gy < h; gy++) {
+      for (let gx = 0; gx < w; gx++) {
+        const v = grid[gy * w + gx];
         if (Number.isNaN(v)) continue;
 
         if (v >= 10000) ctx.fillStyle = '#2563eb';
@@ -108,11 +118,11 @@ export default function WaferCanvas({ data }: Props) {
         else if (v > 2) ctx.fillStyle = '#22c55e';
         else ctx.fillStyle = '#111827';
 
-        ctx.fillRect(x * cell, y * cell, cell, cell);
+        ctx.fillRect(gx * cell, gy * cell, cell, cell);
       }
     }
 
-    // 그리드 (픽셀 스냅)
+    // 그리드 라인 (픽셀 스냅)
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1 / dpr;
@@ -136,7 +146,7 @@ export default function WaferCanvas({ data }: Props) {
       ctx.stroke();
     }
 
-    // 🔥 드래그 오버레이
+    // 드래그 오버레이
     if (dragStartRef.current && dragCurrentRef.current) {
       const x = Math.min(dragStartRef.current.x, dragCurrentRef.current.x);
       const y = Math.min(dragStartRef.current.y, dragCurrentRef.current.y);
@@ -147,7 +157,6 @@ export default function WaferCanvas({ data }: Props) {
       ctx.fillStyle = 'rgba(37,99,235,0.25)';
       ctx.strokeStyle = 'rgba(37,99,235,0.8)';
       ctx.lineWidth = 1;
-
       ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x, y, w, h);
     }
@@ -193,28 +202,36 @@ export default function WaferCanvas({ data }: Props) {
     const grid = gridRef.current;
     if (!grid) return;
 
-    const { w, h, minX, minY } = metaRef.current;
+    const { w, h, minX, maxY } = metaRef.current;
     const size = canvasRef.current!.clientWidth;
     const cell = size / Math.max(w, h);
 
     const x = e.nativeEvent.offsetX / scaleRef.current;
     const y = e.nativeEvent.offsetY / scaleRef.current;
 
-    const ix = Math.floor(x / cell);
-    const iy = Math.floor(y / cell);
+    const gx = Math.floor(x / cell);
+    const gy = Math.floor(y / cell);
 
-    const idx = iy * w + ix;
-    const v = grid[idx];
-
-    if (ix >= 0 && iy >= 0 && ix < w && iy < h && !Number.isNaN(v)) {
-      setTooltip({
-        x: e.clientX + 12,
-        y: e.clientY + 12,
-        text: `x:${ix + minX}, y:${iy + minY}, v:${v}`,
-      });
-    } else {
+    if (gx < 0 || gy < 0 || gx >= w || gy >= h) {
       setTooltip(null);
+      return;
     }
+
+    const idx = gy * w + gx;
+    const v = grid[idx];
+    if (Number.isNaN(v)) {
+      setTooltip(null);
+      return;
+    }
+
+    const dataX = gx + minX;
+    const dataY = maxY - gy; // 🔥 다시 반전
+
+    setTooltip({
+      x: e.clientX + 12,
+      y: e.clientY + 12,
+      text: `x:${dataX}, y:${dataY}, v:${v}`,
+    });
   };
 
   const onMouseUp = (e: React.MouseEvent) => {
@@ -237,9 +254,9 @@ export default function WaferCanvas({ data }: Props) {
       Math.max(dragStartRef.current.y, e.nativeEvent.offsetY) /
       scaleRef.current;
 
-    for (let y = Math.floor(y0 / cell); y <= Math.floor(y1 / cell); y++) {
-      for (let x = Math.floor(x0 / cell); x <= Math.floor(x1 / cell); x++) {
-        const idx = y * w + x;
+    for (let gy = Math.floor(y0 / cell); gy <= Math.floor(y1 / cell); gy++) {
+      for (let gx = Math.floor(x0 / cell); gx <= Math.floor(x1 / cell); gx++) {
+        const idx = gy * w + gx;
         if (!Number.isNaN(gridRef.current[idx])) {
           gridRef.current[idx] = 10000;
         }
