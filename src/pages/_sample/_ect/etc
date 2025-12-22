@@ -64,7 +64,7 @@ export default function WaferHeatmap({ data }: Props) {
   }, [data]);
 
   /* =========================
-     공통 cell 계산 (렌더/툴팁/드래그 동일)
+     공통 cell 계산
   ========================= */
   const getCellSize = () => {
     const canvas = canvasRef.current!;
@@ -98,17 +98,17 @@ export default function WaferHeatmap({ data }: Props) {
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
 
-    // 웨이퍼 중심 & 반지름 (★ 오프바이원 해결)
+    // 중심 & 반지름 (★ 최종 수식)
     const cx = (w - 1) / 2;
     const cy = (h - 1) / 2;
-    const r = (Math.min(w, h) - 1) / 2;
+    const r = (Math.min(w, h) - 1) / 2 + 0.5;
 
     /* ===== heatmap ===== */
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
 
-      // ★ 셀 "중앙 기준" 거리 계산 (중요)
+      // 셀 중앙 기준 거리
       const dx = gx + 0.5 - cx;
       const dy = gy + 0.5 - cy;
 
@@ -118,7 +118,7 @@ export default function WaferHeatmap({ data }: Props) {
       ctx.fillRect(gx * cell, gy * cell, cell, cell);
     }
 
-    /* ===== grid line (선명) ===== */
+    /* ===== grid line ===== */
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
