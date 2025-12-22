@@ -45,7 +45,7 @@ export default function WaferCanvas({ data }: Props) {
     const cy = (h - 1) / 2;
     const r = Math.min(w, h) / 2;
 
-    // 웨이퍼 마스크
+    // 웨이퍼 원형 마스크
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const dx = x - cx;
@@ -67,7 +67,7 @@ export default function WaferCanvas({ data }: Props) {
   }, [data]);
 
   /* ===============================
-   * 2️⃣ Draw
+   * 2️⃣ Draw (픽셀 스냅 포함)
    * =============================== */
   const draw = () => {
     const canvas = canvasRef.current;
@@ -89,15 +89,18 @@ export default function WaferCanvas({ data }: Props) {
     ctx.clearRect(0, 0, size, size);
 
     const { w, h } = metaRef.current;
-    const cell = size / Math.max(w, h);
 
-    /* 2-1️⃣ 셀 채우기 */
+    // 🔥 cell 크기 픽셀 스냅
+    const rawCell = size / Math.max(w, h);
+    const cell = Math.floor(rawCell * dpr) / dpr;
+
+    /* ===== 셀 채우기 ===== */
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const v = grid[y * w + x];
         if (Number.isNaN(v)) continue;
 
-        if (v >= 10000) ctx.fillStyle = '#2563eb'; // 선택 영역
+        if (v >= 10000) ctx.fillStyle = '#2563eb'; // 선택
         else if (v > 5) ctx.fillStyle = '#ef4444';
         else if (v > 2) ctx.fillStyle = '#22c55e';
         else ctx.fillStyle = '#111827';
@@ -106,24 +109,27 @@ export default function WaferCanvas({ data }: Props) {
       }
     }
 
-    /* 2-2️⃣ 그리드 라인 오버레이 */
+    /* ===== 그리드 라인 (완전 선명) ===== */
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1 / dpr;
 
+    const snap = (v: number) =>
+      Math.round(v * dpr) / dpr + 0.5 / dpr;
+
     for (let x = 0; x <= w; x++) {
-      const px = x * cell;
+      const px = snap(x * cell);
       ctx.beginPath();
       ctx.moveTo(px, 0);
-      ctx.lineTo(px, h * cell);
+      ctx.lineTo(px, snap(h * cell));
       ctx.stroke();
     }
 
     for (let y = 0; y <= h; y++) {
-      const py = y * cell;
+      const py = snap(y * cell);
       ctx.beginPath();
       ctx.moveTo(0, py);
-      ctx.lineTo(w * cell, py);
+      ctx.lineTo(snap(w * cell), py);
       ctx.stroke();
     }
 
@@ -131,7 +137,7 @@ export default function WaferCanvas({ data }: Props) {
   };
 
   /* ===============================
-   * 3️⃣ 반응형 처리
+   * 3️⃣ 반응형
    * =============================== */
   useEffect(() => {
     const ro = new ResizeObserver(draw);
@@ -140,12 +146,12 @@ export default function WaferCanvas({ data }: Props) {
   }, []);
 
   /* ===============================
-   * 4️⃣ Zoom (Wheel)
+   * 4️⃣ Zoom
    * =============================== */
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     scaleRef.current *= e.deltaY < 0 ? 1.1 : 0.9;
-    scaleRef.current = Math.min(Math.max(scaleRef.current, 1), 10);
+    scaleRef.current = Math.min(Math.max(scaleRef.current, 1), 8);
     draw();
   };
 
@@ -164,7 +170,9 @@ export default function WaferCanvas({ data }: Props) {
 
     const { w, h } = metaRef.current;
     const size = canvasRef.current!.clientWidth;
-    const cell = size / Math.max(w, h);
+    const rawCell = size / Math.max(w, h);
+    const cell = Math.floor(rawCell * (window.devicePixelRatio || 1)) /
+                 (window.devicePixelRatio || 1);
 
     const x0 =
       Math.min(dragStartRef.current.x, e.nativeEvent.offsetX) /
@@ -188,7 +196,7 @@ export default function WaferCanvas({ data }: Props) {
       for (let x = ix0; x <= ix1; x++) {
         const idx = y * w + x;
         if (!Number.isNaN(gridRef.current[idx])) {
-          gridRef.current[idx] = 10000; // 선택 마킹
+          gridRef.current[idx] = 10000;
         }
       }
     }
@@ -214,8 +222,8 @@ export default function WaferCanvas({ data }: Props) {
         onMouseUp={onMouseUp}
         style={{
           display: 'block',
-          cursor: 'crosshair',
           background: '#000',
+          cursor: 'crosshair',
         }}
       />
     </div>
