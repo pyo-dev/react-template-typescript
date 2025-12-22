@@ -1,5 +1,4 @@
 import Plot from 'react-plotly.js';
-import Plotly from 'plotly.js-dist-min';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type WaferData = [number, number, number];
@@ -10,42 +9,48 @@ interface Props {
 
 export default function WaferHeatmap({ data }: Props) {
   const zRef = useRef<Float32Array | null>(null);
-  const sizeRef = useRef<number>(0);
-  const axisRangeRef = useRef<{ x?: [number, number]; y?: [number, number] }>({});
+  const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  const offsetRef = useRef<{ minX: number; minY: number }>({ minX: 0, minY: 0 });
   const [revision, setRevision] = useState(0);
 
-  /** 1️⃣ 데이터 → SIZE + 웨이퍼 생성 */
+  /* 1️⃣ data → grid */
   useEffect(() => {
-    if (!data || data.length === 0) return;
+    if (!data?.length) return;
 
-    let maxX = 0;
-    let maxY = 0;
-    let maxV = 0;
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
 
-    for (const [x, y, v] of data) {
+    for (const [x, y] of data) {
+      minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
-      maxV = Math.max(maxV, v);
     }
 
-    const SIZE = Math.max(maxX, maxY) + 1;
-    sizeRef.current = SIZE;
+    const W = maxX - minX + 1;
+    const H = maxY - minY + 1;
 
-    const r = SIZE / 2;
-    const z = new Float32Array(SIZE * SIZE);
+    sizeRef.current = { w: W, h: H };
+    offsetRef.current = { minX, minY };
 
-    // 웨이퍼 마스크
-    for (let y = 0; y < SIZE; y++) {
-      for (let x = 0; x < SIZE; x++) {
-        const dx = x - r;
-        const dy = y - r;
-        z[y * SIZE + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
+    const r = Math.min(W, H) / 2;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    const z = new Float32Array(W * H);
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        z[y * W + x] = Math.sqrt(dx * dx + dy * dy) <= r ? 0 : NaN;
       }
     }
 
-    // 데이터 매핑
     for (const [x, y, v] of data) {
-      const idx = y * SIZE + x;
+      const ix = x - minX;
+      const iy = y - minY;
+      const idx = iy * W + ix;
       if (!Number.isNaN(z[idx])) z[idx] = v;
     }
 
@@ -53,70 +58,63 @@ export default function WaferHeatmap({ data }: Props) {
     setRevision(r => r + 1);
   }, [data]);
 
-  /** 2️⃣ 줌 상태 저장 */
-  const handleRelayout = (e: any) => {
-    if (e['xaxis.range[0]'] !== undefined) {
-      axisRangeRef.current.x = [e['xaxis.range[0]'], e['xaxis.range[1]']];
-    }
-    if (e['yaxis.range[0]'] !== undefined) {
-      axisRangeRef.current.y = [e['yaxis.range[0]'], e['yaxis.range[1]']];
-    }
-  };
-
-  /** 3️⃣ 드래그 셀렉트 */
+  /* 2️⃣ select */
   const handleSelected = (e: any) => {
     if (!e?.range || !zRef.current) return;
 
-    const SIZE = sizeRef.current;
+    const { w: W } = sizeRef.current;
+    const { minX, minY } = offsetRef.current;
     const z = zRef.current;
 
     let [x0, x1] = e.range.x;
     let [y0, y1] = e.range.y;
 
-    x0 = Math.floor(Math.max(0, x0));
-    x1 = Math.floor(Math.min(SIZE - 1, x1));
+    const ix0 = Math.floor(x0 - minX);
+    const ix1 = Math.floor(x1 - minX);
+    const iy0 = Math.floor(y0 - minY);
+    const iy1 = Math.floor(y1 - minY);
 
-    // y축 반전 (reversed axis 기준)
-    const ay0 = Math.floor(y0);
-    const ay1 = Math.floor(y1);
+    let maxV = 0;
+    for (const v of z) if (!Number.isNaN(v)) maxV = Math.max(maxV, v);
+    const selectValue = maxV + 1;
 
-    const selectValue = Math.max(...z.filter(v => !Number.isNaN(v))) + 1;
-
-    for (let y = ay0; y <= ay1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        const idx = y * SIZE + x;
+    for (let y = iy0; y <= iy1; y++) {
+      for (let x = ix0; x <= ix1; x++) {
+        const idx = y * W + x;
         if (!Number.isNaN(z[idx])) z[idx] = selectValue;
       }
     }
 
     setRevision(r => r + 1);
-
-    // 🔒 줌 유지 (안전한 방식)
-    requestAnimationFrame(() => {
-      const gd = e?.event?.target;
-      const { x, y } = axisRangeRef.current;
-      if (gd && x && y) {
-        Plotly.relayout(gd, {
-          'xaxis.range': x,
-          'yaxis.range': y,
-        });
-      }
-    });
   };
 
-  /** 4️⃣ 2D 변환 */
-  const z2D = useMemo(() => {
-    if (!zRef.current) return [];
-    const SIZE = sizeRef.current;
+  /* 3️⃣ plotly data */
+  const { z2D, custom2D } = useMemo(() => {
+    if (!zRef.current) return { z2D: [], custom2D: [] };
+
+    const { w: W, h: H } = sizeRef.current;
+    const { minX, minY } = offsetRef.current;
     const z = zRef.current;
-    return Array.from({ length: SIZE }, (_, i) =>
-      Array.from(z.slice(i * SIZE, (i + 1) * SIZE)),
-    );
+
+    const z2D: number[][] = [];
+    const custom2D: [number, number][][] = [];
+
+    for (let y = 0; y < H; y++) {
+      z2D[y] = [];
+      custom2D[y] = [];
+      for (let x = 0; x < W; x++) {
+        z2D[y][x] = z[y * W + x];
+        custom2D[y][x] = [x + minX, y + minY];
+      }
+    }
+
+    return { z2D, custom2D };
   }, [revision]);
 
   if (!zRef.current) return null;
 
-  const SIZE = sizeRef.current;
+  const { w: W, h: H } = sizeRef.current;
+  const { minX, minY } = offsetRef.current;
 
   return (
     <Plot
@@ -124,7 +122,11 @@ export default function WaferHeatmap({ data }: Props) {
         {
           type: 'heatmap',
           z: z2D,
-          hoverinfo: 'skip',
+          customdata: custom2D,
+          hovertemplate:
+            'x: %{customdata[0]}<br>' +
+            'y: %{customdata[1]}<br>' +
+            'v: %{z}<extra></extra>',
           colorscale: [
             [0, '#111827'],
             [0.7, '#22c55e'],
@@ -135,23 +137,26 @@ export default function WaferHeatmap({ data }: Props) {
       layout={{
         width: 600,
         height: 600,
-        dragmode: 'select',
+        dragmode: 'zoom',          // 🔥 핵심
+        uirevision: 'wafer-fixed', // 🔥 핵심
         xaxis: {
-          range: [0, SIZE],
-          visible: false,
+          range: [minX, minX + W],
           autorange: false,
+          visible: false,
         },
         yaxis: {
-          range: [0, SIZE],
-          autorange: 'reversed', // 🔥 핵심
+          range: [minY, minY + H],
+          autorange: 'reversed',
           visible: false,
           scaleanchor: 'x',
         },
         margin: { l: 0, r: 0, t: 0, b: 0 },
       }}
-      config={{ displayModeBar: false }}
+      config={{
+        displayModeBar: true,
+        modeBarButtonsToAdd: ['select2d'], // 🔥 셀렉트는 버튼으로만
+      }}
       revision={revision}
-      onRelayout={handleRelayout}
       onSelected={handleSelected}
     />
   );
