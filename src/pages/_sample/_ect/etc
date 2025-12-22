@@ -98,21 +98,10 @@ export default function WaferHeatmap({ data }: Props) {
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
 
-    // 중심 & 반지름 (★ 최종 수식)
-    const cx = (w - 1) / 2;
-    const cy = (h - 1) / 2;
-    const r = (Math.min(w, h) - 1) / 2 + 0.5;
-
-    /* ===== heatmap ===== */
+    /* ===== heatmap (마스크 없음) ===== */
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
-
-      // 셀 중앙 기준 거리
-      const dx = gx + 0.5 - cx;
-      const dy = gy + 0.5 - cy;
-
-      if (dx * dx + dy * dy > r * r) continue;
 
       ctx.fillStyle = `hsl(${240 - v * 2}, 80%, 50%)`;
       ctx.fillRect(gx * cell, gy * cell, cell, cell);
