@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type DataPoint = [number, number, number];
 
@@ -10,15 +10,14 @@ export default function WaferHeatmap({ data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const metaRef = useRef<{
-    minX: number;
-    maxX: number;
-    minY: number;
-    maxY: number;
-    w: number;
-    h: number;
-    grid: (number | null)[][];
-  } | null>(null);
+  const metaRef = useRef({
+    minX: 0,
+    maxX: 0,
+    minY: 0,
+    maxY: 0,
+    w: 0,
+    h: 0,
+  });
 
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -37,7 +36,7 @@ export default function WaferHeatmap({ data }: Props) {
   }>({ startX: 0, startY: 0, endX: 0, endY: 0, dragging: false });
 
   /* =========================
-     데이터 → Grid 변환
+     META 계산
   ========================= */
   useEffect(() => {
     if (!data.length) return;
@@ -50,206 +49,210 @@ export default function WaferHeatmap({ data }: Props) {
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
 
-    const w = maxX - minX + 1;
-    const h = maxY - minY + 1;
+    metaRef.current = {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      w: maxX - minX + 1,
+      h: maxY - minY + 1,
+    };
 
-    const grid: (number | null)[][] = Array.from({ length: h }, () =>
-      Array(w).fill(null)
-    );
-
-    data.forEach(([x, y, v]) => {
-      const gx = x - minX;
-      const gy = maxY - y; // y 아래 → 위
-      grid[gy][gx] = v;
-    });
-
-    metaRef.current = { minX, maxX, minY, maxY, w, h, grid };
     draw();
+    window.addEventListener("resize", draw);
+    return () => window.removeEventListener("resize", draw);
   }, [data]);
 
   /* =========================
-     공통 Cell 계산 (중요)
+     공통 cell 계산 (중요)
   ========================= */
-  const getCell = () => {
+  const getCellSize = () => {
     const canvas = canvasRef.current!;
-    const dpr = window.devicePixelRatio || 1;
+    const { w, h } = metaRef.current;
     const size = Math.min(canvas.clientWidth, canvas.clientHeight);
-    const { w, h } = metaRef.current!;
+    const dpr = window.devicePixelRatio || 1;
     const raw = size / Math.max(w, h);
     return Math.floor(raw * dpr) / dpr;
   };
 
   /* =========================
-     Draw
+     DRAW
   ========================= */
   const draw = () => {
     const canvas = canvasRef.current;
-    if (!canvas || !metaRef.current) return;
+    const wrapper = wrapperRef.current;
+    if (!canvas || !wrapper) return;
 
     const ctx = canvas.getContext("2d")!;
     const dpr = window.devicePixelRatio || 1;
 
-    const size = Math.min(
-      canvas.clientWidth,
-      canvas.clientHeight
-    );
-
+    const size = Math.min(wrapper.clientWidth, wrapper.clientHeight);
     canvas.width = size * dpr;
     canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, size, size);
 
-    const { w, h, grid } = metaRef.current;
-    const cell = getCell();
+    const { minX, minY, maxY, w, h } = metaRef.current;
+    const cell = getCellSize();
 
-    const ox = Math.floor((size - w * cell) / 2);
-    const oy = Math.floor((size - h * cell) / 2);
-
-    // 웨이퍼 마스크
     const cx = (w - 1) / 2;
     const cy = (h - 1) / 2;
     const r = (Math.min(w, h) - 1) / 2;
 
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const dx = x - cx;
-        const dy = y - cy;
-        if (dx * dx + dy * dy > r * r) continue;
+    // heatmap
+    for (const [x, y, v] of data) {
+      const gx = x - minX;
+      const gy = maxY - y;
 
-        const v = grid[y][x];
-        if (v == null) continue;
+      const dx = gx - cx;
+      const dy = gy - cy;
+      if (dx * dx + dy * dy > r * r) continue;
 
-        ctx.fillStyle = `rgb(${255 - v * 2}, ${50}, ${v * 2})`;
-        ctx.fillRect(
-          ox + x * cell,
-          oy + y * cell,
-          cell,
-          cell
-        );
-      }
+      ctx.fillStyle = `hsl(${240 - v * 2}, 80%, 50%)`;
+      ctx.fillRect(
+        gx * cell,
+        gy * cell,
+        cell,
+        cell
+      );
     }
 
-    // Grid line (선명)
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    // grid line (선명하게)
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = 0; i <= w; i++) {
-      const x = ox + Math.round(i * cell) + 0.5;
-      ctx.moveTo(x, oy);
-      ctx.lineTo(x, oy + h * cell);
+      const x = Math.round(i * cell) + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h * cell);
     }
     for (let i = 0; i <= h; i++) {
-      const y = oy + Math.round(i * cell) + 0.5;
-      ctx.moveTo(ox, y);
-      ctx.lineTo(ox + w * cell, y);
+      const y = Math.round(i * cell) + 0.5;
+      ctx.moveTo(0, y);
+      ctx.lineTo(w * cell, y);
     }
     ctx.stroke();
 
-    // Drag overlay
+    // drag overlay
     if (dragRef.current.dragging) {
       const { startX, startY, endX, endY } = dragRef.current;
-      ctx.fillStyle = "rgba(0,120,255,0.2)";
+      ctx.fillStyle = "rgba(0,120,255,0.25)";
       ctx.strokeStyle = "rgba(0,120,255,0.8)";
-      ctx.fillRect(startX, startY, endX - startX, endY - startY);
-      ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+      ctx.lineWidth = 1;
+      ctx.fillRect(
+        startX,
+        startY,
+        endX - startX,
+        endY - startY
+      );
+      ctx.strokeRect(
+        startX,
+        startY,
+        endX - startX,
+        endY - startY
+      );
     }
   };
 
   /* =========================
-     Mouse Events
+     MOUSE
   ========================= */
-  const onMove = (e: React.MouseEvent) => {
-    if (!metaRef.current) return;
+  const handleMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
+    const { minX, maxY, w, h } = metaRef.current;
+    const cell = getCellSize();
 
-    const { minX, maxY, w, h, grid } = metaRef.current;
-    const cell = getCell();
-    const size = Math.min(canvas.clientWidth, canvas.clientHeight);
-
-    const ox = Math.floor((size - w * cell) / 2);
-    const oy = Math.floor((size - h * cell) / 2);
-
-    const gx = Math.floor((px - ox) / cell);
-    const gy = Math.floor((py - oy) / cell);
+    const gx = Math.floor(x / cell);
+    const gy = Math.floor(y / cell);
 
     if (gx < 0 || gy < 0 || gx >= w || gy >= h) {
       setTooltip(null);
       return;
     }
 
-    const v = grid[gy][gx];
-    if (v == null) {
+    const dataX = minX + gx;
+    const dataY = maxY - gy;
+
+    const found = data.find(d => d[0] === dataX && d[1] === dataY);
+    if (!found) {
       setTooltip(null);
       return;
     }
 
     setTooltip({
-      x: minX + gx,
-      y: maxY - gy,
-      v,
-      px,
-      py
+      x: dataX,
+      y: dataY,
+      v: found[2],
+      px: x,
+      py: y,
     });
 
     if (dragRef.current.dragging) {
-      dragRef.current.endX = px;
-      dragRef.current.endY = py;
+      dragRef.current.endX = x;
+      dragRef.current.endY = y;
       draw();
     }
   };
 
-  const onDown = (e: React.MouseEvent) => {
+  const handleDown = (e: React.MouseEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     dragRef.current = {
       startX: e.clientX - rect.left,
       startY: e.clientY - rect.top,
       endX: e.clientX - rect.left,
       endY: e.clientY - rect.top,
-      dragging: true
+      dragging: true,
     };
   };
 
-  const onUp = () => {
+  const handleUp = () => {
     dragRef.current.dragging = false;
     draw();
   };
 
-  useEffect(() => {
-    const onResize = () => draw();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
+  /* =========================
+     RENDER
+  ========================= */
   return (
-    <div ref={wrapperRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div
+      ref={wrapperRef}
+      style={{ width: "100%", height: "100%", position: "relative" }}
+    >
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "100%", display: "block" }}
-        onMouseMove={onMove}
-        onMouseDown={onDown}
-        onMouseUp={onUp}
-        onMouseLeave={() => setTooltip(null)}
+        onMouseMove={handleMove}
+        onMouseDown={handleDown}
+        onMouseUp={handleUp}
+        onMouseLeave={() => {
+          setTooltip(null);
+          dragRef.current.dragging = false;
+          draw();
+        }}
       />
+
       {tooltip && (
         <div
           style={{
             position: "absolute",
-            left: tooltip.px + 12,
-            top: tooltip.py + 12,
-            background: "#000",
+            left: tooltip.px + 10,
+            top: tooltip.py + 10,
+            background: "#111",
             color: "#fff",
-            padding: "4px 8px",
             fontSize: 12,
+            padding: "4px 6px",
             borderRadius: 4,
             pointerEvents: "none",
-            whiteSpace: "nowrap"
+            whiteSpace: "nowrap",
           }}
         >
-          x: {tooltip.x}, y: {tooltip.y}, v: {tooltip.v}
+          x:{tooltip.x} y:{tooltip.y} v:{tooltip.v}
         </div>
       )}
     </div>
