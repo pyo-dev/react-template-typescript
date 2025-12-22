@@ -29,18 +29,14 @@ export default function WaferHeatmap({
   ========================= */
   useEffect(() => {
     if (!data.length) return;
-
     const xs = data.map(d => d[0]);
     const ys = data.map(d => d[1]);
     const minX = Math.min(...xs);
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-
     metaRef.current = { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
-
     draw();
-
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
   }, [data]);
@@ -80,13 +76,14 @@ export default function WaferHeatmap({
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
+      const key = `${x},${y}`;
 
-      ctx.fillStyle = selectedCellsRef.current.has(`${x},${y}`)
+      ctx.fillStyle = selectedCellsRef.current.has(key)
         ? "rgba(255,0,0,0.7)"
         : `hsl(${240 - v * 2},80%,50%)`;
       ctx.fillRect(gx * cell, gy * cell, cell, cell);
 
-      ctx.fillStyle = selectedCellsRef.current.has(`${x},${y}`) ? fontColorSelected : fontColor;
+      ctx.fillStyle = selectedCellsRef.current.has(key) ? fontColorSelected : fontColor;
       ctx.font = `${Math.floor(cell * 0.5)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -165,14 +162,23 @@ export default function WaferHeatmap({
   const handleDown = (e: React.MouseEvent) => {
     dragHappenedRef.current = false;
     const rect = canvasRef.current!.getBoundingClientRect();
-    dragRef.current = { startX: e.clientX - rect.left, startY: e.clientY - rect.top, endX: e.clientX - rect.left, endY: e.clientY - rect.top, dragging: true };
+    dragRef.current = {
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
+      endX: e.clientX - rect.left,
+      endY: e.clientY - rect.top,
+      dragging: true
+    };
   };
 
   const handleUp = () => {
     dragRef.current.dragging = false;
     draw();
-    if (onSelectionChange) {
-      onSelectionChange(data.map(d => ({ ...d } as DataPoint)));
+
+    if (dragHappenedRef.current && onSelectionChange) {
+      const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
+      onSelectionChange(selectedData);
+      dragHappenedRef.current = false; // 초기화
     }
   };
 
@@ -198,7 +204,11 @@ export default function WaferHeatmap({
     else selectedCellsRef.current.add(key);
 
     draw();
-    if (onSelectionChange) onSelectionChange(data.map(d => ({ ...d } as DataPoint)));
+
+    if (onSelectionChange) {
+      const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
+      onSelectionChange(selectedData);
+    }
   };
 
   return (
