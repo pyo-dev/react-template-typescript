@@ -1,24 +1,24 @@
 import Plot from 'react-plotly.js';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 /* ===============================
-   웨이퍼 Heatmap 데이터 생성
+   웨이퍼 데이터 생성
 ================================ */
 function generateWaferHeatmap(size = 200, radius = 1) {
   const x: number[] = [];
   const y: number[] = [];
-  const z: (number | null)[][] = [];
+  const z: number[][] = [];
 
   for (let i = 0; i < size; i++) {
     x.push(-radius + (2 * radius * i) / size);
     y.push(-radius + (2 * radius * i) / size);
   }
 
-  for (let i = 0; i < size; i++) {
-    const row: (number | null)[] = [];
-    for (let j = 0; j < size; j++) {
-      const dist = Math.sqrt(x[j] ** 2 + y[i] ** 2);
-      row.push(dist <= radius ? Math.random() * 100 : null);
+  for (let yi = 0; yi < size; yi++) {
+    const row: number[] = [];
+    for (let xi = 0; xi < size; xi++) {
+      const d = Math.sqrt(x[xi] ** 2 + y[yi] ** 2);
+      row.push(d <= radius ? Math.random() * 100 : NaN);
     }
     z.push(row);
   }
@@ -30,14 +30,17 @@ function generateWaferHeatmap(size = 200, radius = 1) {
    메인 컴포넌트
 ================================ */
 export default function WaferHeatmap() {
+  const plotRef = useRef<any>(null);
+
   const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
   const [dragMode, setDragMode] = useState<'select' | 'pan'>('select');
+  const shiftPressed = useRef(false);
 
-  /* ===== Heatmap 데이터 (한 번만 생성) ===== */
-  const heatmapTrace = useMemo(() => {
+  /* ===== 데이터 ===== */
+  const heatmapTrace: any = useMemo(() => {
     const { x, y, z } = generateWaferHeatmap(220);
     return {
-      type: 'heatmapgl',
+      type: 'heatmap',
       x,
       y,
       z,
@@ -46,9 +49,9 @@ export default function WaferHeatmap() {
     };
   }, []);
 
-  /* ===== 선택 포인트 Overlay ===== */
-  const selectedOverlay = useMemo(() => ({
-    type: 'scattergl',
+  /* ===== 선택 포인트 색칠 (Overlay) ===== */
+  const selectedOverlay: any = useMemo(() => ({
+    type: 'scatter',
     mode: 'markers',
     x: selectedPoints.map(p => p.x),
     y: selectedPoints.map(p => p.y),
@@ -59,70 +62,100 @@ export default function WaferHeatmap() {
     hoverinfo: 'skip',
   }), [selectedPoints]);
 
-  /* ===== 선택 이벤트 ===== */
+  /* ===== 드래그 선택 이벤트 ===== */
   const handleSelected = (e: any) => {
     if (!e?.points) return;
 
-    const isCtrl = e.event?.ctrlKey;
+    const isCtrl = e?.event?.ctrlKey ?? false;
 
     setSelectedPoints(prev =>
       isCtrl ? [...prev, ...e.points] : e.points
     );
 
-    // 선택 데이터 출력
     console.log(
-      '선택 Z 값:',
-      e.points.map((p: any) => p.z)
+      '선택 데이터:',
+      e.points.map((p: any) => ({
+        x: p.x,
+        y: p.y,
+        z: p.z,
+      }))
     );
   };
 
-  /* ===== Shift 키로 패닝 전환 ===== */
+  /* ===== Shift 키 상태 관리 ===== */
   useEffect(() => {
-    const keyDown = (e: KeyboardEvent) => {
-      if (e.shiftKey) setDragMode('pan');
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        shiftPressed.current = true;
+        setDragMode('pan');
+      }
     };
-    const keyUp = () => setDragMode('select');
 
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
+    const up = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        shiftPressed.current = false;
+        setDragMode('select');
+      }
+    };
+
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
     return () => {
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
     };
   }, []);
 
-  /* ===== Layout ===== */
-  const layout = {
-    dragmode: dragMode,
-    selectdirection: 'any',
-    autosize: true,
-    uirevision: 'wafer-static', // 🔥 리렌더 방지
-    margin: { t: 20, l: 20, r: 20, b: 20 },
-    xaxis: {
-      fixedrange: false,
-      zeroline: false,
-    },
-    yaxis: {
-      fixedrange: false,
-      scaleanchor: 'x',
-      zeroline: false,
-    },
-  };
+  /* ===== Shift + 휠 줌 (커스텀) ===== */
+  useEffect(() => {
+    const el = plotRef.current?.el;
+    if (!el) return;
 
-  /* ===== Config ===== */
-  const config = {
-    scrollZoom: true,          // 휠 줌
-    displayModeBar: false,    // UI 제거 (성능)
-  };
+    const onWheel = (e: WheelEvent) => {
+      if (!shiftPressed.current) return;
+
+      e.preventDefault();
+
+      const factor = e.deltaY > 0 ? 1.1 : 0.9;
+      const gd = plotRef.current.el;
+
+      const xRange = gd.layout.xaxis.range;
+      const yRange = gd.layout.yaxis.range;
+
+      const zoom = (range: number[]) => {
+        const mid = (range[0] + range[1]) / 2;
+        const half = (range[1] - range[0]) / 2 * factor;
+        return [mid - half, mid + half];
+      };
+
+      Plotly.relayout(gd, {
+        'xaxis.range': zoom(xRange),
+        'yaxis.range': zoom(yRange),
+      });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   return (
     <Plot
+      ref={plotRef}
       data={[heatmapTrace, selectedOverlay]}
-      layout={layout}
-      config={config}
+      layout={{
+        dragmode: dragMode,
+        uirevision: 'wafer',
+        selectdirection: 'any',
+        xaxis: { fixedrange: false },
+        yaxis: { fixedrange: false, scaleanchor: 'x' },
+        margin: { t: 20, l: 20, r: 20, b: 20 },
+      }}
+      config={{
+        scrollZoom: false,      // ❌ 일반 휠 줌 차단
+        displayModeBar: false,
+      }}
       onSelected={handleSelected}
       style={{ width: '100%', height: '100vh' }}
-      useResizeHandler
     />
   );
 }
