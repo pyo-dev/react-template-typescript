@@ -22,9 +22,13 @@ export default function WaferHeatmap({
   const dragRef = useRef({ startX: 0, startY: 0, endX: 0, endY: 0, dragging: false });
   const dragHappenedRef = useRef(false);
   const scaleRef = useRef(1);
+  const offsetRef = useRef({ x: 0, y: 0 });
 
   const [tooltip, setTooltip] = useState<{ x: number; y: number; v: number; px: number; py: number } | null>(null);
 
+  /* =========================
+     META 계산
+  ========================= */
   useEffect(() => {
     if (!data.length) return;
     const xs = data.map(d => d[0]);
@@ -36,6 +40,9 @@ export default function WaferHeatmap({
     metaRef.current = { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }, [data]);
 
+  /* =========================
+     ResizeObserver
+  ========================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -63,9 +70,12 @@ export default function WaferHeatmap({
     const size = Math.min(canvas.clientWidth, canvas.clientHeight);
     const dpr = window.devicePixelRatio || 1;
     const raw = size / Math.max(w, h);
-    return Math.max(1, Math.floor(raw * dpr) / dpr); // 최소 1px
+    return Math.max(1, Math.floor(raw * dpr) / dpr);
   };
 
+  /* =========================
+     DRAW
+  ========================= */
   const draw = () => {
     const canvas = canvasRef.current;
     const wrapper = wrapperRef.current;
@@ -75,7 +85,7 @@ export default function WaferHeatmap({
     const width = wrapper.clientWidth;
     const height = wrapper.clientHeight;
 
-    ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, 0, 0);
+    ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
     ctx.clearRect(0, 0, width, height);
 
     const { minX, maxY, w, h } = metaRef.current;
@@ -86,6 +96,7 @@ export default function WaferHeatmap({
     const xOffset = (width / scaleRef.current - totalWidth) / 2;
     const yOffset = (height / scaleRef.current - totalHeight) / 2;
 
+    // heatmap + 텍스트
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
@@ -103,6 +114,7 @@ export default function WaferHeatmap({
       ctx.fillText(v.toString(), xOffset + gx * cell + cell / 2, yOffset + gy * cell + cell / 2);
     }
 
+    // grid line
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -120,7 +132,8 @@ export default function WaferHeatmap({
     }
     ctx.stroke();
 
-    if (dragRef.current.dragging) {
+    // drag overlay
+    if (dragRef.current.dragging && !(window.event as MouseEvent)?.shiftKey) {
       const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
       ctx.strokeStyle = "rgba(0,120,255,0.9)";
@@ -130,11 +143,14 @@ export default function WaferHeatmap({
     }
   };
 
+  /* =========================
+     MOUSE HANDLERS
+  ========================= */
   const handleMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scaleRef.current;
-    const y = (e.clientY - rect.top) / scaleRef.current;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
@@ -143,34 +159,44 @@ export default function WaferHeatmap({
     const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
     const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
 
-    const gx = Math.floor((x - xOffset) / cell);
-    const gy = Math.floor((y - yOffset) / cell);
+    const gx = Math.floor((mouseX - xOffset - offsetRef.current.x) / cell);
+    const gy = Math.floor((mouseY - yOffset - offsetRef.current.y) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
     const found = data.find(d => d[0] === dataX && d[1] === dataY);
-    setTooltip(found ? { x: dataX, y: dataY, v: found[2], px: e.clientX - rect.left, py: e.clientY - rect.top } : null);
+    setTooltip(found ? { x: dataX, y: dataY, v: found[2], px: mouseX, py: mouseY } : null);
 
-    if (dragRef.current.dragging) {
-      dragHappenedRef.current = true;
-      dragRef.current.endX = e.clientX - rect.left;
-      dragRef.current.endY = e.clientY - rect.top;
+    if (!dragRef.current.dragging) return;
 
+    if (e.shiftKey && scaleRef.current !== 1) {
+      // Shift + 드래그 → 패닝
+      offsetRef.current.x += mouseX - dragRef.current.startX;
+      offsetRef.current.y += mouseY - dragRef.current.startY;
+      dragRef.current.startX = mouseX;
+      dragRef.current.startY = mouseY;
+      draw();
+      return;
+    }
+
+    // 드래그 선택
+    dragHappenedRef.current = true;
+    dragRef.current.endX = mouseX;
+    dragRef.current.endY = mouseY;
+
+    for (const [dx, dy] of data) {
+      const cellX = xOffset + (dx - minX) * cell + offsetRef.current.x;
+      const cellY = yOffset + (maxY - dy) * cell + offsetRef.current.y;
       const x0 = Math.min(dragRef.current.startX, dragRef.current.endX);
       const x1 = Math.max(dragRef.current.startX, dragRef.current.endX);
       const y0 = Math.min(dragRef.current.startY, dragRef.current.endY);
       const y1 = Math.max(dragRef.current.startY, dragRef.current.endY);
 
-      for (const [dx, dy] of data) {
-        const cellX = xOffset + (dx - minX) * cell;
-        const cellY = yOffset + (maxY - dy) * cell;
-        if (cellX + cell >= x0 / scaleRef.current && cellX <= x1 / scaleRef.current &&
-            cellY + cell >= y0 / scaleRef.current && cellY <= y1 / scaleRef.current) {
-          selectedCellsRef.current.add(`${dx},${dy}`);
-        }
+      if (cellX + cell >= x0 && cellX <= x1 && cellY + cell >= y0 && cellY <= y1) {
+        selectedCellsRef.current.add(`${dx},${dy}`);
       }
-      draw();
     }
+    draw();
   };
 
   const handleDown = (e: React.MouseEvent) => {
@@ -199,8 +225,9 @@ export default function WaferHeatmap({
     if (dragHappenedRef.current) return;
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scaleRef.current;
-    const y = (e.clientY - rect.top) / scaleRef.current;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
     const totalWidth = w * cell;
@@ -208,8 +235,8 @@ export default function WaferHeatmap({
     const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
     const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
 
-    const gx = Math.floor((x - xOffset) / cell);
-    const gy = Math.floor((y - yOffset) / cell);
+    const gx = Math.floor((mouseX - xOffset - offsetRef.current.x) / cell);
+    const gy = Math.floor((mouseY - yOffset - offsetRef.current.y) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
@@ -239,7 +266,6 @@ export default function WaferHeatmap({
     const factor = 1.05;
     let newScale = scaleRef.current * (delta > 0 ? factor : 1 / factor);
 
-    // 최소 scale 제한
     const minScale = Math.min(1, canvas.clientWidth / (w * cell), canvas.clientHeight / (h * cell));
     newScale = Math.max(minScale, Math.min(newScale, 10));
 
