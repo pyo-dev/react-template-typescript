@@ -82,13 +82,20 @@ export default function WaferHeatmap({
 
     const ctx = canvas.getContext("2d")!;
     const dpr = window.devicePixelRatio || 1;
-    const size = Math.min(wrapper.clientWidth, wrapper.clientHeight);
+    const width = wrapper.clientWidth;
+    const height = wrapper.clientHeight;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, width, height);
 
-    const { minX, maxY } = metaRef.current;
+    const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
+
+    // 중앙 정렬 오프셋
+    const totalWidth = w * cell;
+    const totalHeight = h * cell;
+    const xOffset = (width - totalWidth) / 2;
+    const yOffset = (height - totalHeight) / 2;
 
     /* ===== heatmap + 중앙 텍스트 ===== */
     for (const [x, y, v] of data) {
@@ -99,13 +106,13 @@ export default function WaferHeatmap({
       ctx.fillStyle = selectedCellsRef.current.has(key)
         ? "rgba(255,0,0,0.7)"
         : `hsl(${240 - v * 2},80%,50%)`;
-      ctx.fillRect(gx * cell, gy * cell, cell, cell);
+      ctx.fillRect(xOffset + gx * cell, yOffset + gy * cell, cell, cell);
 
       ctx.fillStyle = selectedCellsRef.current.has(key) ? fontColorSelected : fontColor;
       ctx.font = `${Math.floor(cell * 0.5)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(v.toString(), gx * cell + cell / 2, gy * cell + cell / 2);
+      ctx.fillText(v.toString(), xOffset + gx * cell + cell / 2, yOffset + gy * cell + cell / 2);
     }
 
     /* ===== grid line ===== */
@@ -115,8 +122,8 @@ export default function WaferHeatmap({
     for (const [x, y] of data) {
       const gx = x - minX;
       const gy = maxY - y;
-      const left = gx * cell + 0.5;
-      const top = gy * cell + 0.5;
+      const left = xOffset + gx * cell + 0.5;
+      const top = yOffset + gy * cell + 0.5;
       const right = left + cell - 1;
       const bottom = top + cell - 1;
       ctx.moveTo(left, top); ctx.lineTo(right, top);
@@ -146,10 +153,15 @@ export default function WaferHeatmap({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const { minX, maxY } = metaRef.current;
+    const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
-    const gx = Math.floor(x / cell);
-    const gy = Math.floor(y / cell);
+    const totalWidth = w * cell;
+    const totalHeight = h * cell;
+    const xOffset = (canvas.clientWidth - totalWidth) / 2;
+    const yOffset = (canvas.clientHeight - totalHeight) / 2;
+
+    const gx = Math.floor((x - xOffset) / cell);
+    const gy = Math.floor((y - yOffset) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
@@ -167,9 +179,9 @@ export default function WaferHeatmap({
       const y1 = Math.max(dragRef.current.startY, dragRef.current.endY);
 
       for (const [dx, dy] of data) {
-        const gx = (dx - minX) * cell;
-        const gy = (maxY - dy) * cell;
-        if (gx + cell >= x0 && gx <= x1 && gy + cell >= y0 && gy <= y1) {
+        const cellX = xOffset + (dx - minX) * cell;
+        const cellY = yOffset + (maxY - dy) * cell;
+        if (cellX + cell >= x0 && cellX <= x1 && cellY + cell >= y0 && cellY <= y1) {
           selectedCellsRef.current.add(`${dx},${dy}`);
         }
       }
@@ -207,11 +219,15 @@ export default function WaferHeatmap({
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
-    const { minX, maxY } = metaRef.current;
+    const totalWidth = w * cell;
+    const totalHeight = h * cell;
+    const xOffset = (canvas.clientWidth - totalWidth) / 2;
+    const yOffset = (canvas.clientHeight - totalHeight) / 2;
 
-    const gx = Math.floor(x / cell);
-    const gy = Math.floor(y / cell);
+    const gx = Math.floor((x - xOffset) / cell);
+    const gy = Math.floor((y - yOffset) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
