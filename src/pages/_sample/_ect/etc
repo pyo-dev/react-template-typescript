@@ -16,7 +16,27 @@ const testData: [number, number, number][] = [
 ];
 
 
+const testData10: [number, number, number][] = [
+  // 상단
+  [10, 29, 1],
+  [11, 29, 2],
+  [12, 29, 3],
 
+  // 중상단
+  [10, 28, 4],
+  [11, 28, 5],
+
+  // 중앙
+  [11, 27, 6],
+
+  // 중하단
+  [10, 26, 7],
+  [11, 26, 8],
+
+  // 하단
+  [11, 25, 9],
+  [12, 25, 10],
+];
 
 
 import { useEffect, useRef, useState } from 'react';
