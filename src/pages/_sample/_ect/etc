@@ -78,15 +78,16 @@ export default function WaferHeatmap({
   ========================= */
   const draw = () => {
     const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
-
+    if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const width = wrapper.clientWidth;
-    const height = wrapper.clientHeight;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
+    // 잔상 제거: 실제 픽셀 기준 clear
     ctx.clearRect(0, 0, width, height);
+
+    ctx.save();
+    ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
 
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
@@ -132,15 +133,27 @@ export default function WaferHeatmap({
     }
     ctx.stroke();
 
-    // drag overlay
+    // 드래그 overlay
     if (dragRef.current.dragging && !(window.event as MouseEvent)?.shiftKey) {
       const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
       ctx.strokeStyle = "rgba(0,120,255,0.9)";
       ctx.lineWidth = 1;
-      ctx.fillRect(startX / scaleRef.current, startY / scaleRef.current, (endX - startX) / scaleRef.current, (endY - startY) / scaleRef.current);
-      ctx.strokeRect(startX / scaleRef.current, startY / scaleRef.current, (endX - startX) / scaleRef.current, (endY - startY) / scaleRef.current);
+      ctx.fillRect(
+        Math.min(startX, endX) / scaleRef.current - offsetRef.current.x / scaleRef.current,
+        Math.min(startY, endY) / scaleRef.current - offsetRef.current.y / scaleRef.current,
+        Math.abs(endX - startX) / scaleRef.current,
+        Math.abs(endY - startY) / scaleRef.current
+      );
+      ctx.strokeRect(
+        Math.min(startX, endX) / scaleRef.current - offsetRef.current.x / scaleRef.current,
+        Math.min(startY, endY) / scaleRef.current - offsetRef.current.y / scaleRef.current,
+        Math.abs(endX - startX) / scaleRef.current,
+        Math.abs(endY - startY) / scaleRef.current
+      );
     }
+
+    ctx.restore();
   };
 
   /* =========================
@@ -159,8 +172,10 @@ export default function WaferHeatmap({
     const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
     const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
 
-    const gx = Math.floor((mouseX - xOffset - offsetRef.current.x) / cell);
-    const gy = Math.floor((mouseY - yOffset - offsetRef.current.y) / cell);
+    const localX = (mouseX - offsetRef.current.x) / scaleRef.current;
+    const localY = (mouseY - offsetRef.current.y) / scaleRef.current;
+    const gx = Math.floor((localX - xOffset) / cell);
+    const gy = Math.floor((localY - yOffset) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
@@ -185,12 +200,12 @@ export default function WaferHeatmap({
     dragRef.current.endY = mouseY;
 
     for (const [dx, dy] of data) {
-      const cellX = xOffset + (dx - minX) * cell + offsetRef.current.x;
-      const cellY = yOffset + (maxY - dy) * cell + offsetRef.current.y;
-      const x0 = Math.min(dragRef.current.startX, dragRef.current.endX);
-      const x1 = Math.max(dragRef.current.startX, dragRef.current.endX);
-      const y0 = Math.min(dragRef.current.startY, dragRef.current.endY);
-      const y1 = Math.max(dragRef.current.startY, dragRef.current.endY);
+      const cellX = xOffset + (dx - minX) * cell;
+      const cellY = yOffset + (maxY - dy) * cell;
+      const x0 = (Math.min(dragRef.current.startX, dragRef.current.endX) - offsetRef.current.x) / scaleRef.current;
+      const x1 = (Math.max(dragRef.current.startX, dragRef.current.endX) - offsetRef.current.x) / scaleRef.current;
+      const y0 = (Math.min(dragRef.current.startY, dragRef.current.endY) - offsetRef.current.y) / scaleRef.current;
+      const y1 = (Math.max(dragRef.current.startY, dragRef.current.endY) - offsetRef.current.y) / scaleRef.current;
 
       if (cellX + cell >= x0 && cellX <= x1 && cellY + cell >= y0 && cellY <= y1) {
         selectedCellsRef.current.add(`${dx},${dy}`);
@@ -235,8 +250,10 @@ export default function WaferHeatmap({
     const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
     const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
 
-    const gx = Math.floor((mouseX - xOffset - offsetRef.current.x) / cell);
-    const gy = Math.floor((mouseY - yOffset - offsetRef.current.y) / cell);
+    const localX = (mouseX - offsetRef.current.x) / scaleRef.current;
+    const localY = (mouseY - offsetRef.current.y) / scaleRef.current;
+    const gx = Math.floor((localX - xOffset) / cell);
+    const gy = Math.floor((localY - yOffset) / cell);
     const dataX = minX + gx;
     const dataY = maxY - gy;
 
