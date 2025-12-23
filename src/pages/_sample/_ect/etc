@@ -19,9 +19,16 @@ export default function WaferHeatmap({
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   /* ================= META ================= */
-  const metaRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0, w: 0, h: 0 });
+  const metaRef = useRef({
+    minX: 0,
+    maxX: 0,
+    minY: 0,
+    maxY: 0,
+    w: 0,
+    h: 0,
+  });
 
-  /* ================= STATE REF ================= */
+  /* ================= STATE REFS ================= */
   const selectedCellsRef = useRef<Set<string>>(new Set());
 
   const dragRef = useRef({
@@ -54,6 +61,7 @@ export default function WaferHeatmap({
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
+
     metaRef.current = {
       minX,
       maxX,
@@ -87,8 +95,7 @@ export default function WaferHeatmap({
   const getCellSize = () => {
     const canvas = canvasRef.current!;
     const { w, h } = metaRef.current;
-    const size = Math.min(canvas.clientWidth, canvas.clientHeight);
-    return size / Math.max(w, h);
+    return Math.min(canvas.clientWidth, canvas.clientHeight) / Math.max(w, h);
   };
 
   const getBaseOffset = () => {
@@ -119,6 +126,7 @@ export default function WaferHeatmap({
     const base = getBaseOffset();
     const { minX, maxY } = metaRef.current;
 
+    /* 셀 렌더 */
     for (const d of data) {
       const [x, y, v] = d;
       const gx = x - minX;
@@ -150,24 +158,37 @@ export default function WaferHeatmap({
       );
     }
 
+    /* 그리드 */
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const d of data) {
+      const gx = d[0] - minX;
+      const gy = maxY - d[1];
+      const x = base.x + gx * cell;
+      const y = base.y + gy * cell;
+      ctx.rect(x + 0.5, y + 0.5, cell, cell);
+    }
+    ctx.stroke();
+
     /* 드래그 오버레이 */
     if (dragRef.current.dragging && !panHappenedRef.current) {
-      const x0 = Math.min(dragRef.current.startX, dragRef.current.endX);
-      const y0 = Math.min(dragRef.current.startY, dragRef.current.endY);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const x = Math.min(dragRef.current.startX, dragRef.current.endX);
+      const y = Math.min(dragRef.current.startY, dragRef.current.endY);
       const w = Math.abs(dragRef.current.endX - dragRef.current.startX);
       const h = Math.abs(dragRef.current.endY - dragRef.current.startY);
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "rgba(0,120,255,0.25)";
       ctx.strokeStyle = "rgba(0,120,255,0.9)";
-      ctx.fillRect(x0, y0, w, h);
-      ctx.strokeRect(x0, y0, w, h);
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
     }
 
     ctx.restore();
   };
 
-  /* ================= EVENT ================= */
+  /* ================= EVENTS ================= */
   const handleDown = (e: React.MouseEvent) => {
     dragHappenedRef.current = false;
     panHappenedRef.current = false;
@@ -196,7 +217,6 @@ export default function WaferHeatmap({
 
     const lx = (mx - offsetRef.current.x) / scaleRef.current - base.x;
     const ly = (my - offsetRef.current.y) / scaleRef.current - base.y;
-
     const gx = Math.floor(lx / cell);
     const gy = Math.floor(ly / cell);
     const hit = data.find(d => d[0] === minX + gx && d[1] === maxY - gy);
@@ -206,6 +226,7 @@ export default function WaferHeatmap({
 
     dragHappenedRef.current = true;
 
+    /* 패닝 */
     if (e.shiftKey && scaleRef.current !== 1) {
       panHappenedRef.current = true;
       offsetRef.current.x += mx - dragRef.current.startX;
@@ -216,6 +237,7 @@ export default function WaferHeatmap({
       return;
     }
 
+    /* 드래그 선택 */
     dragRef.current.endX = mx;
     dragRef.current.endY = my;
 
@@ -282,7 +304,6 @@ export default function WaferHeatmap({
 
     const lx = (mx - offsetRef.current.x) / scaleRef.current - base.x;
     const ly = (my - offsetRef.current.y) / scaleRef.current - base.y;
-
     const gx = Math.floor(lx / cell);
     const gy = Math.floor(ly / cell);
 
@@ -300,17 +321,31 @@ export default function WaferHeatmap({
     );
   };
 
+  /* ======= 🔑 마우스 기준 확대/축소 ======= */
   const handleWheel = (e: React.WheelEvent) => {
     if (!e.shiftKey) return;
     e.preventDefault();
 
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const oldScale = scaleRef.current;
     const factor = 1.05;
-    const next =
-      scaleRef.current * (e.deltaY < 0 ? factor : 1 / factor);
+    const nextScale =
+      oldScale * (e.deltaY < 0 ? factor : 1 / factor);
 
-    scaleRef.current = Math.max(1, Math.min(next, 10));
+    const newScale = Math.max(1, Math.min(nextScale, 10));
 
-    if (scaleRef.current === 1) {
+    const worldX = (mx - offsetRef.current.x) / oldScale;
+    const worldY = (my - offsetRef.current.y) / oldScale;
+
+    scaleRef.current = newScale;
+    offsetRef.current.x = mx - worldX * newScale;
+    offsetRef.current.y = my - worldY * newScale;
+
+    if (newScale === 1) {
       offsetRef.current = { x: 0, y: 0 };
     }
 
@@ -333,12 +368,7 @@ export default function WaferHeatmap({
     >
       <button
         onClick={handleReset}
-        style={{
-          position: "absolute",
-          right: 10,
-          top: 10,
-          zIndex: 10,
-        }}
+        style={{ position: "absolute", right: 10, top: 10, zIndex: 10 }}
       >
         Reset
       </button>
@@ -368,6 +398,7 @@ export default function WaferHeatmap({
             padding: "4px 6px",
             borderRadius: 4,
             pointerEvents: "none",
+            whiteSpace: "nowrap",
           }}
         >
           {tooltip.data.map((v, i) => (
