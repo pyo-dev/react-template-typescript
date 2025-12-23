@@ -9,22 +9,56 @@ interface Props {
   onSelectionChange?: (selected: DataPoint[]) => void;
 }
 
+type ActionType = "NONE" | "CLICK" | "DRAG_SELECT" | "PAN";
+
 export default function WaferHeatmap({
   data,
-  fontColor = "#000",
+  fontColor = "#111",
   fontColorSelected = "#fff",
   onSelectionChange,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const metaRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0, w: 0, h: 0 });
-  const selectedCellsRef = useRef<Set<string>>(new Set());
-  const dragRef = useRef({ startX: 0, startY: 0, endX: 0, endY: 0, dragging: false });
-  const dragHappenedRef = useRef(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  /** ===== meta ===== */
+  const metaRef = useRef({
+    minX: 0,
+    maxX: 0,
+    minY: 0,
+    maxY: 0,
+    w: 0,
+    h: 0,
+  });
+
+  /** ===== view ===== */
   const scaleRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
 
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; v: number; px: number; py: number } | null>(null);
+  /** ===== selection ===== */
+  const selectedRef = useRef<Set<string>>(new Set());
+
+  /** ===== drag ===== */
+  const dragRef = useRef({
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+  });
+
+  /** ===== action FSM ===== */
+  const actionRef = useRef<{ type: ActionType; moved: boolean }>({
+    type: "NONE",
+    moved: false,
+  });
+
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    v: number;
+    px: number;
+    py: number;
+  } | null>(null);
 
   /* =========================
      META 계산
@@ -33,11 +67,14 @@ export default function WaferHeatmap({
     if (!data.length) return;
     const xs = data.map(d => d[0]);
     const ys = data.map(d => d[1]);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    metaRef.current = { minX, maxX, minY, maxY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    metaRef.current = {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+      w: Math.max(...xs) - Math.min(...xs) + 1,
+      h: Math.max(...ys) - Math.min(...ys) + 1,
+    };
   }, [data]);
 
   /* =========================
@@ -45,32 +82,38 @@ export default function WaferHeatmap({
   ========================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    const canvas = canvasRef.current;
+    if (!wrapper || !canvas) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const ro = new ResizeObserver(() => {
       const dpr = window.devicePixelRatio || 1;
-      const width = wrapper.clientWidth;
-      const height = wrapper.clientHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      canvas.width = wrapper.clientWidth * dpr;
+      canvas.height = wrapper.clientHeight * dpr;
+      canvas.style.width = `${wrapper.clientWidth}px`;
+      canvas.style.height = `${wrapper.clientHeight}px`;
       draw();
     });
 
-    resizeObserver.observe(wrapper);
-    return () => resizeObserver.disconnect();
+    ro.observe(wrapper);
+    return () => ro.disconnect();
   }, [data]);
 
+  /* =========================
+     Helpers
+  ========================= */
   const getCellSize = () => {
     const canvas = canvasRef.current!;
     const { w, h } = metaRef.current;
     const size = Math.min(canvas.clientWidth, canvas.clientHeight);
-    const dpr = window.devicePixelRatio || 1;
-    const raw = size / Math.max(w, h);
-    return Math.max(1, Math.floor(raw * dpr) / dpr);
+    return Math.max(8, Math.floor(size / Math.max(w, h)));
+  };
+
+  const emitSelection = () => {
+    if (!onSelectionChange) return;
+    const selected = data.filter(d =>
+      selectedRef.current.has(`${d[0]},${d[1]}`)
+    );
+    onSelectionChange(selected);
   };
 
   /* =========================
@@ -80,234 +123,215 @@ export default function WaferHeatmap({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const width = canvas.width;
-    const height = canvas.height;
-
-    ctx.clearRect(0, 0, width, height); // 잔상 제거
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
 
     const { minX, maxY, w, h } = metaRef.current;
     const cell = getCellSize();
+    const totalW = w * cell;
+    const totalH = h * cell;
 
-    const totalWidth = w * cell;
-    const totalHeight = h * cell;
-    const xOffset = (width / scaleRef.current - totalWidth) / 2;
-    const yOffset = (height / scaleRef.current - totalHeight) / 2;
+    const cx = (canvas.width / scaleRef.current - totalW) / 2;
+    const cy = (canvas.height / scaleRef.current - totalH) / 2;
 
-    // heatmap + 텍스트
     for (const [x, y, v] of data) {
       const gx = x - minX;
       const gy = maxY - y;
+      const px = cx + gx * cell;
+      const py = cy + gy * cell;
       const key = `${x},${y}`;
 
-      ctx.fillStyle = selectedCellsRef.current.has(key)
-        ? "rgba(255,0,0,0.7)"
-        : `hsl(${240 - v * 2},80%,50%)`;
-      ctx.fillRect(xOffset + gx * cell, yOffset + gy * cell, cell, cell);
+      ctx.fillStyle = selectedRef.current.has(key)
+        ? "rgba(255,80,80,0.85)"
+        : `hsl(${240 - v * 2},75%,55%)`;
+      ctx.fillRect(px, py, cell, cell);
 
-      ctx.fillStyle = selectedCellsRef.current.has(key) ? fontColorSelected : fontColor;
-      ctx.font = `${Math.floor(cell * 0.5)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(v.toString(), xOffset + gx * cell + cell / 2, yOffset + gy * cell + cell / 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.35)";
+      ctx.strokeRect(px + 0.5, py + 0.5, cell - 1, cell - 1);
+
+      if (!Number.isNaN(v)) {
+        ctx.fillStyle = selectedRef.current.has(key)
+          ? fontColorSelected
+          : fontColor;
+        ctx.font = `${Math.floor(cell * 0.45)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(v), px + cell / 2, py + cell / 2);
+      }
     }
 
-    // grid line
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (const [x, y] of data) {
-      const gx = x - minX;
-      const gy = maxY - y;
-      const left = xOffset + gx * cell + 0.5;
-      const top = yOffset + gy * cell + 0.5;
-      const right = left + cell - 1;
-      const bottom = top + cell - 1;
-      ctx.moveTo(left, top); ctx.lineTo(right, top);
-      ctx.moveTo(left, bottom); ctx.lineTo(right, bottom);
-      ctx.moveTo(left, top); ctx.lineTo(left, bottom);
-      ctx.moveTo(right, top); ctx.lineTo(right, bottom);
-    }
-    ctx.stroke();
+    // drag overlay (선택일 때만)
+    if (dragRef.current.dragging && actionRef.current.type === "DRAG_SELECT") {
+      const x = Math.min(dragRef.current.startX, dragRef.current.endX);
+      const y = Math.min(dragRef.current.startY, dragRef.current.endY);
+      const w = Math.abs(dragRef.current.endX - dragRef.current.startX);
+      const h = Math.abs(dragRef.current.endY - dragRef.current.startY);
 
-    // 드래그 overlay
-    if (dragRef.current.dragging && !(window.event as MouseEvent)?.shiftKey) {
-      const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
       ctx.strokeStyle = "rgba(0,120,255,0.9)";
-      ctx.lineWidth = 1;
-      ctx.fillRect(
-        Math.min(startX, endX) / scaleRef.current - offsetRef.current.x / scaleRef.current,
-        Math.min(startY, endY) / scaleRef.current - offsetRef.current.y / scaleRef.current,
-        Math.abs(endX - startX) / scaleRef.current,
-        Math.abs(endY - startY) / scaleRef.current
-      );
-      ctx.strokeRect(
-        Math.min(startX, endX) / scaleRef.current - offsetRef.current.x / scaleRef.current,
-        Math.min(startY, endY) / scaleRef.current - offsetRef.current.y / scaleRef.current,
-        Math.abs(endX - startX) / scaleRef.current,
-        Math.abs(endY - startY) / scaleRef.current
-      );
+      ctx.fillRect(x / scaleRef.current - offsetRef.current.x / scaleRef.current,
+                   y / scaleRef.current - offsetRef.current.y / scaleRef.current,
+                   w / scaleRef.current,
+                   h / scaleRef.current);
+      ctx.strokeRect(x / scaleRef.current - offsetRef.current.x / scaleRef.current,
+                     y / scaleRef.current - offsetRef.current.y / scaleRef.current,
+                     w / scaleRef.current,
+                     h / scaleRef.current);
     }
 
     ctx.restore();
   };
 
   /* =========================
-     MOUSE HANDLERS
+     Mouse Events
   ========================= */
+  const handleDown = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    dragRef.current = { dragging: true, startX: x, startY: y, endX: x, endY: y };
+    actionRef.current = {
+      type: e.shiftKey && scaleRef.current !== 1 ? "PAN" : "CLICK",
+      moved: false,
+    };
+  };
+
   const handleMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-    const { minX, maxY, w, h } = metaRef.current;
+    // tooltip
+    const { minX, maxY } = metaRef.current;
     const cell = getCellSize();
-    const totalWidth = w * cell;
-    const totalHeight = h * cell;
-    const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
-    const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
-
-    const localX = (mouseX - offsetRef.current.x) / scaleRef.current;
-    const localY = (mouseY - offsetRef.current.y) / scaleRef.current;
-    const gx = Math.floor((localX - xOffset) / cell);
-    const gy = Math.floor((localY - yOffset) / cell);
-    const dataX = minX + gx;
-    const dataY = maxY - gy;
-
-    const found = data.find(d => d[0] === dataX && d[1] === dataY);
-    setTooltip(found ? { x: dataX, y: dataY, v: found[2], px: mouseX, py: mouseY } : null);
+    const cx = (canvas.clientWidth - metaRef.current.w * cell) / 2;
+    const cy = (canvas.clientHeight - metaRef.current.h * cell) / 2;
+    const lx = (x - offsetRef.current.x) / scaleRef.current - cx;
+    const ly = (y - offsetRef.current.y) / scaleRef.current - cy;
+    const gx = Math.floor(lx / cell);
+    const gy = Math.floor(ly / cell);
+    const tx = minX + gx;
+    const ty = maxY - gy;
+    const found = data.find(d => d[0] === tx && d[1] === ty);
+    setTooltip(found ? { x: tx, y: ty, v: found[2], px: x, py: y } : null);
 
     if (!dragRef.current.dragging) return;
 
-    if (e.shiftKey && scaleRef.current !== 1) {
-      // 패닝 처리
-      offsetRef.current.x += mouseX - dragRef.current.startX;
-      offsetRef.current.y += mouseY - dragRef.current.startY;
-      dragRef.current.startX = mouseX;
-      dragRef.current.startY = mouseY;
-      dragHappenedRef.current = true; // 패닝도 드래그로 처리
+    const dx = Math.abs(x - dragRef.current.startX);
+    const dy = Math.abs(y - dragRef.current.startY);
+    if (dx > 3 || dy > 3) actionRef.current.moved = true;
+
+    // PAN
+    if (actionRef.current.type === "PAN") {
+      offsetRef.current.x += x - dragRef.current.startX;
+      offsetRef.current.y += y - dragRef.current.startY;
+      dragRef.current.startX = x;
+      dragRef.current.startY = y;
       draw();
       return;
     }
 
-    // 드래그 선택
-    dragHappenedRef.current = true;
-    dragRef.current.endX = mouseX;
-    dragRef.current.endY = mouseY;
+    // DRAG SELECT
+    if (actionRef.current.moved) {
+      actionRef.current.type = "DRAG_SELECT";
+      dragRef.current.endX = x;
+      dragRef.current.endY = y;
 
-    for (const [dx, dy] of data) {
-      const cellX = xOffset + (dx - minX) * cell;
-      const cellY = yOffset + (maxY - dy) * cell;
-      const x0 = (Math.min(dragRef.current.startX, dragRef.current.endX) - offsetRef.current.x) / scaleRef.current;
-      const x1 = (Math.max(dragRef.current.startX, dragRef.current.endX) - offsetRef.current.x) / scaleRef.current;
-      const y0 = (Math.min(dragRef.current.startY, dragRef.current.endY) - offsetRef.current.y) / scaleRef.current;
-      const y1 = (Math.max(dragRef.current.startY, dragRef.current.endY) - offsetRef.current.y) / scaleRef.current;
+      const x0 = Math.min(dragRef.current.startX, dragRef.current.endX);
+      const x1 = Math.max(dragRef.current.startX, dragRef.current.endX);
+      const y0 = Math.min(dragRef.current.startY, dragRef.current.endY);
+      const y1 = Math.max(dragRef.current.startY, dragRef.current.endY);
 
-      if (cellX + cell >= x0 && cellX <= x1 && cellY + cell >= y0 && cellY <= y1) {
-        selectedCellsRef.current.add(`${dx},${dy}`);
+      for (const [dx, dy] of data) {
+        const px = cx + (dx - minX) * cell;
+        const py = cy + (maxY - dy) * cell;
+        const sx = px * scaleRef.current + offsetRef.current.x;
+        const sy = py * scaleRef.current + offsetRef.current.y;
+        if (sx + cell * scaleRef.current >= x0 &&
+            sx <= x1 &&
+            sy + cell * scaleRef.current >= y0 &&
+            sy <= y1) {
+          selectedRef.current.add(`${dx},${dy}`);
+        }
       }
+      draw();
     }
-    draw();
-  };
-
-  const handleDown = (e: React.MouseEvent) => {
-    dragHappenedRef.current = false;
-    const rect = canvasRef.current!.getBoundingClientRect();
-    dragRef.current = {
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top,
-      endX: e.clientX - rect.left,
-      endY: e.clientY - rect.top,
-      dragging: true
-    };
   };
 
   const handleUp = () => {
     dragRef.current.dragging = false;
-    if (!dragHappenedRef.current) return; // 드래그 없으면 선택 처리 안함
-    draw();
-    if (onSelectionChange) {
-      const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
-      onSelectionChange(selectedData);
+
+    if (actionRef.current.type === "PAN") {
+      actionRef.current.type = "NONE";
+      return;
     }
-    dragHappenedRef.current = false;
-  };
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (dragHappenedRef.current) return; // 드래그/패닝 후 클릭 무시
-
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const { minX, maxY, w, h } = metaRef.current;
-    const cell = getCellSize();
-    const totalWidth = w * cell;
-    const totalHeight = h * cell;
-    const xOffset = (canvas.clientWidth / scaleRef.current - totalWidth) / 2;
-    const yOffset = (canvas.clientHeight / scaleRef.current - totalHeight) / 2;
-
-    const localX = (mouseX - offsetRef.current.x) / scaleRef.current;
-    const localY = (mouseY - offsetRef.current.y) / scaleRef.current;
-    const gx = Math.floor((localX - xOffset) / cell);
-    const gy = Math.floor((localY - yOffset) / cell);
-    const dataX = minX + gx;
-    const dataY = maxY - gy;
-
-    const key = `${dataX},${dataY}`;
-    if (!data.find(d => d[0] === dataX && d[1] === dataY)) return;
-
-    if (selectedCellsRef.current.has(key)) selectedCellsRef.current.delete(key);
-    else selectedCellsRef.current.add(key);
-
-    draw();
-
-    if (onSelectionChange) {
-      const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
-      onSelectionChange(selectedData);
+    if (actionRef.current.type === "DRAG_SELECT") {
+      emitSelection();
+      actionRef.current.type = "NONE";
+      return;
     }
+
+    if (actionRef.current.type === "CLICK" && !actionRef.current.moved) {
+      const { startX, startY } = dragRef.current;
+      const canvas = canvasRef.current!;
+      const { minX, maxY } = metaRef.current;
+      const cell = getCellSize();
+      const cx = (canvas.clientWidth - metaRef.current.w * cell) / 2;
+      const cy = (canvas.clientHeight - metaRef.current.h * cell) / 2;
+      const lx = (startX - offsetRef.current.x) / scaleRef.current - cx;
+      const ly = (startY - offsetRef.current.y) / scaleRef.current - cy;
+      const gx = Math.floor(lx / cell);
+      const gy = Math.floor(ly / cell);
+      const x = minX + gx;
+      const y = maxY - gy;
+      const key = `${x},${y}`;
+
+      if (data.find(d => d[0] === x && d[1] === y)) {
+        selectedRef.current.has(key)
+          ? selectedRef.current.delete(key)
+          : selectedRef.current.add(key);
+        draw();
+        emitSelection();
+      }
+    }
+
+    actionRef.current.type = "NONE";
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!e.shiftKey) return;
     e.preventDefault();
-
-    const canvas = canvasRef.current!;
-    const cell = getCellSize();
-    const { w, h } = metaRef.current;
-
-    const delta = -e.deltaY;
-    const factor = 1.05;
-    let newScale = scaleRef.current * (delta > 0 ? factor : 1 / factor);
-
-    const minScale = Math.min(1, canvas.clientWidth / (w * cell), canvas.clientHeight / (h * cell));
-    newScale = Math.max(minScale, Math.min(newScale, 10));
-
-    scaleRef.current = newScale;
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    scaleRef.current = Math.min(10, Math.max(1, scaleRef.current * factor));
     draw();
   };
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{ width: "100%", height: "100%", position: "relative" }}
-      onWheel={handleWheel}
-    >
+    <div ref={wrapperRef} style={{ width: "100%", height: "100%", position: "relative" }} onWheel={handleWheel}>
       <canvas
         ref={canvasRef}
-        onMouseMove={handleMove}
         onMouseDown={handleDown}
+        onMouseMove={handleMove}
         onMouseUp={handleUp}
-        onClick={handleClick}
-        onMouseLeave={() => { setTooltip(null); dragRef.current.dragging = false; draw(); }}
+        onMouseLeave={() => setTooltip(null)}
       />
       {tooltip && (
-        <div style={{ position: "absolute", left: tooltip.px + 10, top: tooltip.py + 10, background: "#111", color: "#fff", fontSize: 12, padding: "4px 6px", borderRadius: 4, pointerEvents: "none", whiteSpace: "nowrap" }}>
+        <div style={{
+          position: "absolute",
+          left: tooltip.px + 10,
+          top: tooltip.py + 10,
+          background: "#000",
+          color: "#fff",
+          padding: "4px 6px",
+          fontSize: 12,
+          borderRadius: 4,
+          pointerEvents: "none"
+        }}>
           x:{tooltip.x} y:{tooltip.y} v:{tooltip.v}
         </div>
       )}
