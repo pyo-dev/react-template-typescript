@@ -83,8 +83,7 @@ export default function WaferHeatmap({
     const width = canvas.width;
     const height = canvas.height;
 
-    // 잔상 제거: 실제 픽셀 기준 clear
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height); // 잔상 제거
 
     ctx.save();
     ctx.setTransform(scaleRef.current, 0, 0, scaleRef.current, offsetRef.current.x, offsetRef.current.y);
@@ -185,11 +184,12 @@ export default function WaferHeatmap({
     if (!dragRef.current.dragging) return;
 
     if (e.shiftKey && scaleRef.current !== 1) {
-      // Shift + 드래그 → 패닝
+      // 패닝 처리
       offsetRef.current.x += mouseX - dragRef.current.startX;
       offsetRef.current.y += mouseY - dragRef.current.startY;
       dragRef.current.startX = mouseX;
       dragRef.current.startY = mouseY;
+      dragHappenedRef.current = true; // 패닝도 드래그로 처리
       draw();
       return;
     }
@@ -228,16 +228,18 @@ export default function WaferHeatmap({
 
   const handleUp = () => {
     dragRef.current.dragging = false;
+    if (!dragHappenedRef.current) return; // 드래그 없으면 선택 처리 안함
     draw();
-    if (dragHappenedRef.current && onSelectionChange) {
+    if (onSelectionChange) {
       const selectedData = data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`));
       onSelectionChange(selectedData);
-      dragHappenedRef.current = false;
     }
+    dragHappenedRef.current = false;
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (dragHappenedRef.current) return;
+    if (dragHappenedRef.current) return; // 드래그/패닝 후 클릭 무시
+
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
