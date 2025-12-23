@@ -21,6 +21,9 @@ export default function WaferHeatmap({
   const metaRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0, w: 0, h: 0 });
   const selectedCellsRef = useRef<Set<string>>(new Set());
 
+  const scaleRef = useRef(1);
+  const offsetRef = useRef({ x: 0, y: 0 });
+
   const dragRef = useRef({
     dragging: false,
     startWX: 0,
@@ -30,17 +33,15 @@ export default function WaferHeatmap({
   });
 
   const dragHappenedRef = useRef(false);
-  const scaleRef = useRef(1);
-  const offsetRef = useRef({ x: 0, y: 0 });
   const panRef = useRef(false);
 
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
     v: number;
+    extra: number[];
     px: number;
     py: number;
-    extra: number[];
   } | null>(null);
 
   /* =========================
@@ -54,6 +55,7 @@ export default function WaferHeatmap({
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
+
     metaRef.current = {
       minX,
       maxX,
@@ -92,6 +94,17 @@ export default function WaferHeatmap({
     return Math.max(1, Math.floor(size / Math.max(w, h)));
   };
 
+  const getMinScale = () => {
+    const canvas = canvasRef.current!;
+    const cell = getCellSize();
+    const { w, h } = metaRef.current;
+    return Math.min(
+      canvas.clientWidth / (w * cell),
+      canvas.clientHeight / (h * cell),
+      1
+    );
+  };
+
   /* =========================
      DRAW
   ========================= */
@@ -120,7 +133,7 @@ export default function WaferHeatmap({
     const ox = (cw / scaleRef.current - w * cell) / 2;
     const oy = (ch / scaleRef.current - h * cell) / 2;
 
-    // cells
+    // cell
     for (const d of data) {
       const [x, y, v] = d;
       const gx = x - minX;
@@ -149,14 +162,11 @@ export default function WaferHeatmap({
 
     // grid
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 1;
     ctx.beginPath();
     for (const [x, y] of data) {
       const gx = x - minX;
       const gy = maxY - y;
-      const px = ox + gx * cell;
-      const py = oy + gy * cell;
-      ctx.rect(px, py, cell, cell);
+      ctx.rect(ox + gx * cell, oy + gy * cell, cell, cell);
     }
     ctx.stroke();
 
@@ -177,7 +187,7 @@ export default function WaferHeatmap({
   };
 
   /* =========================
-     MOUSE
+     UTILS
   ========================= */
   const getWorldPos = (e: React.MouseEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -189,6 +199,9 @@ export default function WaferHeatmap({
     };
   };
 
+  /* =========================
+     EVENTS
+  ========================= */
   const handleDown = (e: React.MouseEvent) => {
     dragHappenedRef.current = false;
     panRef.current = e.shiftKey && scaleRef.current !== 1;
@@ -218,8 +231,8 @@ export default function WaferHeatmap({
     const gy = Math.floor((wy - oy) / cell);
     const dx = minX + gx;
     const dy = maxY - gy;
-    const found = data.find(d => d[0] === dx && d[1] === dy);
 
+    const found = data.find(d => d[0] === dx && d[1] === dy);
     setTooltip(
       found
         ? {
@@ -237,6 +250,7 @@ export default function WaferHeatmap({
 
     dragHappenedRef.current = true;
 
+    // pan
     if (panRef.current) {
       offsetRef.current.x += e.movementX;
       offsetRef.current.y += e.movementY;
@@ -317,8 +331,32 @@ export default function WaferHeatmap({
     e.preventDefault();
 
     const factor = e.deltaY < 0 ? 1.05 : 1 / 1.05;
-    scaleRef.current = Math.min(10, Math.max(1, scaleRef.current * factor));
+    let next = scaleRef.current * factor;
+    const minScale = getMinScale();
+
+    if (next <= minScale) {
+      scaleRef.current = minScale;
+      offsetRef.current = { x: 0, y: 0 }; // 중앙 스냅
+    } else {
+      scaleRef.current = Math.min(10, next);
+    }
+
     draw();
+  };
+
+  /* =========================
+     RESET
+  ========================= */
+  const resetView = () => {
+    selectedCellsRef.current.clear();
+    scaleRef.current = 1;
+    offsetRef.current = { x: 0, y: 0 };
+    dragRef.current.dragging = false;
+    dragHappenedRef.current = false;
+    panRef.current = false;
+    setTooltip(null);
+    draw();
+    onSelectionChange?.([]);
   };
 
   return (
@@ -327,6 +365,13 @@ export default function WaferHeatmap({
       style={{ width: "100%", height: "100%", position: "relative" }}
       onWheel={handleWheel}
     >
+      <button
+        onClick={resetView}
+        style={{ position: "absolute", right: 10, top: 10, zIndex: 10 }}
+      >
+        Reset
+      </button>
+
       <canvas
         ref={canvasRef}
         onMouseDown={handleDown}
@@ -340,6 +385,7 @@ export default function WaferHeatmap({
           draw();
         }}
       />
+
       {tooltip && (
         <div
           style={{
