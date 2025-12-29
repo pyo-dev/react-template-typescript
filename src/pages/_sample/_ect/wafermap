@@ -98,13 +98,18 @@ export default function WaferHeatmap({
     return Math.min(canvas.clientWidth, canvas.clientHeight) / Math.max(w, h);
   };
 
+  // ✅ 실제 그려지는 영역 기준 중앙 정렬
   const getBaseOffset = () => {
     const canvas = canvasRef.current!;
     const cell = getCellSize();
-    const { w, h } = metaRef.current;
+    const { minX, maxX, minY, maxY } = metaRef.current;
+
+    const drawWidth = (maxX - minX + 1) * cell;
+    const drawHeight = (maxY - minY + 1) * cell;
+
     return {
-      x: (canvas.clientWidth - w * cell) / 2,
-      y: (canvas.clientHeight - h * cell) / 2,
+      x: (canvas.clientWidth - drawWidth) / 2,
+      y: (canvas.clientHeight - drawHeight) / 2,
     };
   };
 
@@ -124,13 +129,13 @@ export default function WaferHeatmap({
 
     const cell = getCellSize();
     const base = getBaseOffset();
-    const { minX, maxY } = metaRef.current;
+    const { minX, minY } = metaRef.current;
 
     /* 셀 렌더 */
     for (const d of data) {
       const [x, y, v] = d;
       const gx = x - minX;
-      const gy = maxY - y;
+      const gy = y - minY;
       const key = `${x},${y}`;
 
       ctx.fillStyle = selectedCellsRef.current.has(key)
@@ -164,10 +169,13 @@ export default function WaferHeatmap({
     ctx.beginPath();
     for (const d of data) {
       const gx = d[0] - minX;
-      const gy = maxY - d[1];
-      const x = base.x + gx * cell;
-      const y = base.y + gy * cell;
-      ctx.rect(x + 0.5, y + 0.5, cell, cell);
+      const gy = d[1] - minY;
+      ctx.rect(
+        base.x + gx * cell + 0.5,
+        base.y + gy * cell + 0.5,
+        cell,
+        cell
+      );
     }
     ctx.stroke();
 
@@ -213,13 +221,16 @@ export default function WaferHeatmap({
     /* tooltip */
     const cell = getCellSize();
     const base = getBaseOffset();
-    const { minX, maxY } = metaRef.current;
+    const { minX, minY } = metaRef.current;
 
     const lx = (mx - offsetRef.current.x) / scaleRef.current - base.x;
     const ly = (my - offsetRef.current.y) / scaleRef.current - base.y;
     const gx = Math.floor(lx / cell);
     const gy = Math.floor(ly / cell);
-    const hit = data.find(d => d[0] === minX + gx && d[1] === maxY - gy);
+
+    const hit = data.find(
+      d => d[0] === minX + gx && d[1] === minY + gy
+    );
     setTooltip(hit ? { px: mx, py: my, data: hit } : null);
 
     if (!dragRef.current.dragging) return;
@@ -252,7 +263,7 @@ export default function WaferHeatmap({
         scaleRef.current * (base.x + (d[0] - minX) * cell);
       const cy =
         offsetRef.current.y +
-        scaleRef.current * (base.y + (maxY - d[1]) * cell);
+        scaleRef.current * (base.y + (d[1] - minY) * cell);
 
       if (
         cx + cell * scaleRef.current >= x0 &&
@@ -300,14 +311,14 @@ export default function WaferHeatmap({
 
     const cell = getCellSize();
     const base = getBaseOffset();
-    const { minX, maxY } = metaRef.current;
+    const { minX, minY } = metaRef.current;
 
     const lx = (mx - offsetRef.current.x) / scaleRef.current - base.x;
     const ly = (my - offsetRef.current.y) / scaleRef.current - base.y;
     const gx = Math.floor(lx / cell);
     const gy = Math.floor(ly / cell);
 
-    const key = `${minX + gx},${maxY - gy}`;
+    const key = `${minX + gx},${minY + gy}`;
     if (selectedCellsRef.current.has(key))
       selectedCellsRef.current.delete(key);
     else selectedCellsRef.current.add(key);
@@ -321,7 +332,7 @@ export default function WaferHeatmap({
     );
   };
 
-  /* ======= 🔑 마우스 기준 확대/축소 ======= */
+  /* ======= 마우스 기준 확대/축소 ======= */
   const handleWheel = (e: React.WheelEvent) => {
     if (!e.shiftKey) return;
     e.preventDefault();
