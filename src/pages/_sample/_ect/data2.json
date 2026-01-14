@@ -1,12 +1,13 @@
-const text = "안녕링크는https://www.123.com/p?v=1,2,3,http://www.2222.com이야...";
+const text = "안녕링크는https://www.123.com/p?v=1,2,3,http://www.2222.com이야 그리거 하나더https://www.123.com/p?v=1,2,3,http://www.2222.com";
 
-// 'http'로 시작해서 영어, 숫자, 특수문자(?, =, ,, &, - 등)가 끝날 때까지 긁어오기
-const urls = text.match(/https?:\/\/[a-zA-Z0-9\.\/\?\=\&\-\_\,]+/g);
+// 1. ( ,http ) 또는 ( http ) 패턴을 기준으로 나누되, 괄호로 감싸서 구분자도 보존합니다.
+// 2. 그 후 URL 뒤에 붙은 한글/공백 등을 분리하기 위해 추가 처리를 합니다.
+const result = text.split(/(https?:\/\/[a-zA-Z0-9\.\/\?\=\&\-\_\,]+)/g);
 
-console.log(urls);
-// 결과: ["https://www.123.com/p?v=1,2,3", "http://www.2222.com", ...]
+// 빈 값 제거 (문자열 맨 앞이나 뒤에 URL이 올 경우 빈 문자열이 생길 수 있음)
+const finalArray = result.filter(item => item !== "");
 
-
+console.log(finalArray);
 
 
 {
