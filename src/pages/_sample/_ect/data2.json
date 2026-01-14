@@ -1,3 +1,14 @@
+const text = "안녕링크는https://www.123.com/p?v=1,2,3,http://www.2222.com이야...";
+
+// 'http'로 시작해서 영어, 숫자, 특수문자(?, =, ,, &, - 등)가 끝날 때까지 긁어오기
+const urls = text.match(/https?:\/\/[a-zA-Z0-9\.\/\?\=\&\-\_\,]+/g);
+
+console.log(urls);
+// 결과: ["https://www.123.com/p?v=1,2,3", "http://www.2222.com", ...]
+
+
+
+
 {
 	"value_range": {
 		"min": 0,
