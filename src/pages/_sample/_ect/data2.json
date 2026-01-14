@@ -1,12 +1,12 @@
 const text = "안녕링크는https://www.123.com/p?v=1,2,3,http://www.2222.com이야 그리거 하나더https://www.123.com/p?v=1,2,3,http://www.2222.com";
 
-// 정규식 설명:
-// 1. https?:\/\/... : 일반적인 URL 패턴을 찾습니다.
-// 2. [^가-힣\s,]+ : 한글, 공백, 쉼표가 아닌 문자를 최대한 찾습니다.
-// 3. (?:,[^h])* : 쉼표 뒤에 h(http의 시작)가 오지 않는 경우에만 쉼표를 포함하여 반복해서 가져옵니다.
+// 1. URL 패턴으로 분리
 const result = text.split(/(https?:\/\/[^가-힣\s,]+(?:,[^h][^가-힣\s,]*)*)/g);
 
-const finalArray = result.filter(item => item !== "");
+// 2. 빈 값 제거 및 각 문장의 앞뒤 쉼표(,) 제거
+const finalArray = result
+  .map(item => item.replace(/^,+|,+$/g, '').trim()) // 앞뒤 쉼표와 공백 제거
+  .filter(item => item !== "");
 
 console.log(finalArray);
 
