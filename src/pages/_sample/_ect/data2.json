@@ -1,14 +1,23 @@
-const text = "안녕링크는https://www.123.com/p?v=1,2,3,http://www.2222.com이야 그리거 하나더https://www.123.com/p?v=1,2,3,http://www.2222.com";
+export function parseOrderedObject(raw) {
+  if (typeof raw !== 'string') {
+    throw new Error('raw must be a string');
+  }
 
-// 1. URL 패턴으로 분리
-const result = text.split(/(https?:\/\/[^가-힣\s,]+(?:,[^h][^가-힣\s,]*)*)/g);
+  // 따옴표 없는 키 → 자동 보정 (특수문자/숫자/영문 모두)
+  const sanitized = raw.replace(
+    /([{,]\s*)([^"'\s][^:]*)(\s*:)/g,
+    '$1"$2"$3'
+  );
 
-// 2. 빈 값 제거 및 각 문장의 앞뒤 쉼표(,) 제거
-const finalArray = result
-  .map(item => item.replace(/^,+|,+$/g, '').trim()) // 앞뒤 쉼표와 공백 제거
-  .filter(item => item !== "");
+  // JS literal → 객체 변환 + 삽입 순서 유지
+  const obj = Function('"use strict"; return (' + sanitized + ')')();
 
-console.log(finalArray);
+  // 배열로 변환 (원 순서 그대로)
+  return Object.entries(obj).map(([title, data]) => ({
+    title,
+    data,
+  }));
+}
 
 
 
