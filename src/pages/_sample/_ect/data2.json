@@ -1,25 +1,34 @@
-export function parseOrderedObject(raw) {
-  if (typeof raw !== 'string') {
-    throw new Error('raw must be a string');
-  }
+import { useEffect, useState, useRef } from 'react';
 
-  // 따옴표 없는 키 → 자동 보정 (특수문자/숫자/영문 모두)
-  const sanitized = raw.replace(
-    /([{,]\s*)([^"'\s][^:]*)(\s*:)/g,
-    '$1"$2"$3'
-  );
+export function useWindowHeight() {
+  const [height, setHeight] = useState(window.innerHeight);
+  const rafRef = useRef<number | null>(null);
+  const timerRef = useRef<number | null>(null);
 
-  // JS literal → 객체 변환 + 삽입 순서 유지
-  const obj = Function('"use strict"; return (' + sanitized + ')')();
+  useEffect(() => {
+    const onResize = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
-  // 배열로 변환 (원 순서 그대로)
-  return Object.entries(obj).map(([title, data]) => ({
-    title,
-    data,
-  }));
+      rafRef.current = requestAnimationFrame(() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+
+        timerRef.current = window.setTimeout(() => {
+          setHeight(window.innerHeight);
+        }, 200);
+      });
+    };
+
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return height;
 }
-
-
 
 {
 	"value_range": {
