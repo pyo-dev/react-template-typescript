@@ -1,3 +1,53 @@
+import { useEffect, useState } from 'react';
+
+function MyComponent() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let timer;
+
+    const handleResize = () => {
+      // 리사이즈가 발생할 때마다 이전 타이머를 취소합니다.
+      clearTimeout(timer);
+
+      // 새로운 타이머를 설정합니다 (300ms 동안 멈추면 실행).
+      timer = setTimeout(() => {
+        console.log("리사이즈 종료 시점에만 실행될 로직");
+        // 여기에 API 호출이나 무거운 작업을 넣으세요.
+        // 예: fetchHeavyData();
+      }, 300);
+    };
+
+    // 이벤트 리스너 등록
+    window.addEventListener('resize', handleResize);
+
+    // [중요] 클린업 함수: 컴포넌트 언마운트 시 리스너와 타이머 제거
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
+  }, []); // 빈 배열을 넣어 마운트 시 한 번만 리스너 등록
+
+  return <div>브라우저 크기를 조절해 보세요.</div>;
+}
+
+import { useEffect, useMemo } from 'react';
+import { debounce } from 'lodash';
+
+useEffect(() => {
+  const handleResize = debounce(() => {
+    console.log("리사이즈 종료!");
+  }, 300);
+
+  window.addEventListener('resize', handleResize);
+  return () => {
+    window.removeEventListener('resize', handleResize);
+    handleResize.cancel(); // lodash 디바운스 취소
+  };
+}, []);
+
+
+
 {
 	"value_range": {
 		"min": 0,
