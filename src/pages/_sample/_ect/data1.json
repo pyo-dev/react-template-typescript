@@ -1,54 +1,47 @@
-// resizeEndEmitter.ts
+// resizeEnd.ts
 type Listener = () => void;
 
-class ResizeEndEmitter {
-  private listeners: Listener[] = [];
-  private timeout: ReturnType<typeof setTimeout> | null = null;
-  private delay = 200; // debounce 시간
+let listeners: Listener[] = [];
+let timer: ReturnType<typeof setTimeout> | null = null;
+const delay = 200;
 
-  constructor() {
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", this.handleResize);
-    }
-  }
-
-  private handleResize = () => {
-    if (this.timeout) clearTimeout(this.timeout);
-
-    this.timeout = setTimeout(() => {
-      this.emit();
-    }, this.delay);
-  }
-
-  private emit() {
-    this.listeners.forEach((cb) => cb());
-  }
-
-  subscribe(callback: Listener) {
-    this.listeners.push(callback);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== callback);
-    };
-  }
+function handleResize() {
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(() => {
+    listeners.forEach((cb) => cb());
+  }, delay);
 }
 
-export const resizeEndEmitter = new ResizeEndEmitter();
+export function subscribeResizeEnd(cb: Listener) {
+  listeners.push(cb);
+
+  if (listeners.length === 1) {
+    window.addEventListener("resize", handleResize);
+  }
+
+  return () => {
+    listeners = listeners.filter(l => l !== cb);
+    if (listeners.length === 0) {
+      window.removeEventListener("resize", handleResize);
+    }
+  };
+}
 
 import React, { useEffect } from "react";
-import { resizeEndEmitter } from "../utils/resizeEndEmitter";
+import { subscribeResizeEnd } from "../utils/resizeEnd";
 
-export const MyComponent = () => {
+export function MyComp() {
   useEffect(() => {
-    const unsubscribe = resizeEndEmitter.subscribe(() => {
-      console.log("리사이즈 종료!");
-      // 여기서 원하는 로직 실행
+    const unsub = subscribeResizeEnd(() => {
+      console.log("resize 끝!");
     });
-
-    return unsubscribe;
+    return unsub;
   }, []);
 
-  return <div>리사이즈 테스트</div>;
-};
+  return <div>테스트</div>;
+}
+
+
 
 
 
