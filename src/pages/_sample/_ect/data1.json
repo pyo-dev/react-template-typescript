@@ -1,50 +1,54 @@
-import { useEffect, useState } from 'react';
+// resizeEndEmitter.ts
+type Listener = () => void;
 
-function MyComponent() {
-  const [data, setData] = useState(null);
+class ResizeEndEmitter {
+  private listeners: Listener[] = [];
+  private timeout: ReturnType<typeof setTimeout> | null = null;
+  private delay = 200; // debounce 시간
 
-  useEffect(() => {
-    let timer;
+  constructor() {
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", this.handleResize);
+    }
+  }
 
-    const handleResize = () => {
-      // 리사이즈가 발생할 때마다 이전 타이머를 취소합니다.
-      clearTimeout(timer);
+  private handleResize = () => {
+    if (this.timeout) clearTimeout(this.timeout);
 
-      // 새로운 타이머를 설정합니다 (300ms 동안 멈추면 실행).
-      timer = setTimeout(() => {
-        console.log("리사이즈 종료 시점에만 실행될 로직");
-        // 여기에 API 호출이나 무거운 작업을 넣으세요.
-        // 예: fetchHeavyData();
-      }, 300);
-    };
+    this.timeout = setTimeout(() => {
+      this.emit();
+    }, this.delay);
+  }
 
-    // 이벤트 리스너 등록
-    window.addEventListener('resize', handleResize);
+  private emit() {
+    this.listeners.forEach((cb) => cb());
+  }
 
-    // [중요] 클린업 함수: 컴포넌트 언마운트 시 리스너와 타이머 제거
+  subscribe(callback: Listener) {
+    this.listeners.push(callback);
     return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(timer);
+      this.listeners = this.listeners.filter((l) => l !== callback);
     };
-  }, []); // 빈 배열을 넣어 마운트 시 한 번만 리스너 등록
-
-  return <div>브라우저 크기를 조절해 보세요.</div>;
+  }
 }
 
-import { useEffect, useMemo } from 'react';
-import { debounce } from 'lodash';
+export const resizeEndEmitter = new ResizeEndEmitter();
 
-useEffect(() => {
-  const handleResize = debounce(() => {
-    console.log("리사이즈 종료!");
-  }, 300);
+import React, { useEffect } from "react";
+import { resizeEndEmitter } from "../utils/resizeEndEmitter";
 
-  window.addEventListener('resize', handleResize);
-  return () => {
-    window.removeEventListener('resize', handleResize);
-    handleResize.cancel(); // lodash 디바운스 취소
-  };
-}, []);
+export const MyComponent = () => {
+  useEffect(() => {
+    const unsubscribe = resizeEndEmitter.subscribe(() => {
+      console.log("리사이즈 종료!");
+      // 여기서 원하는 로직 실행
+    });
+
+    return unsubscribe;
+  }, []);
+
+  return <div>리사이즈 테스트</div>;
+};
 
 
 
