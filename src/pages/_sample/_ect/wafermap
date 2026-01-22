@@ -18,13 +18,7 @@ export default function WaferHeatmap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const metaRef = useRef({
-    minX: 0,
-    maxX: 0,
-    minY: 0,
-    maxY: 0,
-  });
-
+  const metaRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
   const selectedCellsRef = useRef<Set<string>>(new Set());
 
   const dragRef = useRef({
@@ -36,10 +30,12 @@ export default function WaferHeatmap({
   });
 
   const dragHappenedRef = useRef(false);
+  const suppressClickRef = useRef(false);
+
   const scaleRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
 
-  const suppressClickRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   const [tooltip, setTooltip] = useState<{
     px: number;
@@ -48,7 +44,7 @@ export default function WaferHeatmap({
   } | null>(null);
 
   /* =========================
-     META 계산
+     META
   ========================= */
   useEffect(() => {
     if (!data.length) return;
@@ -64,7 +60,7 @@ export default function WaferHeatmap({
   }, [data]);
 
   /* =========================
-     ResizeObserver (스크롤 안전)
+     ResizeObserver
   ========================= */
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -89,7 +85,7 @@ export default function WaferHeatmap({
         canvas.height = Math.floor(height * dpr);
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
-        draw();
+        scheduleDraw();
       });
     });
 
@@ -101,14 +97,16 @@ export default function WaferHeatmap({
   }, []);
 
   /* =========================
-     계산 유틸
+     Utils
   ========================= */
   const getCellSize = () => {
     const canvas = canvasRef.current!;
     const { minX, maxX, minY, maxY } = metaRef.current;
     const size = Math.min(canvas.clientWidth, canvas.clientHeight);
-    const cell = size / Math.max(maxX - minX + 1, maxY - minY + 1);
-    return Math.max(1, Math.floor(cell));
+    return Math.max(
+      1,
+      Math.floor(size / Math.max(maxX - minX + 1, maxY - minY + 1))
+    );
   };
 
   const getBaseOffset = () => {
@@ -116,13 +114,24 @@ export default function WaferHeatmap({
     const cell = getCellSize();
     const { minX, maxX, minY, maxY } = metaRef.current;
 
-    const drawW = (maxX - minX + 1) * cell;
-    const drawH = (maxY - minY + 1) * cell;
+    const w = (maxX - minX + 1) * cell;
+    const h = (maxY - minY + 1) * cell;
 
     return {
-      x: (canvas.clientWidth - drawW) / 2,
-      y: (canvas.clientHeight - drawH) / 2,
+      x: (canvas.clientWidth - w) / 2,
+      y: (canvas.clientHeight - h) / 2,
     };
+  };
+
+  /* =========================
+     Draw Scheduler
+  ========================= */
+  const scheduleDraw = () => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      draw();
+    });
   };
 
   /* =========================
@@ -153,11 +162,8 @@ export default function WaferHeatmap({
 
     for (const row of data) {
       const [x, y, v] = row;
-      const gx = x - minX;
-      const gy = y - minY; // 위 → 아래 증가
-
-      const px = base.x + gx * cell;
-      const py = base.y + gy * cell;
+      const px = base.x + (x - minX) * cell;
+      const py = base.y + (y - minY) * cell;
 
       const key = `${x},${y}`;
       const selected = selectedCellsRef.current.has(key);
@@ -165,7 +171,6 @@ export default function WaferHeatmap({
       ctx.fillStyle = selected
         ? "rgba(255,0,0,0.7)"
         : `hsl(${240 - v * 2},80%,50%)`;
-
       ctx.fillRect(px, py, cell, cell);
 
       ctx.strokeStyle = "rgba(0,0,0,0.35)";
@@ -178,7 +183,6 @@ export default function WaferHeatmap({
       ctx.fillText(String(v), px + cell / 2, py + cell / 2);
     }
 
-    // 드래그 overlay
     if (dragRef.current.dragging) {
       const { startX, startY, endX, endY } = dragRef.current;
       ctx.fillStyle = "rgba(0,120,255,0.25)";
@@ -201,7 +205,7 @@ export default function WaferHeatmap({
   };
 
   /* =========================
-     이벤트
+     Events
   ========================= */
   const handleDown = (e: React.MouseEvent) => {
     dragHappenedRef.current = false;
@@ -246,7 +250,7 @@ export default function WaferHeatmap({
       offsetRef.current.y += my - dragRef.current.startY;
       dragRef.current.startX = mx;
       dragRef.current.startY = my;
-      draw();
+      scheduleDraw();
       return;
     }
 
@@ -272,14 +276,14 @@ export default function WaferHeatmap({
       }
     }
 
-    draw();
+    scheduleDraw();
   };
 
   const handleUp = () => {
     dragRef.current.dragging = false;
 
-    if (dragHappenedRef.current && onSelectionChange) {
-      onSelectionChange(
+    if (dragHappenedRef.current) {
+      onSelectionChange?.(
         data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`))
       );
     }
@@ -288,7 +292,7 @@ export default function WaferHeatmap({
       dragHappenedRef.current = false;
     }, 0);
 
-    draw();
+    scheduleDraw();
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -310,13 +314,11 @@ export default function WaferHeatmap({
     const gy = Math.floor((ly - base.y) / cell);
 
     const key = `${minX + gx},${minY + gy}`;
-    if (selectedCellsRef.current.has(key)) {
+    if (selectedCellsRef.current.has(key))
       selectedCellsRef.current.delete(key);
-    } else {
-      selectedCellsRef.current.add(key);
-    }
+    else selectedCellsRef.current.add(key);
 
-    draw();
+    scheduleDraw();
     onSelectionChange?.(
       data.filter(d => selectedCellsRef.current.has(`${d[0]},${d[1]}`))
     );
@@ -330,9 +332,8 @@ export default function WaferHeatmap({
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
     const prev = scaleRef.current;
-    const next = Math.min(10, Math.max(1, prev * factor));
+    const next = Math.min(10, Math.max(1, prev * (e.deltaY < 0 ? 1.1 : 0.9)));
 
     const wx = (mx - offsetRef.current.x) / prev;
     const wy = (my - offsetRef.current.y) / prev;
@@ -341,7 +342,7 @@ export default function WaferHeatmap({
     offsetRef.current.x = mx - wx * next;
     offsetRef.current.y = my - wy * next;
 
-    draw();
+    scheduleDraw();
   };
 
   /* =========================
@@ -351,29 +352,19 @@ export default function WaferHeatmap({
     scaleRef.current = 1;
     offsetRef.current = { x: 0, y: 0 };
     selectedCellsRef.current.clear();
-    draw();
+    scheduleDraw();
     onSelectionChange?.([]);
   };
 
   return (
     <div
       ref={wrapperRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        overflow: "hidden",
-      }}
+      style={{ width: "100%", height: "100%", position: "relative" }}
       onWheel={handleWheel}
     >
       <button
         onClick={reset}
-        style={{
-          position: "absolute",
-          zIndex: 10,
-          top: 8,
-          right: 8,
-        }}
+        style={{ position: "absolute", top: 8, right: 8, zIndex: 10 }}
       >
         Reset
       </button>
@@ -387,7 +378,6 @@ export default function WaferHeatmap({
         onMouseLeave={() => {
           dragRef.current.dragging = false;
           setTooltip(null);
-          draw();
         }}
       />
 
