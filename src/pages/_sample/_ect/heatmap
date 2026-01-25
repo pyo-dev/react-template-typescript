@@ -1,7 +1,0 @@
-export const NoticeList = () => {
-	return (
-		<div>
-			리엑트 템플릿
-		</div>
-	);
-};
